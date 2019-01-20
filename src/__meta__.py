@@ -1,0 +1,6 @@
+__version__ = "0.1.0"
+__author__ = "Francis Charette Migneault"
+__email__ = "francis.charette.migneault@gmail.com"
+__maintainer__ = "Francis Charette Migneault"
+__description__ = "Tool for updating ID3 tags of music files using JSON configurations."
+__url__ = "https://github.com/fmigneault/music-info-updater"
