@@ -1,0 +1,3 @@
+test  some artist		1:23
+song	test-artist   4:56
+medley  I Love Long Songs  1:02:17

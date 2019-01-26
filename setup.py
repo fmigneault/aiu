@@ -47,7 +47,7 @@ TEST_REQUIREMENTS = list(filtered_test_requirements)
 
 setup(
     # -- meta information --------------------------------------------------
-    name='miu',
+    name=__meta__.__package__,
     version=__meta__.__version__,
     description=__meta__.__description__,
     long_description=README + '\n\n' + HISTORY,
@@ -59,7 +59,7 @@ setup(
     url=__meta__.__url__,
     platforms=['linux_x86_64'],
     license="ISCL",
-    keywords='miu,music,tag,id3',
+    keywords=__meta__.__package__+',music,tag,id3',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -72,11 +72,8 @@ setup(
     ],
 
     # -- Package structure -------------------------------------------------
-    #packages=[
-    #    'miu',
-    #],
-    packages=['miu'],
-    package_dir={'miu': 'src'},
+    packages=[__meta__.__package__],
+    package_dir={__meta__.__package__: 'src'},
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,
@@ -91,7 +88,7 @@ setup(
     # -- script entry points -----------------------------------------------
     entry_points="""\
           [paste.app_factory]
-          main = miu.main:main
+          main = aiu.main:main
           [console_scripts]
           """,
 )

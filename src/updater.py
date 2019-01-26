@@ -4,7 +4,7 @@ import six
 
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
-    from miu.types import AudioFile, AudioFileAny, AudioTagDict
+    from aiu.types import AudioFile, AudioFileAny, AudioTagDict
 
 
 def update_audio_tags(audio_file, audio_tags, overwrite=False):
