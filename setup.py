@@ -59,7 +59,7 @@ setup(
     url=__meta__.__url__,
     platforms=['linux_x86_64'],
     license="ISCL",
-    keywords='miu',
+    keywords='miu,music,tag,id3',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -75,8 +75,8 @@ setup(
     #packages=[
     #    'miu',
     #],
-    packages=find_packages(),
-    package_dir={'miu': '.'},
+    packages=['miu'],
+    package_dir={'miu': 'src'},
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,
@@ -91,7 +91,7 @@ setup(
     # -- script entry points -----------------------------------------------
     entry_points="""\
           [paste.app_factory]
-          main = miu.miuctl:main
+          main = miu.main:main
           [console_scripts]
           """,
 )
