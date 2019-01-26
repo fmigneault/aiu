@@ -86,9 +86,6 @@ setup(
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------
-    entry_points="""\
-          [paste.app_factory]
-          main = aiu.main:main
-          [console_scripts]
-          """,
+    #scripts=['bin/{}'.format(__meta__.__package__)],
+    entry_points={'console_scripts': ['aiu=aiu.main:AudioInfoUpdater']}
 )

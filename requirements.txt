@@ -1,3 +1,6 @@
+python-magic
+python-magic-bin
+libmagic
 docopt
 typing
 PyYAML

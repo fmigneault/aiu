@@ -37,4 +37,4 @@ def AudioInfoUpdater(search_path=None,      # type: Optional[AnyStr]
 
 
 if __name__ == '__main__':
-    MusicInfoUpdater()
+    AudioInfoUpdater()
