@@ -4,5 +4,6 @@ libmagic
 docopt
 typing
 PyYAML
+Pillow
 eyed3
 six

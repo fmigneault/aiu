@@ -6,7 +6,7 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-from src import __meta__
+from aiu import __meta__
 
 with open('README.rst') as readme_file:
     README = readme_file.read()
@@ -59,7 +59,7 @@ setup(
     url=__meta__.__url__,
     platforms=['linux_x86_64'],
     license="ISCL",
-    keywords=__meta__.__package__+',music,tag,id3',
+    keywords='audio,music,editor,tag,id3,mp3',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -73,7 +73,7 @@ setup(
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],
-    package_dir={__meta__.__package__: 'src'},
+    package_dir={__meta__.__package__: 'aiu'},
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,
@@ -87,5 +87,5 @@ setup(
 
     # -- script entry points -----------------------------------------------
     #scripts=['bin/{}'.format(__meta__.__package__)],
-    entry_points={'console_scripts': ['aiu=aiu.main:AudioInfoUpdater']}
+    entry_points={'console_scripts': ['aiu=aiu.main:cli']}
 )
