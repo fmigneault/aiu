@@ -17,7 +17,7 @@ def merge_audio_configs(configs):
         corresponding fields apply to `all` audio files (`True`) or individually (`False`).
     :return: merged config.
     """
-    raise NotImplemented
+    raise NotImplemented  # TODO
 
 
 def update_audio_tags(audio_file, audio_tags, overwrite=True):
@@ -43,7 +43,7 @@ def update_cover_image(audio_file, cover_file, overwrite=True):
     """Update the album cover tag of an audio file using the provided cover image file."""
     audio_file = get_audio_file(audio_file)
     cover_file = get_cover_file(cover_file)
-    raise NotImplemented
+    raise NotImplemented  # TODO
 
 
 def apply_audio_config(audio_files, audio_config):
@@ -52,4 +52,4 @@ def apply_audio_config(audio_files, audio_config):
     Applies the metadata fields to the corresponding audio files.
     Matching is attempted first with file names, and other heuristics as required afterward.
     """
-    raise NotImplemented
+    raise NotImplemented  # TODO

@@ -5,7 +5,7 @@ CONFIG_DIR = os.path.join(os.path.dirname(__file__), 'configs')
 
 
 def test_parser_config_csv_basic():
-    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-basic.csv'))
+    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-basic.csv'), 'csv')
     assert isinstance(config, list)
     assert len(config) == 2
     assert config[0]['track'] == 2
@@ -17,11 +17,11 @@ def test_parser_config_csv_basic():
 
 
 def test_parser_config_json_basic():
-    raise NotImplemented
+    raise NotImplemented  # TODO
 
 
 def test_parser_config_yaml_basic():
-    raise NotImplemented
+    raise NotImplemented  # TODO
 
 
 def test_parser_config_tab_basic():
@@ -46,11 +46,11 @@ def test_parser_config_tab_basic():
 
 
 def test_parser_config_tab_numbered():
-    raise NotImplemented
+    raise NotImplemented  # TODO
 
 
 def test_parser_config_tab_crazy():
-    raise NotImplemented
+    raise NotImplemented  # TODO
 
 
 def test_parser_config_tab_time():

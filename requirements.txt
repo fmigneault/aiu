@@ -1,6 +1,7 @@
 python-magic
 python-magic-bin
 libmagic
+slugify
 docopt
 typing
 PyYAML

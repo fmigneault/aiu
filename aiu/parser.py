@@ -1,12 +1,12 @@
-from aiu.typedefs import AudioFile, AudioConfig, Duration
+from aiu.typedefs import AudioFile, AudioConfig, FormatInfo
 from aiu.utils import get_logger
 from eyed3.mp3 import isMp3File
-from typing import AnyStr, Dict, Iterable, List, Optional, Union
-from datetime import datetime
+from typing import AnyStr, Iterable, Optional, Union
 import string
+import math
 import yaml
+import json
 import csv
-import six
 import os
 import re
 
@@ -21,83 +21,59 @@ duration_info = re.compile(r"""     # Match any 'duration' representation, need 
      (?::[0-5]\d)?)                     # seconds time part (00-59)
 """, re.VERBOSE)
 
-PARSER_MODE_ANY = 'any'
-PARSER_MODE_CSV = 'csv'
-PARSER_MODE_TAB = 'tab'
-PARSER_MODE_JSON = 'json'
-PARSER_MODE_YAML = 'yaml'
-parser_modes = frozenset([
-    PARSER_MODE_ANY,
-    PARSER_MODE_CSV,
-    PARSER_MODE_TAB,
-    PARSER_MODE_JSON,
-    PARSER_MODE_YAML,
-])
-FORMAT_MODE_CSV = PARSER_MODE_CSV
-FORMAT_MODE_JSON = PARSER_MODE_JSON
-FORMAT_MODE_YAML = PARSER_MODE_YAML
+FORMAT_MODE_ANY = FormatInfo('any', '*')
+FORMAT_MODE_CSV = FormatInfo('csv', 'csv')
+FORMAT_MODE_TAB = FormatInfo('tab', ['tab', 'cfg', 'config', 'meta', 'info', 'txt'])
+FORMAT_MODE_JSON = FormatInfo('json', 'json')
+FORMAT_MODE_YAML = FormatInfo('yaml', ['yml', 'yaml'])
 format_modes = frozenset([
     FORMAT_MODE_CSV,
+    FORMAT_MODE_TAB,
     FORMAT_MODE_JSON,
     FORMAT_MODE_YAML,
 ])
+parser_modes = frozenset([FORMAT_MODE_ANY] + list(format_modes))
 
 
-def clean_fields(config):
-    # type: (List[Dict[AnyStr, AnyStr]]) -> AudioConfig
-    for i, entry in enumerate(config):
-        for field in entry:
-            if isinstance(config[i][field], six.string_types):
-                config[i][field] = config[i][field].strip(white_space_no_space)
-            if field == 'duration' and config[i][field] is not None:
-                time_parts = entry['duration'].replace('-', ':').replace('/', ':').split(':')
-                h, m, s = [None] + time_parts if len(time_parts) == 2 else time_parts
-                config[i][field] = Duration(hours=h, minutes=m, seconds=s)
-    return config
+def find_mode(mode, formats):
+    # type: (Union[AnyStr, FormatInfo], Iterable[FormatInfo]) -> Union[FormatInfo, None]
+    if isinstance(mode, FormatInfo):
+        return mode
+    for fmt in formats:
+        if fmt.matches(mode):
+            return fmt
+    return None
 
 
-def parse_audio_config(config_file, mode=None):
-    # type: (AnyStr, Optional[Union[parser_modes]]) -> AudioConfig
+def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
+    # type: (AnyStr, Optional[Union[AnyStr, FormatInfo]]) -> AudioConfig
     """Attempts various parsing methods to retrieve audio files metadata from a config file."""
 
     if not os.path.isfile(config_file):
         raise ValueError("invalid file path: [{}]".format(config_file))
 
-    if mode not in parser_modes:
-        LOGGER.warning("unknown parser mode [{}], reverting to default [{}].".format(mode, PARSER_MODE_ANY))
-        mode = PARSER_MODE_ANY
-
-    # --- YAML / JSON ---
-    if mode in [PARSER_MODE_ANY, PARSER_MODE_YAML, PARSER_MODE_JSON]:
-        mode_yj = "{}/{}".format(FORMAT_MODE_YAML, PARSER_MODE_JSON)
-        LOGGER.debug("parsing using mode '{}'".format(mode_yj))
-        # noinspection PyBroadException
-        try:
-            with open(config_file, 'r') as f:
-                config = yaml.load(f)
-            config = clean_fields(config if isinstance(config, list) else list(config))
-            LOGGER.debug("success using mode '{}'".format(mode_yj))
-            return config
-        except Exception:
-            LOGGER.warning("failed parsing as '{}', moving on...".format(mode_yj))
-            pass
+    fmt_mode = find_mode(mode, parser_modes)
+    if not fmt_mode:
+        raise ValueError("invalid parser mode: [{}]".format(mode))
 
     # --- CSV with header row ---
-    if mode in [PARSER_MODE_ANY, PARSER_MODE_CSV]:
-        LOGGER.debug("parsing using mode '{}'".format(PARSER_MODE_CSV))
+    if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_CSV]:
+        LOGGER.debug("parsing using mode [{}]".format(FORMAT_MODE_CSV))
         # noinspection PyBroadException
         try:
             with open(config_file, 'r') as f:
-                config = clean_fields(list(csv.DictReader(f)))
-            LOGGER.debug("success using mode '{}'".format(PARSER_MODE_CSV))
+                config = AudioConfig(list(csv.DictReader(f)))
+            LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_CSV))
             return config
-        except Exception:
-            LOGGER.warning("failed parsing as '{}', moving on...".format(PARSER_MODE_CSV))
-            pass
+        except Exception as ex:
+            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
+            log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_CSV))
+            if fmt_mode is not FORMAT_MODE_ANY:
+                pass
 
     # --- TAB with/without numbering ---
-    if mode in [PARSER_MODE_ANY, PARSER_MODE_TAB]:
-        LOGGER.debug("parsing using mode '{}'".format(PARSER_MODE_TAB))
+    if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_TAB]:
+        LOGGER.debug("parsing using mode [{}]".format(FORMAT_MODE_TAB))
         # noinspection PyBroadException
         try:
             with open(config_file, 'r') as f:
@@ -115,25 +91,85 @@ def parse_audio_config(config_file, mode=None):
                     'duration': duration,
                 }
             if not all([isinstance(c, dict) for c in config]):
-                raise ValueError("invalid parsing result as '{}', moving on...".format(PARSER_MODE_TAB))
+                raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_TAB))
             # noinspection PyTypeChecker
-            config = clean_fields(config)
-            LOGGER.debug("success using mode '{}'".format(PARSER_MODE_TAB))
+            config = AudioConfig(config)
+            LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_TAB))
             return config
         except Exception:
-            LOGGER.warning("failed parsing as '{}', moving on...".format(PARSER_MODE_TAB))
-            pass
+            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
+            log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_TAB))
+            if fmt_mode is not FORMAT_MODE_ANY:
+                pass
+
+    # --- YAML / JSON ---
+    if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_JSON, FORMAT_MODE_YAML]:
+        mode_yj = "{}/{}".format(FORMAT_MODE_YAML, FORMAT_MODE_JSON)
+        LOGGER.debug("parsing using mode [{}]".format(mode_yj))
+        # noinspection PyBroadException
+        try:
+            with open(config_file, 'r') as f:
+                config = yaml.load(f)
+            if not isinstance(config, list):
+                config = [config]
+            config = AudioConfig(config)
+            LOGGER.debug("success using mode [{}]".format(mode_yj))
+            return config
+        except Exception:
+            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
+            log_func("failed parsing as [{}], moving on...".format(mode_yj))
+            if fmt_mode is not FORMAT_MODE_ANY:
+                pass
 
     raise ValueError("no more parsing method available, aborting...")
 
 
+def write_config(audio_config, file_path, fmt_mode):
+    # type: (AudioConfig, AnyStr, FormatInfo) -> None
+    """Raw writing operation to dump audio config to file with specified format."""
+    all_have_track = all(isinstance(_.track, int) for _ in audio_config)
+    audio_config = sorted(audio_config, key=lambda _: _.track if all_have_track else _.title)
+    with open(file_path, 'w') as f:
+        if fmt_mode is FORMAT_MODE_JSON:
+            json.dump(audio_config, f)
+        elif fmt_mode is FORMAT_MODE_YAML:
+            yaml.dump(audio_config, f)
+        elif fmt_mode is FORMAT_MODE_CSV:
+            header = list(audio_config[0].keys())
+            w = csv.DictWriter(f, fieldnames=header)
+            w.writeheader()
+            w.writerows(audio_config)
+        elif fmt_mode is FORMAT_MODE_TAB:
+            max_title_len = len(max(audio_config, key=lambda _: _.title).title)
+            max_track_len = 0 if not all_have_track else int(math.log10(len(audio_config))) + 2  # +2 for '.' after
+            line_fmt = '{track:track_tab}{title:title_tab}{duration}' \
+                .replace('title_tab', str(max_title_len)) \
+                .replace('track_tab', str(max_track_len))
+            for ac in audio_config:
+                f.write(line_fmt.format(
+                    track='{}.'.format(ac.track) if all_have_track else '',
+                    title=ac.title,
+                    duration=ac.duration if ac.duration else '')
+                )
+        else:
+            raise NotImplemented("format [{}] writing to file unknown".format(fmt_mode))
+
+
 def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML):
-    # type: (AudioConfig, AnyStr, Optional[Union[format_modes]]) -> bool
-    if mode not in format_modes:
+    # type: (AudioConfig, AnyStr, Optional[Union[AnyStr, FormatInfo]]) -> bool
+    """Saves the audio config if permitted by the OS and using the corrected file extension."""
+    fmt_mode = find_mode(mode, format_modes)
+    if not mode:
         raise ValueError("invalid output format mode [{}], aborting...".format(mode))
-    os.remove(file_path)
-    with open(file_path, 'w'):
-        raise NotImplemented
+    name, ext = os.path.splitext(file_path)
+    if not fmt_mode.matches(ext):
+        LOGGER.warning("file extension [{}] doesn't match requested save format [{}], fixing to [{}]."
+                       .format(ext, mode, fmt_mode.name))
+        ext = fmt_mode.extension
+    file_path = "{}{}{}".format(name, '' if ext.startswith('.') else '.', ext)
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+    write_config(audio_config, file_path, fmt_mode)
     return os.path.isfile(file_path)
 
 

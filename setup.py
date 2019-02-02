@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import find_packages
 try:
     from setuptools import setup
 except ImportError:
@@ -15,35 +14,42 @@ with open('CHANGES.rst') as changes_file:
     HISTORY = changes_file.read().replace('.. :changelog:', '')
 
 
-def parse_requirements(requirements_path='requirements.txt'):
-    links = set()   # See https://github.com/pypa/pip/issues/3610
-    reqs = set()    # use set to have unique packages by name
-    with open(requirements_path, 'r') as requirements_file:
+def _parse_requirements(file_path, requirements, links):
+    with open(file_path, 'r') as requirements_file:
         for line in requirements_file:
             if 'git+https' in line:
                 pkg = line.split('#')[-1]
                 links.add(line.strip())
-                reqs.add(pkg.replace('egg=', '').rstrip())
+                requirements.add(pkg.replace('egg=', '').rstrip())
             elif line.startswith('http'):
                 links.add(line.strip())
             else:
-                reqs.add(line.strip())
-    return list(reqs), list(links)
+                requirements.add(line.strip())
 
 
-REQUIREMENTS, LINKS = parse_requirements('requirements.txt')
-TEST_REQUIREMENTS, _ = parse_requirements('requirements-dev.txt')
+def _filter_requirements(requirements, test_requirements):
+    raw_requirements = set()
+    for req in requirements:
+        raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
+        raw_requirements.add(raw_req)
+    filtered_test_requirements = set()
+    for req in test_requirements:
+        raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
+        if raw_req not in raw_requirements:
+            filtered_test_requirements.add(req)
+    return list(filtered_test_requirements)
 
-raw_requirements = set()
-for req in REQUIREMENTS:
-    raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
-    raw_requirements.add(raw_req)
-filtered_test_requirements = set()
-for req in TEST_REQUIREMENTS:
-    raw_req = req.split('>')[0].split('=')[0].split('<')[0].split('!')[0]
-    if raw_req not in raw_requirements:
-        filtered_test_requirements.add(req)
-TEST_REQUIREMENTS = list(filtered_test_requirements)
+
+# See https://github.com/pypa/pip/issues/3610
+# use set to have unique packages by name
+LINKS = set()
+REQUIREMENTS = set()
+TEST_REQUIREMENTS = set()
+_parse_requirements('requirements.txt', REQUIREMENTS, LINKS)
+_parse_requirements('requirements-dev.txt', TEST_REQUIREMENTS, LINKS)
+LINKS = list(LINKS)
+REQUIREMENTS = list(REQUIREMENTS)
+TEST_REQUIREMENTS = _filter_requirements(REQUIREMENTS, TEST_REQUIREMENTS)
 
 setup(
     # -- meta information --------------------------------------------------
@@ -80,12 +86,10 @@ setup(
     zip_safe=False,
 
     # -- self - tests --------------------------------------------------------
-    #test_suite='nose.collector',
-    #test_suite='tests.test_runner',
-    #test_loader='tests.test_runner:run_suite',
+    test_suite='tests',
     tests_require=TEST_REQUIREMENTS,
 
     # -- script entry points -----------------------------------------------
-    #scripts=['bin/{}'.format(__meta__.__package__)],
+    # scripts=['bin/{}'.format(__meta__.__package__)],
     entry_points={'console_scripts': ['aiu=aiu.main:cli']}
 )
