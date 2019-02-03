@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import posixpath
+import os
 try:
     from setuptools import setup
 except ImportError:
@@ -12,6 +13,11 @@ with open('README.rst') as readme_file:
 
 with open('CHANGES.rst') as changes_file:
     HISTORY = changes_file.read().replace('.. :changelog:', '')
+
+
+def _find_data_files(dir_name):
+    files = os.listdir(dir_name)
+    return [(dir_name, [posixpath.join(dir_name, f) for f in files])]
 
 
 def _parse_requirements(file_path, requirements, links):
@@ -80,6 +86,7 @@ setup(
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],
     package_dir={__meta__.__package__: 'aiu'},
+    data_files=_find_data_files('config'),
     include_package_data=True,
     install_requires=REQUIREMENTS,
     dependency_links=LINKS,
