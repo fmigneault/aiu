@@ -1,3 +1,4 @@
+from aiu.clean import beautify_string
 from typing import AnyStr, Dict, List, Optional, Union
 from PIL import Image, ImageFile
 from slugify import slugify
@@ -8,6 +9,9 @@ import six
 
 class FormatInfo(object):
     """Format information container for parsing and input/output of metadata config files."""
+
+    __slots__ = ['_name', '_ext']
+
     def __init__(self, name, extensions):
         # type: (AnyStr, Union[AnyStr, List[AnyStr]]) -> None
         """
@@ -33,15 +37,41 @@ class FormatInfo(object):
 
 
 class Duration(datetime.timedelta):
-    def __init__(self, duration=None, **kwargs):
+    """Audio duration representation.
+
+    Instantiation examples::
+
+        Duration('1:23')
+        Duration('1:23:45')
+        Duration(minutes=1, seconds=23)
+        Duration(hours=1, minutes=23, seconds=45)
+        Duration(datetime.timedelta(hours=1, minutes=23, seconds=45))
+        Duration(5025)  # int == 1*3600 + 23*60 + 45 seconds
+    """
+    def __new__(cls, duration=None, **kwargs):
         if isinstance(duration, six.string_types):
             time_parts = duration.replace('-', ':').replace('/', ':').split(':')
             h, m, s = [None] + time_parts if len(time_parts) == 2 else time_parts
-            self.__init__(hours=h, minutes=m, seconds=s)
+            h = int(h) if h is not None else 0
+            m = int(m) if m is not None else 0
+            s = int(s) if s is not None else 0
+            return super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s)
+        elif isinstance(duration, int):
+            return Duration(datetime.timedelta(seconds=duration))
+        elif duration is None:
+            h = kwargs.get('hours', 0)
+            m = kwargs.get('minutes', 0)
+            s = kwargs.get('seconds', 0)
+            return super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s)
         elif isinstance(duration, datetime.timedelta):
-            super(Duration, self).__init__(**kwargs)
-        else:
-            raise ValueError("invalid value [{!s}] for {}".format(duration, self.__name__))
+            h = duration.seconds // 3600
+            m = duration.seconds % 3600 // 60
+            s = duration.seconds % 3600 % 60
+            return Duration(hours=h, minutes=m, seconds=s)
+        raise ValueError("invalid value [{!s}] for [{}]".format(duration, cls.__name__))
+
+    def __add__(self, other):
+        return super(Duration, self).__add__(other)
 
     def __str__(self):
         """
@@ -49,29 +79,113 @@ class Duration(datetime.timedelta):
         where `<H>` is a N digit number representing the total amount of hours.
         """
         s = super(Duration, self).__str__()
-        return s if self.seconds >= 3600 else s[2:]
+        return s if self._sec >= 3600 else s[2:]
+
+    @property
+    def _sec(self):
+        return super(Duration, self).seconds
+
+    @property
+    def hours(self):
+        # type: (...) -> int
+        """Hours part of the duration."""
+        return self._sec // 3600
+
+    @property
+    def minutes(self):
+        # type: (...) -> int
+        """Minutes part of the duration."""
+        return self._sec % 3600 // 60
+
+    @property
+    def seconds(self):
+        # type: (...) -> int
+        """Seconds part of the duration."""
+        return self._sec % 3600 % 60
 
 
 Date = datetime.date
 
 
-class StingField(object):
-    def __init__(self, value, allow_none=True):
-        # type: (Union[AnyStr, None], Optional[bool]) -> None
-        self._allow_none = allow_none
-        self.__set__(self, value)
+class BaseField(object):
+    _value = None
+
+    def __eq__(self, other):
+        if isinstance(other, BaseField):
+            return self._value == other._value
+        if isinstance(other, type(self._value)):
+            return self._value == other
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __get__(self, instance, owner):
+        return self._value
+
+
+class StrField(str, BaseField):
+    def __new__(cls, value, allow_none=True, beautify=False):
+        # type: (StrField, Union[AnyStr, None], Optional[bool], Optional[bool]) -> StrField
+        field = super(StrField, cls).__new__(cls, value)
+        field._allow_none = allow_none
+        field._beautify = beautify
+        field.__set__(field, value)
+        return field
 
     def __str__(self):
         # type: (...) -> AnyStr
         return self._value if self._value else ''
 
+    def __set__(self, instance, value):
+        # type: (StrField, Union[None, AnyStr]) -> None
+        if not (isinstance(value, six.string_types) or (self._allow_none and value is None)):
+            raise ValueError("invalid value [{!s}] for [{}]".format(value, type(self).__name__))
+        if self._beautify and isinstance(value, six.string_types):
+            # noinspection PyTypeChecker
+            value = beautify_string(value)
+        self._value = value
+
+
+class IntField(int, BaseField):
+    _value = None
+    _is_none = True
+
+    def __new__(cls, value, allow_none=True):
+        # type: (IntField, Union[AnyStr, None], Optional[bool]) -> IntField
+        field = super(IntField, cls).__new__(cls, value or 0)
+        field._allow_none = allow_none
+        field.__set__(field, value)
+        return field
+
+    def __str__(self, digit_count=None):
+        # type: (Optional[int]) -> AnyStr
+        if self._is_none:
+            return ''
+        int_str = super(IntField, self).__str__()
+        return int_str.zfill(digit_count) if digit_count else int_str
+
+    def __eq__(self, other):
+        # type: (...) -> bool
+        return self.__get__(self, self) == other
+
+    def __ne__(self, other):
+        # type: (...) -> bool
+        return not self.__eq__(other)
+
     def __get__(self, instance, owner):
         # type: (...) -> Union[AnyStr, None]
-        return self._value
+        return None if self._is_none else self._value
 
     def __set__(self, instance, value):
-        if not isinstance(value, six.string_types) or (self._allow_none and value is None):
-            raise ValueError("invalid value [{!s}] for {}".format(value, self.__name__))
+        self._is_none = value is None
+        if isinstance(value, six.string_types):
+            try:
+                value = int(value)
+            except ValueError as ex:
+                raise ValueError(str(ex).replace('int()', '{}()'.format(type(self).__name__)))
+        if not (isinstance(value, int) or (self._allow_none and self._is_none)):
+            raise ValueError("invalid value [{!s}] for [{}]".format(value, type(self).__name__))
         self._value = value
 
 
@@ -80,6 +194,8 @@ CoverFileAny = Union[AnyStr, CoverFileRaw]
 
 
 class CoverFile(object):
+    __slots__ = ['_cover', '_name']
+
     def __init__(self, image):
         # type: (CoverFileAny) -> None
         if isinstance(image, six.string_types):
@@ -89,7 +205,7 @@ class CoverFile(object):
             self._cover = image
             self._name = 'cover.jpg'
         else:
-            raise ValueError("invalid value [{!s}] for {}".format(image, self.__name__))
+            raise ValueError("invalid value [{!s}] for [{}]".format(image, type(self).__name__))
 
     def __str__(self):
         return self._name
@@ -98,12 +214,13 @@ class CoverFile(object):
 AudioTagDict = Dict[AnyStr, Union[AnyStr, int]]
 AudioFile = eyed3.core.AudioFile
 AudioFileAny = Union[AnyStr, AudioFile]
-AudioField = Union[None, int, StingField, Date, Duration, CoverFile]
+AudioField = Union[None, int, StrField, Date, Duration, CoverFile]
 
 
 class AudioInfo(dict):
     def __init__(self, title, **kwargs):
         super(AudioInfo, self).__init__()
+        self.beautify = kwargs.pop('beautify', True)
         self.title = title or kwargs.pop('title', None)
         for kw in kwargs:
             self.__setattr__(kw, kwargs[kw])
@@ -113,15 +230,24 @@ class AudioInfo(dict):
 
     def _set_title(self, title):
         # type: (AnyStr) -> None
-        self['title'] = StingField(title, allow_none=False)
+        self['title'] = StrField(title, allow_none=False, beautify=self.beautify)
 
     title = property(_get_title, _set_title)
+
+    def _get_artist(self):
+        return self['artist']
+
+    def _set_artist(self, artist):
+        # type: (AnyStr) -> None
+        self['artist'] = StrField(artist, allow_none=False, beautify=self.beautify)
+
+    artist = property(_get_artist, _set_artist)
 
     def _get_track(self):
         return self['track']
 
     def _set_track(self, track):
-        self['track'] = StingField(track)
+        self['track'] = IntField(track)
 
     track = property(_get_track, _set_track)
 
@@ -151,5 +277,5 @@ class AudioConfig(list):
         # type: (Union[AudioInfo, List[AudioInfo], Dict[AnyStr, AudioField], List[Dict[AnyStr, AudioField]]]) -> None
         if not isinstance(raw_config, list):
             raw_config = [raw_config]
-        config = [AudioInfo(cfg) for cfg in raw_config]
+        config = [AudioInfo(**cfg) for cfg in raw_config]
         super(AudioConfig, self).__init__(config)

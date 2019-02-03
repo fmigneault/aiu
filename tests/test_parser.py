@@ -1,5 +1,7 @@
-from aiu.parser import parse_audio_config
-from aiu.typedefs import Duration
+from aiu.parser import parse_audio_config, FORMAT_MODE_CSV, FORMAT_MODE_TAB, FORMAT_MODE_JSON, FORMAT_MODE_YAML
+from aiu.typedefs import Duration, IntField, StrField, AudioConfig, AudioInfo
+# noinspection PyPackageRequirements
+import pytest
 import os
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), 'configs')
 
@@ -10,72 +12,97 @@ def test_parser_config_csv_basic():
     assert len(config) == 2
     assert config[0]['track'] == 2
     assert config[0]['title'] == 'test'
-    assert config[0]['artist'] == 'test'
+    assert config[0]['artist'] == 'test-artist'
     assert config[1]['track'] == 1
     assert config[1]['title'] == 'song'
     assert config[1]['artist'] == 'other artist'
 
 
+def test_parser_config_csv_typing():
+    """Validate config formats, fields, properties and key getters."""
+    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-basic.csv'), FORMAT_MODE_CSV)
+    assert isinstance(config, list)
+    assert isinstance(config, AudioConfig)
+    assert len(config) == 2
+    for c in config:
+        assert isinstance(c, dict)
+        assert isinstance(c, AudioInfo)
+        assert isinstance(c['track'], IntField)
+        assert isinstance(c.track, IntField)
+        assert isinstance(c['title'], StrField)
+        assert isinstance(c.title, StrField)
+        assert isinstance(c['artist'], StrField)
+        assert isinstance(c.artist, StrField)
+
+
+@pytest.mark.skip("not implemented")
 def test_parser_config_json_basic():
     raise NotImplemented  # TODO
 
 
+@pytest.mark.skip("not implemented")
 def test_parser_config_yaml_basic():
     raise NotImplemented  # TODO
 
 
 def test_parser_config_tab_basic():
-    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-tab-basic.txt'))
+    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-tab-basic.txt'), FORMAT_MODE_TAB)
     assert isinstance(config, list)
-    assert len(config) == 2
-    assert config[0]['track'] is None
-    assert config[0]['title'] == 'test'
-    assert config[0]['artist'] == 'some artist'
+    assert len(config) == 3
+    # noinspection PyComparisonWithNone
+    assert config[0]['track'] == None   # noqa
+    assert config[0]['title'] == 'some song'
     assert isinstance(config[0]['duration'], Duration)
     assert config[0]['duration'] == Duration(minutes=1, seconds=23)
-    assert config[1]['track'] is None
+    # noinspection PyComparisonWithNone
+    assert config[1]['track'] == None   # noqa
     assert config[1]['title'] == 'song'
-    assert config[1]['artist'] == 'test-artist'
     assert isinstance(config[1]['duration'], Duration)
     assert config[1]['duration'] == Duration(minutes=4, seconds=56)
-    assert config[1]['track'] is None
-    assert config[1]['title'] == 'medley'
-    assert config[1]['artist'] == 'I Love Long Songs'
-    assert isinstance(config[1]['duration'], Duration)
-    assert config[1]['duration'] == Duration(hours=1, minutes=2, seconds=17)
+    # noinspection PyComparisonWithNone
+    assert config[2]['track'] == None   # noqa
+    assert config[2]['title'] == 'I Love Long Songs'
+    assert isinstance(config[2]['duration'], Duration)
+    assert config[2]['duration'] == Duration(hours=1, minutes=2, seconds=17)
 
 
+@pytest.mark.skip("not implemented")
 def test_parser_config_tab_numbered():
     raise NotImplemented  # TODO
 
 
+@pytest.mark.skip("not implemented")
 def test_parser_config_tab_crazy():
     raise NotImplemented  # TODO
 
 
 def test_parser_config_tab_time():
-    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-tab-time.txt'))
+    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-tab-time.txt'), FORMAT_MODE_TAB)
     assert isinstance(config, list)
     assert len(config) == 8
-    for i, case in enumerate([{
-        {'track': 1, 'title': 'Nothing to Say', 'artist': 'Easy Test',
+    for conf, result in zip(config, [
+        {'track': 1, 'title': 'Nothing to Say',
          'duration': Duration(minutes=1, seconds=23)},
-        {'track': 2, 'title': 'A Random Song', 'artist': 'Bad Signer',
+        {'track': 2, 'title': 'A Random Song',
          'duration': Duration(minutes=4, seconds=56)},
-        {'track': 3, 'title': 'Medley', 'artist': 'I Love Long Songs',
+        {'track': 3, 'title': 'I Love Long Songs',
          'duration': Duration(hours=1, minutes=2, seconds=17)},
-        {'track': 4, 'title': 'Got 1 Number in Here', 'artist': 'Tricky Be Good',
+        {'track': 4, 'title': 'Got 1 Number in Here',
          'duration': Duration(minutes=3, seconds=29)},
-        {'track': 5, 'title': 'Have 2 Here: 6, and There 11', 'artist': 'Slightly Worst',
+        {'track': 5, 'title': 'Have 2 Here: 6, and There 11',
          'duration': Duration(minutes=3, seconds=29)},
-        {'track': 6, 'title': 'Have Fun with this: 1:23', 'artist': 'Some A-Hole',
+        {'track': 6, 'title': 'Have Fun with this: 1:23',
          'duration': Duration(minutes=2, seconds=54)},
-        {'track': 7, 'title': 'At 4:20 is when it happens', 'artist': 'Watch the World Burn',
+        {'track': 7, 'title': 'At 4:20 is when it happens',
          'duration': Duration(hours=3, minutes=20, seconds=54)},
-        {'track': 8, 'title': 'Some Absolutely Crazy Long Song', 'artist': 'Never Gonna Stop',
+        {'track': 8, 'title': 'Some Absolutely Crazy Long Song',
          'duration': Duration(hours=104, minutes=56, seconds=20)},
-    }]):
-        assert config[i]['track'] == case['track']
-        assert config[i]['title'] == case['title']
-        assert config[i]['artist'] == case['artist']
-        assert config[i]['duration'] == case['duration']
+    ]):
+        assert conf['track'] == result['track']
+        assert conf['title'] == result['title']
+        assert conf['duration'] == result['duration']
+
+
+@pytest.mark.skip("not implemented")
+def test_parser_config_any_format():
+    pass

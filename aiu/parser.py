@@ -12,7 +12,6 @@ import re
 
 LOGGER = get_logger()
 
-white_space_no_space = string.whitespace.replace(' ', '')
 numbered_list = re.compile(r"^[\s\-#.]*([0-9]+)[\s\-#.]*(.*)")
 duration_info = re.compile(r"""     # Match any 'duration' representation, need to filter if many (ex: one in title)
     .*?                                 # non-greedy match on filler (as close as possible)
@@ -65,7 +64,7 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
                 config = AudioConfig(list(csv.DictReader(f)))
             LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_CSV))
             return config
-        except Exception as ex:
+        except Exception:
             log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
             log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_CSV))
             if fmt_mode is not FORMAT_MODE_ANY:
@@ -79,11 +78,15 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
             with open(config_file, 'r') as f:
                 config = f.readlines()
             for i, row in enumerate(config):
+                row = row.strip()
                 info = re.match(numbered_list, row)
                 track, row = info.groups() if info else (None, row)
                 info = re.match(duration_info, row)
                 # assume the duration is the last info if multiple matches
-                duration, row = info.groups()[-1] if info else (None, row)
+                duration = info.groups()[-1] if info else (None, row)
+                if duration:
+                    row = row[:-len(duration)]
+                row = row.strip()
                 # noinspection PyTypeChecker
                 config[i] = {
                     'track': track,
@@ -141,10 +144,11 @@ def write_config(audio_config, file_path, fmt_mode):
             w.writerows(audio_config)
         elif fmt_mode is FORMAT_MODE_TAB:
             max_title_len = len(max(audio_config, key=lambda _: _.title).title)
-            max_track_len = 0 if not all_have_track else int(math.log10(len(audio_config))) + 2  # +2 for '.' after
+            max_track_len = 0 if not all_have_track else int(math.log10(max(_.track for _ in audio_config))) + 1
+            max_track_dot = max_track_len + 1   # extra space for '.' after track number
             line_fmt = '{track:track_tab}{title:title_tab}{duration}' \
                 .replace('title_tab', str(max_title_len)) \
-                .replace('track_tab', str(max_track_len))
+                .replace('track_tab', str(max_track_dot))
             for ac in audio_config:
                 f.write(line_fmt.format(
                     track='{}.'.format(ac.track) if all_have_track else '',
