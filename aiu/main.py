@@ -1,11 +1,10 @@
 from aiu.parser import (
     get_audio_files,
-    get_audio_configs,
     save_audio_config,
     parse_audio_config,
     parser_modes,
-    PARSER_MODE_ANY,
     format_modes,
+    FORMAT_MODE_ANY,
     FORMAT_MODE_YAML,
 )
 from aiu.updater import merge_audio_configs, apply_audio_config
@@ -24,8 +23,8 @@ def main(search_path=None,              # type: Optional[AnyStr]
          info_file=None,                # type: Optional[AnyStr]
          all_info_file=None,            # type: Optional[AnyStr]
          cover_file=None,               # type: Optional[AnyStr]
-         parser_mode=PARSER_MODE_ANY,   # type: Optional[Union[parser_modes]]
-         format_mode=FORMAT_MODE_YAML,  # type: Optional[Union[format_modes]]
+         parser_mode=FORMAT_MODE_ANY,   # type: Optional[Union[parser_modes]]
+         output_mode=FORMAT_MODE_YAML,  # type: Optional[Union[format_modes]]
          logger_level=INFO,             # type: Optional[Union[AnyStr, int]]
          output_file=None,              # type: Optional[AnyStr]
          ):                             # type: (...) -> AudioConfig
@@ -39,7 +38,7 @@ def main(search_path=None,              # type: Optional[AnyStr]
     Usage:
         aiu [-h] [--help] [-f FILE | -p PATH] [-i INFO | -c CONFIG] [-a ALL] [--image IMAGE | --cover COVER]
             [--artist ARTIST] [--title TITLE] [--album ALBUM] [--album-artist ALBUM_ARTIST] [--year YEAR]
-            [--genre GENRE] [-m MODE] [-o OUTPUT] [--quiet | --warn | --verbose | --debug]
+            [--genre GENRE] [--parser PARSER] [-o OUTPUT] [--format FORMAT] [--quiet | --warn | --verbose | --debug]
         aiu --help
         aiu --version
 
@@ -62,7 +61,7 @@ def main(search_path=None,              # type: Optional[AnyStr]
                                             (default: looks for any text file compatible format named `all`, `any` or
                                             `every` under `path`, any first match).
 
-        -c --cover="<path>/cover.*"         Path where to find image file to use as audio file album cover.
+        --cover="<path>/cover.*"            Path where to find image file to use as audio file album cover.
                                             (default: locks for any image compatible format named `cover`, `artwork`
                                             or `art` under `path`, any first match).
 
@@ -86,11 +85,11 @@ def main(search_path=None,              # type: Optional[AnyStr]
         --no-match-album-artist             Don't use the `album-artist` metadata as `artist` when missing.
                                             See argument `--album-artist`.
 
-        -m --mode=any                       Mode to enforce parsing method, one of [any, csv, tab, json, yaml].
+        --parser=any                        Parsing mode to enforce, one of [any, csv, tab, json, yaml].
 
         -o --output="<path>/output.cfg"     Location where to save applied output configurations. Directory must exist.
 
-        --format=yaml                       Mode to output applied metadata information, one of [csv, json, yaml].
+        --format=yaml                       Format to output applied metadata information, one of [csv, json, yaml].
 
         -q --quiet                          Do not provide any logging details.
 
@@ -121,7 +120,7 @@ def main(search_path=None,              # type: Optional[AnyStr]
             (cfg_audio_config, False), (all_audio_config, True), ([{'cover': cover_file}], True)
         ])
         output_config = apply_audio_config(audio_files, audio_config)
-        if not save_audio_config(output_config, output_file, mode=format_mode):
+        if not save_audio_config(output_config, output_file, mode=output_mode):
             LOGGER.error("Failed saving file, but no unhandled exception occurred.")
         return output_config
     except Exception:
@@ -129,7 +128,7 @@ def main(search_path=None,              # type: Optional[AnyStr]
 
 
 def cli():
-    args = docopt(__doc__, version=__meta__.__version__)
+    args = docopt(main.__doc__, version=__meta__.__version__)
     main(**args)
 
 
