@@ -32,7 +32,7 @@ def main(search_path=None,              # type: Optional[AnyStr]
     Main process for updating audio files metadata from parsed configuration files.
 
     All arguments defining specific metadata fields (`artist`, `year`, `cover`, etc.) override any matching
-    information fields found in configurations files (`info`, `all`).
+    information fields found in configurations files (`config`, `info`, `all`).
     Applied changes are saved to `output` file.
 
     Usage:
@@ -128,7 +128,8 @@ def main(search_path=None,              # type: Optional[AnyStr]
 
 
 def cli():
-    args = docopt(main.__doc__, version=__meta__.__version__)
+    # noinspection PyTypeChecker
+    args = docopt(main.__doc__, help=True, version=__meta__.__version__)
     main(**args)
 
 
