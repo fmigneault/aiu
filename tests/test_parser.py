@@ -101,7 +101,7 @@ def test_parser_config_tab_time_and_beautify():
          'duration': Duration(minutes=3, seconds=29)},
         {'track': 6, 'title_raw': 'Have fun with this: 1:23', 'title_clean': 'Have Fun with This: 1:23',
          'duration': Duration(minutes=2, seconds=54)},
-        {'track': 7, 'title_raw': 'At 4:20 is when it happens', 'title_clean': 'At 4:20 is when it happens',
+        {'track': 7, 'title_raw': 'At 4:20 is when it happens', 'title_clean': 'At 4:20 Is When It Happens',
          'duration': Duration(hours=3, minutes=20, seconds=54)},
         {'track': 8, 'title_raw': 'Some absolutely crazy long song', 'title_clean': 'Some Absolutely Crazy Long Song',
          'duration': Duration(hours=104, minutes=56, seconds=20)},

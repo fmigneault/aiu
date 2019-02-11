@@ -14,10 +14,11 @@ LOGGER = get_logger()
 
 numbered_list = re.compile(r"^[\s\-#.]*([0-9]+)[\s\-#.]*(.*)")
 duration_info = re.compile(r"""     # Match any 'duration' representation, need to filter if many (ex: one in title)
-    .*?                                 # non-greedy match on filler (as close as possible)
-    ((?:(?:\d*)|(?:[2][0-3])|(?:\d)):   # hours time part of any length (0-inf, not 00-12)
-     (?:[0-5]\d)                        # minutes time part (00-59)
-     (?::[0-5]\d)?)                     # seconds time part (00-59)
+                                    # Use literal [0-9] ranges because \d can match an empty string, which raises int()
+    .*?                                         # non-greedy match on filler (as close as possible)
+    ((?:(?:[0-9]*)|(?:[2][0-3])|(?:[0-9])):     # hours time part of any length (0-inf, not 00-12)
+     (?:[0-5][0-9])                             # minutes time part (00-59)
+     (?::[0-5][0-9])?)                          # seconds time part (00-59)
 """, re.VERBOSE)
 
 FORMAT_MODE_ANY = FormatInfo('any', '*')
@@ -81,9 +82,9 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
                 row = row.strip()
                 info = re.match(numbered_list, row)
                 track, row = info.groups() if info else (None, row)
-                info = re.match(duration_info, row)
+                info = re.findall(duration_info, row)
                 # assume the duration is the last info if multiple matches
-                duration = info.groups()[-1] if info else (None, row)
+                duration = info[-1] if info else (None, row)
                 if duration:
                     row = row[:-len(duration)]
                 row = row.strip()
