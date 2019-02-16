@@ -71,14 +71,33 @@ def test_parser_config_tab_basic():
     assert config[2]['duration'] == Duration(hours=1, minutes=2, seconds=17)
 
 
-@pytest.mark.skip("not implemented")
 def test_parser_config_tab_numbered():
-    raise NotImplemented  # TODO
+    aiu.STOPWORDS = []  # ignore
+    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-tab-number.txt'), FORMAT_MODE_TAB)
+    assert isinstance(config, list)
+    assert len(config) == 2
+    assert config[0]['track'].raw == '1'
+    assert config[0]['title'].raw == 'song 1'
+    assert isinstance(config[0]['duration'], Duration)
+    assert config[0]['duration'] == Duration(minutes=3, seconds=59)
+    assert config[1]['track'].raw == '2'
+    assert config[1]['title'].raw == 'song 2'
+    assert isinstance(config[1]['duration'], Duration)
+    assert config[1]['duration'] == Duration(minutes=4, seconds=50)
 
 
-@pytest.mark.skip("not implemented")
 def test_parser_config_tab_crazy():
-    raise NotImplemented  # TODO
+    aiu.STOPWORDS = []  # ignore
+    config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-tab-crazy.txt'), FORMAT_MODE_TAB)
+    tests = [
+        ('1', 'blah'), ('2', 'test'), ('3', 'ok'), ('4', 'what...'), ('5', 'so fly'), ('6', 'yep'),
+        ('7', 'am i a joke to you?'), ('8', 'lol'), ('9', 'why not'), ('10', 'hahaha'), (None, 'what is this?')
+    ]
+    assert isinstance(config, list)
+    assert len(config) == len(tests)
+    for i, t in enumerate(tests):
+        assert config[i]['track'].raw == t[0]
+        assert config[i]['title'].raw == t[1]
 
 
 def test_parser_config_tab_time_and_beautify():

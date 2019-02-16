@@ -2,7 +2,6 @@ from aiu.typedefs import AudioFile, AudioConfig, FormatInfo
 from aiu.utils import get_logger
 from eyed3.mp3 import isMp3File
 from typing import AnyStr, Iterable, Optional, Union
-import string
 import math
 import yaml
 import json
@@ -84,7 +83,7 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
                 track, row = info.groups() if info else (None, row)
                 info = re.findall(duration_info, row)
                 # assume the duration is the last info if multiple matches
-                duration = info[-1] if info else (None, row)
+                duration = info[-1] if info else None
                 if duration:
                     row = row[:-len(duration)]
                 row = row.strip()
@@ -186,5 +185,4 @@ def get_audio_files(path):
             path = [path]
         else:
             raise ValueError("invalid path: [{}]".format(path))
-
     return filter(isMp3File, path)

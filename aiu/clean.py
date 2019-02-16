@@ -30,7 +30,7 @@ def beautify_string(s, stopwords_config=aiu.DEFAULT_STOPWORDS_CONFIG):
     if isinstance(stopwords_config, list):
         aiu.STOPWORDS = stopwords_config
     if aiu.STOPWORDS:
-        word_sep_list = re.split('(\W+)', s)
+        word_sep_list = re.split(r'(\W+)', s)
         s = ''.join([w.capitalize() if w not in aiu.STOPWORDS else w.lower() for w in word_sep_list])
     words = s.split(' ', maxsplit=1)
     words = words[0].capitalize() + (' ' + words[1] if len(words) > 1 else '')
