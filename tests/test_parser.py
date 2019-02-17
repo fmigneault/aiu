@@ -41,12 +41,12 @@ def test_parser_config_csv_typing():
 
 @pytest.mark.skip("not implemented")
 def test_parser_config_json_basic():
-    raise NotImplemented  # TODO
+    raise NotImplementedError  # TODO
 
 
 @pytest.mark.skip("not implemented")
 def test_parser_config_yaml_basic():
-    raise NotImplemented  # TODO
+    raise NotImplementedError  # TODO
 
 
 def test_parser_config_tab_basic():

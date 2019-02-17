@@ -5,29 +5,31 @@ from typing import Iterable, Optional, Tuple
 LOGGER = get_logger()
 
 
-def merge_audio_configs(configs):
-    # type: (Iterable[Tuple[AudioConfig, bool]]) -> AudioConfig
+def merge_audio_configs(configs, match_artist=False):
+    # type: (Iterable[Tuple[bool, AudioConfig]], Optional[bool]) -> AudioConfig
     """
     Merge matching configuration fields into a single one.
     Matching of corresponding entries is accomplished using `title` field.
     Later config fields in the list override preceding ones if they are not empty or invalid.
 
     :param configs:
-        list of metadata files to merge together with a `bool` associated to each one to indicate if their
-        corresponding fields apply to `all` audio files (`True`) or individually (`False`).
+        list of metadata files to merge together with a `bool` associated to each one indicating if their
+        corresponding fields apply to `all` audio files (`True`) or specifically to each index (`False`).
+    :param match_artist:
+        indicates if `TAG_ALBUM_ARTIST` should be set equal as `TAG_ARTIST` if missing.
     :return: merged config.
     """
-    raise NotImplemented  # TODO
+    raise NotImplementedError  # TODO
 
 
 def update_audio_tags(audio_file, audio_tags, overwrite=True):
     # type: (AudioFileAny, AudioTagDict, Optional[bool]) -> None
     """Updates the audio file using provided audio tags."""
     audio_file = get_audio_file(audio_file)
-    if not isinstance(audio_tags, AudioTagDict):
+    if not isinstance(audio_tags, dict):
         raise TypeError("Audio tag dict expected.")
 
-    for tag, value in audio_tags:
+    for tag, value in audio_tags.items():
         if not hasattr(audio_file, tag):
             LOGGER.warning("unknown tag '{}'".format(tag))
             continue
@@ -43,7 +45,7 @@ def update_cover_image(audio_file, cover_file, overwrite=True):
     """Update the album cover tag of an audio file using the provided cover image file."""
     audio_file = get_audio_file(audio_file)
     cover_file = get_cover_file(cover_file)
-    raise NotImplemented  # TODO
+    raise NotImplementedError  # TODO
 
 
 def apply_audio_config(audio_files, audio_config):
@@ -52,4 +54,4 @@ def apply_audio_config(audio_files, audio_config):
     Applies the metadata fields to the corresponding audio files.
     Matching is attempted first with file names, and other heuristics as required afterward.
     """
-    raise NotImplemented  # TODO
+    raise NotImplementedError  # TODO

@@ -9,12 +9,13 @@ from aiu.parser import (
 )
 from aiu.updater import merge_audio_configs, apply_audio_config
 from aiu.utils import look_for_default_file, validate_output_file, get_logger
-from aiu.typedefs import AudioConfig
-from aiu import __meta__
+from aiu.typedefs import AudioConfig, Duration
+from aiu import __meta__, tags as t
 from typing import AnyStr, Optional, Union
 from inspect import signature
 from docopt import docopt
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
+import sys
 import os
 
 LOGGER = get_logger()
@@ -35,30 +36,60 @@ def main(
          album=None,                    # type: Optional[AnyStr]
          album_artist=None,             # type: Optional[AnyStr]
          title=None,                    # type: Optional[AnyStr]
+         track=None,                    # type: Optional[int]
          genre=None,                    # type: Optional[AnyStr]
+         duration=None,                 # type: Optional[Union[Duration, AnyStr]]
          year=None,                     # type: Optional[int]
-         no_match_artist=False,         # type: Optional[bool]
+         match_artist=True,             # type: Optional[bool]
          ):                             # type: (...) -> AudioConfig
     LOGGER.setLevel(logger_level)
     # noinspection PyBroadException
     try:
         search_path = os.path.abspath(search_path or os.path.curdir)
+        LOGGER.info("Search path is: [{}]".format(search_path))
         cfg_info_file = info_file if info_file else look_for_default_file(search_path, ['info', 'config', 'meta'])
+        LOGGER.info("Matched config info file: [{}]".format(cfg_info_file))
         all_info_file = all_info_file if all_info_file else look_for_default_file(search_path, ['all', 'any', 'every'])
+        LOGGER.info("Matched config 'all' file: [{}]".format(all_info_file))
         cover_file = cover_file if cover_file else look_for_default_file(cover_file, ['covert', 'artwork'])
+        LOGGER.info("Matched cover image file: [{}]".format(cover_file))
         output_file = validate_output_file(output_file, search_path, default_name='output.cfg')
+        LOGGER.info("Output config file will be: [{}]".format(output_file))
         audio_files = get_audio_files(search_path)
-        cfg_audio_config = parse_audio_config(cfg_info_file, mode=parser_mode)
-        all_audio_config = parse_audio_config(all_info_file, mode=parser_mode)
-        audio_config = merge_audio_configs([
-            (cfg_audio_config, False), (all_audio_config, True), ([{'cover': cover_file}], True)
-        ])
+        LOGGER.info("Found audio files to process: {}".format(audio_files))
+        config_combo = []
+        if cfg_info_file:
+            LOGGER.info("Running audio config parsing...")
+            cfg_audio_config = parse_audio_config(cfg_info_file, mode=parser_mode)
+            config_combo.append((False, cfg_audio_config))
+        if all_info_file:
+            LOGGER.info("Running audio 'all' config parsing...")
+            all_audio_config = parse_audio_config(all_info_file, mode=parser_mode)
+            config_combo.append((True, all_audio_config))
+        literal_fields = {
+            t.TAG_ALBUM: album, t.TAG_ALBUM_ARTIST: album_artist, t.TAG_ARTIST: artist, t.TAG_TITLE: title,
+            t.TAG_TRACK: track, t.TAG_DURATION: duration, t.TAG_GENRE: genre, t.TAG_YEAR: year,
+        }
+        literal_fields = dict((k, v) for k, v in literal_fields.items() if v is not None)
+        if cover_file:
+            config_combo.append((True, {'cover': cover_file}))
+        if literal_fields:
+            LOGGER.info("Literal fields to apply: [{}]".format(literal_fields))
+            config_combo.append((True, literal_fields))
+        if not config_combo:
+            LOGGER.error("Couldn't find any config to apply.")
+            sys.exit(-1)
+        LOGGER.info("Resolving metadata config fields...")
+        LOGGER.debug("Match artist parameter: {}".format(match_artist))
+        audio_config = merge_audio_configs(config_combo, match_artist)
+        LOGGER.info("Applying config...")
         output_config = apply_audio_config(audio_files, audio_config)
         if not save_audio_config(output_config, output_file, mode=output_mode):
             LOGGER.error("Failed saving file, but no unhandled exception occurred.")
+        LOGGER.info("Operation complete.")
         return output_config
-    except Exception:
-        LOGGER.exception("unhandled exception")
+    except Exception as ex:
+        LOGGER.exception("exception: [{!r}]".format(ex))
 
 
 def cli():
@@ -102,7 +133,11 @@ def cli():
 
         --title TITLE                   Name to apply as `title` metadata attribute to file(s).
 
+        --track TRACK                   Name to apply as `track` metadata attribute to file(s).
+
         --year YEAR                     Name to apply as `year` metadata attribute to file(s).
+
+        --duration DURATION             Name to apply as `duration` metadata attribute to file(s).
 
         --genre GENRE                   Name to apply as `genre` metadata attribute to file(s).
 
@@ -161,6 +196,7 @@ def cli():
         'output_mode': args.pop('format'),
         'parser_mode': args.pop('parser'),
         'logger_level': logger_level or ERROR,
+        'match_artist': not args.pop('no_match_artist', False)
     })
     sig = signature(main)
     args = dict((k, v) for k, v in args.items() if k in sig.parameters)

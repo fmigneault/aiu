@@ -1,7 +1,8 @@
 from aiu.typedefs import AudioFile, AudioConfig, FormatInfo
 from aiu.utils import get_logger
+from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
 from eyed3.mp3 import isMp3File
-from typing import AnyStr, Iterable, Optional, Union
+from typing import AnyStr, Iterable, List, Optional, Union
 import math
 import yaml
 import json
@@ -39,7 +40,7 @@ def find_mode(mode, formats):
     if isinstance(mode, FormatInfo):
         return mode
     for fmt in formats:
-        if fmt.matches(mode):
+        if fmt.matches(extension=mode) or fmt.name == mode:
             return fmt
     return None
 
@@ -89,9 +90,9 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
                 row = row.strip()
                 # noinspection PyTypeChecker
                 config[i] = {
-                    'track': track,
-                    'title': row,
-                    'duration': duration,
+                    TAG_TRACK: track,
+                    TAG_TITLE: row,
+                    TAG_DURATION: duration,
                 }
             if not all([isinstance(c, dict) for c in config]):
                 raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_TAB))
@@ -156,7 +157,7 @@ def write_config(audio_config, file_path, fmt_mode):
                     duration=ac.duration if ac.duration else '')
                 )
         else:
-            raise NotImplemented("format [{}] writing to file unknown".format(fmt_mode))
+            raise NotImplementedError("format [{}] writing to file unknown".format(fmt_mode))
 
 
 def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML):
@@ -178,11 +179,20 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML):
 
 
 def get_audio_files(path):
-    # type: (AnyStr) -> Iterable[AudioFile]
+    # type: (AnyStr) -> List[AudioFile]
     """Retrieves all supported audio files from the specified path (file or directory)."""
     if not os.path.isdir(path):
         if os.path.isfile(path):
-            path = [path]
+            files = [path]
         else:
             raise ValueError("invalid path: [{}]".format(path))
-    return filter(isMp3File, path)
+    else:
+        files = [os.path.join(path, f) for f in os.listdir(path)]
+
+    def is_mp3(f):
+        try:
+            return isMp3File(f)
+        except PermissionError:
+            return False
+
+    return list(filter(is_mp3, files))

@@ -11,14 +11,9 @@ import os
 # noinspection PyProtectedMember
 def get_logger():
     # type: (...) -> logging._loggerClass
-    logger_extra = {'path': os.path.curdir}
-    logger_format = "[%(name)s] %(asctime)-15s %(levelname)-8s %(message)s [path: '%(path)s']"
+    logger_format = "[%(name)s] %(asctime)-15s %(levelname)-8s %(message)s"
     logging.basicConfig(format=logger_format)
     logger = logging.getLogger(__meta__.__package__)
-    logger_handler = logging.StreamHandler()
-    logger_handler.setFormatter(logger_format)
-    logger.addHandler(logger_handler)
-    logging.LoggerAdapter(logger, logger_extra)
     return logger
 
 
@@ -26,14 +21,14 @@ def look_for_default_file(path, names):
     # type: (AnyStr, Union[List[AnyStr], AnyStr]) -> Union[AnyStr, None]
     """
     Looks in `path` for any file matching any of the `names`.
-    :returns: first matching occurrence, or `None`.
+    :returns: full path of first matching occurrence, or `None`.
     """
     names = names if isinstance(names, list) else [names]
     contents = sorted(os.listdir(path))
     for c in contents:
         c_name, c_ext = os.path.splitext(c)
         if c_name in names and c_ext != '':
-            return c
+            return os.path.abspath(os.path.join(path, c))
     return None
 
 
