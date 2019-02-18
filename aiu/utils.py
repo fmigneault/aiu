@@ -1,6 +1,6 @@
-from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile
+from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
 from aiu import __meta__
-from typing import AnyStr, List, Optional, Union
+from typing import AnyStr, Callable, List, Optional, Union
 from PIL import Image
 import logging
 import eyed3
@@ -8,13 +8,29 @@ import six
 import os
 
 
-# noinspection PyProtectedMember
 def get_logger():
-    # type: (...) -> logging._loggerClass
+    # type: (...) -> LoggerType
     logger_format = "[%(name)s] %(asctime)-15s %(levelname)-8s %(message)s"
     logging.basicConfig(format=logger_format)
     logger = logging.getLogger(__meta__.__package__)
     return logger
+
+
+def log_exception(logger=None):
+    # type: (LoggerType) -> Callable
+    """Decorator that logs an exception on raise within the passed ``function``."""
+    if not isinstance(logger, LoggerType):
+        logger = get_logger()
+
+    def decorator(function):
+        def log_exc(*args, **kwargs):
+            # noinspection PyBroadException
+            try:
+                return function(*args, **kwargs)
+            except Exception as ex:
+                logger.exception("{!r}".format(ex))
+        return log_exc
+    return decorator
 
 
 def look_for_default_file(path, names):

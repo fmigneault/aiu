@@ -2,9 +2,13 @@ from aiu.clean import beautify_string
 from typing import AnyStr, Dict, List, Optional, Union
 from PIL import Image, ImageFile
 from slugify import slugify
+import logging
 import datetime
 import eyed3
 import six
+
+# noinspection PyProtectedMember
+LoggerType = logging._loggerClass
 
 
 class FormatInfo(object):
@@ -296,9 +300,12 @@ class AudioInfo(dict):
 
 
 class AudioConfig(list):
-    def __init__(self, raw_config):
+    def __init__(self, raw_config=None):
         # type: (Union[AudioInfo, List[AudioInfo], Dict[AnyStr, AudioField], List[Dict[AnyStr, AudioField]]]) -> None
-        if not isinstance(raw_config, list):
-            raw_config = [raw_config]
-        config = [AudioInfo(**cfg) for cfg in raw_config]
+        if not raw_config:
+            config = {}
+        else:
+            if not isinstance(raw_config, list):
+                raw_config = [raw_config]
+            config = [AudioInfo(**cfg) for cfg in raw_config]
         super(AudioConfig, self).__init__(config)

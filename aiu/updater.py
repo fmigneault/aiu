@@ -8,18 +8,41 @@ LOGGER = get_logger()
 def merge_audio_configs(configs, match_artist=False):
     # type: (Iterable[Tuple[bool, AudioConfig]], Optional[bool]) -> AudioConfig
     """
-    Merge matching configuration fields into a single one.
-    Matching of corresponding entries is accomplished using `title` field.
-    Later config fields in the list override preceding ones if they are not empty or invalid.
+    Merge matching audio info fields into a single one, for each :class:`AudioInfo` in resulting :class:`AudioConfig`.
+
+    Lazy matching of corresponding entries in resulting :class:`AudioConfig` is accomplished using ``TAG_TITLE`` field.
+
+    Later :class:`AudioInfo` fields in ``configs`` list override preceding ones if they are not empty or invalid.
+    For this reason
 
     :param configs:
         list of metadata files to merge together with a `bool` associated to each one indicating if their
         corresponding fields apply to `all` audio files (`True`) or specifically to each index (`False`).
     :param match_artist:
-        indicates if `TAG_ALBUM_ARTIST` should be set equal as `TAG_ARTIST` if missing.
+        indicates if ``TAG_ALBUM_ARTIST`` should be set equal as ``TAG_ARTIST`` if missing.
     :return: merged config.
     """
-    raise NotImplementedError  # TODO
+    merged_config = AudioConfig()
+    max_audio_count = max(len(cfg[1]) for cfg in configs)
+    for i, cfg in enumerate(configs):
+        cfg_size = len(cfg[1])
+        if not i:
+            # first config is written as is, or duplicated if unique
+            if cfg_size == max_audio_count:
+                merged_config.append(cfg[1])
+            elif cfg_size == 1:
+                merged_config.extend([cfg[1]] * max_audio_count)
+            else:
+                raise ValueError("Cannot initialize audio config with [total = {}] and first config [size = {}]. "
+                                 "First config must be [total = size] or [size = 1]".format(max_audio_count, cfg_size))
+        else:
+            # following configs updates the first as required
+            if cfg_size != max_audio_count:
+                cfg_i =
+
+
+                #for c in cfg[1]:
+    return merged_config
 
 
 def update_audio_tags(audio_file, audio_tags, overwrite=True):
