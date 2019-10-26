@@ -1,6 +1,8 @@
-from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioTagDict, CoverFileAny
+from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
 from aiu.utils import get_audio_file, get_cover_file, get_logger
 from typing import Iterable, Optional, Tuple
+import eyed3
+import os
 
 LOGGER = get_logger()
 
@@ -29,16 +31,17 @@ def merge_audio_configs(configs, match_artist=False):
         if not i:
             # first config is written as is, or duplicated if unique
             if cfg_size == max_audio_count:
-                merged_config.append(cfg[1])
+                merged_config.extend(cfg[1])
             elif cfg_size == 1:
-                merged_config.extend([cfg[1]] * max_audio_count)
+                merged_config.extend([cfg[1] for _ in range(max_audio_count)])
             else:
                 raise ValueError("Cannot initialize audio config with [total = {}] and first config [size = {}]. "
                                  "First config must be [total = size] or [size = 1]".format(max_audio_count, cfg_size))
         else:
             # following configs updates the first as required
             if cfg_size != max_audio_count:
-                cfg_i =
+                # FIXME: not implemented
+                pass
 
 
                 #for c in cfg[1]:
@@ -72,9 +75,26 @@ def update_cover_image(audio_file, cover_file, overwrite=True):
 
 
 def apply_audio_config(audio_files, audio_config):
-    # type: (Iterable[AudioFile], AudioConfig) -> AudioConfig
+    # type: (Iterable[str], AudioConfig) -> AudioConfig
     """
     Applies the metadata fields to the corresponding audio files.
     Matching is attempted first with file names, and other heuristics as required afterward.
     """
-    raise NotImplementedError  # TODO
+    for file_path in audio_files:
+        file_dir, file_name = os.path.split(file_path)
+        matched_info = None
+        for audio_info in audio_config:     # type: AudioInfo
+            if audio_info.title.lower() in file_name.lower():
+                matched_info = audio_info
+                break
+
+        if matched_info:
+            LOGGER.debug("Matched file [%s] with [%s]", file_path, matched_info)
+            audio_file = get_audio_file(file_path)
+            for tag_name, tag_value in audio_info.items():
+                setattr(audio_file.tag, tag_name, tag_value)
+            audio_file.tag.save()
+        else:
+            LOGGER.warning("No audio information was matched for file: [{}]", file_path)
+
+    return audio_config  # FIXME: should return applied with respect to saved audio file tags

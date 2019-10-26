@@ -110,7 +110,7 @@ def cli():
         --version                       Show the package version.
 
         -p, --path PATH                 Path where to search for audio and metadata info files to process.
-                                        [default: ``'.'``]
+                                        [default: '.']
 
         -f, --file FILE                 Path to a single audio file to edit metadata. (default: `path`)
 
@@ -151,13 +151,13 @@ def cli():
                                         See option `album-artist`.
 
         --parser PARSER                 Parsing mode to enforce, one of ``[any, csv, tab, json, yaml]``.
-                                        [default: ``any``]
+                                        [default: any]
 
         -o, --output OUTPUT             Location where to save applied output configurations. Directory must exist.
                                         (default: `output.cfg` located under `path`).
 
-        --format FORMAT                 Format to output applied metadata information, one of ``[csv, json, yaml]``.
-                                        [default: ``yaml``]
+        --format FORMAT                 Output format of applied metadata details, one of ``[csv, json, yaml, raw]``.
+                                        [default: yaml]
 
         -q, --quiet                     Do not provide any logging details.
 
@@ -196,7 +196,7 @@ def cli():
         'logger_level': logger_level or ERROR,
         'match_artist': not args.pop('no_match_artist', False)
     })
-    sig = signature(main)
+    sig = signature(main, follow_wrapped=True)
     args = dict((k, v) for k, v in args.items() if k in sig.parameters)
     main(**args)
 

@@ -59,7 +59,13 @@ class BaseField(object):
 
     @property
     def raw(self):
+        """Represents the initial value provided on initialization, before any *possible* modification."""
         return self._raw
+
+    @property
+    def value(self):
+        """Represents the stored value updated as required by various conditions of the class."""
+        return self._value or self.raw
 
 
 class Duration(BaseField, datetime.timedelta):
@@ -96,9 +102,12 @@ class Duration(BaseField, datetime.timedelta):
             d._raw = kwargs
             return d
         elif isinstance(duration, datetime.timedelta):
-            h = duration.seconds // 3600
-            m = duration.seconds % 3600 // 60
-            s = duration.seconds % 3600 % 60
+            h = duration.hours
+            m = duration.minutes
+            s = duration.seconds
+            #h = duration.seconds // 3600
+            #m = duration.seconds % 3600 // 60
+            #s = duration.seconds % 3600 % 60
             d = Duration(hours=h, minutes=m, seconds=s)
             d._raw = duration
             return d
@@ -114,6 +123,10 @@ class Duration(BaseField, datetime.timedelta):
         """
         s = super(Duration, self).__str__()
         return s if self._sec >= 3600 else s[2:]
+
+    @property
+    def value(self):
+        return str(self)
 
     @property
     def _sec(self):
@@ -212,6 +225,10 @@ class IntField(int, BaseField):
             raise ValueError("invalid value [{!s}] for [{}]".format(value, type(self).__name__))
         self._value = value
 
+    @property
+    def value(self):
+        return None if self._is_none else int(self)
+
 
 CoverFileRaw = Union[Image.Image]
 CoverFileAny = Union[AnyStr, CoverFileRaw]
@@ -243,6 +260,10 @@ AudioField = Union[None, int, StrField, Date, Duration, CoverFile]
 
 
 class AudioInfo(dict):
+    """
+    Represents an audio file information container, each field corresponding to some details as represented
+    in a configuration file row.
+    """
     __slots__ = ['_beautify']
 
     def __init__(self, title, **kwargs):
@@ -251,6 +272,21 @@ class AudioInfo(dict):
         self.title = title or kwargs.pop('title', None)
         for kw in kwargs:
             self.__setattr__(kw, kwargs[kw])
+
+    def __str__(self):
+        cls_str = type(self).__name__
+        trk_str = "{}. ".format(self.track) if self.track else ""
+        dur_str = " - {}".format(self.duration) if self.duration else ""
+        return "{}({}{}{})".format(cls_str, trk_str, self.title, dur_str)
+
+    @property
+    def __dict__(self):
+        return dict(self)   # need to do this because of __slots__
+
+    @property
+    def value(self):
+        """Literal Python value representation for all audio info fields."""
+        return {k: v.value for k, v in self.items()}
 
     def _get_title(self):
         return self['title']
@@ -300,12 +336,23 @@ class AudioInfo(dict):
 
 
 class AudioConfig(list):
+    """
+    Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing
+    and audio file definition and fields.
+    """
     def __init__(self, raw_config=None):
         # type: (Union[AudioInfo, List[AudioInfo], Dict[AnyStr, AudioField], List[Dict[AnyStr, AudioField]]]) -> None
         if not raw_config:
             config = {}
         else:
-            if not isinstance(raw_config, list):
+            if not isinstance(raw_config, (list, set)):
                 raw_config = [raw_config]
+            if not all(isinstance(c, dict) for c in raw_config):
+                raise TypeError("Invalid audio information must be dict-like.")
             config = [AudioInfo(**cfg) for cfg in raw_config]
         super(AudioConfig, self).__init__(config)
+
+    @property
+    def value(self):
+        """Literal Python value representation for all audio info entries."""
+        return [ai.value for ai in self]

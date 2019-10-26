@@ -26,13 +26,21 @@ FORMAT_MODE_CSV = FormatInfo('csv', 'csv')
 FORMAT_MODE_TAB = FormatInfo('tab', ['tab', 'cfg', 'config', 'meta', 'info', 'txt'])
 FORMAT_MODE_JSON = FormatInfo('json', 'json')
 FORMAT_MODE_YAML = FormatInfo('yaml', ['yml', 'yaml'])
+FORMAT_MODE_RAW = FormatInfo('raw', ['raw', 'cls', 'class', 'ref'])     # YAML with full class and properties values
 format_modes = frozenset([
     FORMAT_MODE_CSV,
     FORMAT_MODE_TAB,
     FORMAT_MODE_JSON,
     FORMAT_MODE_YAML,
+    FORMAT_MODE_RAW,
 ])
-parser_modes = frozenset([FORMAT_MODE_ANY] + list(format_modes))
+parser_modes = frozenset([
+    FORMAT_MODE_ANY,
+    FORMAT_MODE_CSV,
+    FORMAT_MODE_TAB,
+    FORMAT_MODE_JSON,
+    FORMAT_MODE_YAML,
+])
 
 
 def find_mode(mode, formats):
@@ -132,12 +140,17 @@ def write_config(audio_config, file_path, fmt_mode):
     # type: (AudioConfig, AnyStr, FormatInfo) -> None
     """Raw writing operation to dump audio config to file with specified format."""
     all_have_track = all(isinstance(_.track, int) for _ in audio_config)
-    audio_config = sorted(audio_config, key=lambda _: _.track if all_have_track else _.title)
+    audio_config = AudioConfig(sorted(audio_config, key=lambda _: _.track if all_have_track else _.title))
+    if fmt_mode is FORMAT_MODE_RAW:
+        # yaml with classes with output yaml representation of their references
+        fmt_mode = FORMAT_MODE_YAML
+    else:
+        audio_config = audio_config.value
     with open(file_path, 'w') as f:
         if fmt_mode is FORMAT_MODE_JSON:
             json.dump(audio_config, f)
         elif fmt_mode is FORMAT_MODE_YAML:
-            yaml.dump(audio_config, f)
+            yaml.dump(audio_config, f, default_flow_style=False)
         elif fmt_mode is FORMAT_MODE_CSV:
             header = list(audio_config[0].keys())
             w = csv.DictWriter(f, fieldnames=header)
@@ -179,7 +192,7 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML):
 
 
 def get_audio_files(path):
-    # type: (AnyStr) -> List[AudioFile]
+    # type: (AnyStr) -> List[str]
     """Retrieves all supported audio files from the specified path (file or directory)."""
     if not os.path.isdir(path):
         if os.path.isfile(path):

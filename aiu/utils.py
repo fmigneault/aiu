@@ -1,8 +1,8 @@
 from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
-from aiu import __meta__
+from aiu import LOGGER
 from typing import AnyStr, Callable, List, Optional, Union
 from PIL import Image
-import logging
+from functools import wraps
 import eyed3
 import six
 import os
@@ -10,10 +10,13 @@ import os
 
 def get_logger():
     # type: (...) -> LoggerType
-    logger_format = "[%(name)s] %(asctime)-15s %(levelname)-8s %(message)s"
-    logging.basicConfig(format=logger_format)
-    logger = logging.getLogger(__meta__.__package__)
-    return logger
+    """
+    Get a generic logger configured for the ``aiu`` package.
+
+    .. seealso::
+        aiu.LOGGER
+    """
+    return LOGGER
 
 
 def log_exception(logger=None):
@@ -23,6 +26,7 @@ def log_exception(logger=None):
         logger = get_logger()
 
     def decorator(function):
+        @wraps(function)
         def log_exc(*args, **kwargs):
             # noinspection PyBroadException
             try:
