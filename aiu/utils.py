@@ -6,6 +6,7 @@ from functools import wraps
 import eyed3
 import six
 import os
+import re
 
 
 def get_logger():
@@ -78,3 +79,8 @@ def validate_output_file(output_file_path, search_path, default_name='output.cfg
     if not os.path.isdir(os.path.dirname(output_file_path)):
         raise ValueError("invalid save location: [{}]".format(output_file_path))
     return output_file_path
+
+
+def slugify_file_name(file_name):
+    # type: (AnyStr) -> AnyStr
+    return re.sub(r'(?u)[^-\w.\s_\-\!]', '_', file_name)

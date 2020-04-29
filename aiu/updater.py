@@ -1,5 +1,5 @@
 from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
-from aiu.utils import get_audio_file, get_cover_file, get_logger
+from aiu.utils import get_audio_file, get_cover_file, get_logger, slugify_file_name
 from typing import Iterable, Optional, Tuple
 import eyed3
 import os
@@ -75,7 +75,7 @@ def update_cover_image(audio_file, cover_file, overwrite=True):
 
 
 def apply_audio_config(audio_files, audio_config):
-    # type: (Iterable[str], AudioConfig) -> AudioConfig
+    # type: (Iterable[str], AudioConfig, Optional[str]) -> AudioConfig
     """
     Applies the metadata fields to the corresponding audio files.
     Matching is attempted first with file names, and other heuristics as required afterward.
@@ -90,11 +90,48 @@ def apply_audio_config(audio_files, audio_config):
 
         if matched_info:
             LOGGER.debug("Matched file [%s] with [%s]", file_path, matched_info)
+            if matched_info.file:
+                LOGGER.warning("[%s] already matched with [%s], skipping...", matched_info, matched_info.file)
+                continue
+            matched_info.file = file_path
             audio_file = get_audio_file(file_path)
             for tag_name, tag_value in audio_info.items():
                 setattr(audio_file.tag, tag_name, tag_value)
             audio_file.tag.save()
         else:
-            LOGGER.warning("No audio information was matched for file: [{}]", file_path)
+            LOGGER.warning("No audio information was matched for file: [%s]", file_path)
 
     return audio_config  # FIXME: should return applied with respect to saved audio file tags
+
+
+def update_file_names(audio_config, rename_title, rename_format, prefix_track):
+    # type: (AudioConfig, bool, bool, Optional[str]) -> AudioConfig
+    """
+    Renames the files and updates the configuration according to specified formats.
+    """
+    if not audio_config:
+        LOGGER.error("No configuration to process!")
+        return audio_config
+    if rename_title:
+        if prefix_track:
+            LOGGER.debug("Updating rename format with title and prefix.")
+            rename_format = "%(TRACK)s %(TITLE)s"
+        else:
+            LOGGER.debug("Updating rename format with title only.")
+            rename_format = "%(TITLE)s"
+    elif not rename_format or "%(" not in rename_format or ")" not in rename_format:
+        LOGGER.error("No format or template variable specified!")
+    for audio_item in audio_config:  # type: AudioInfo
+        if audio_item.file:
+            if not os.path.isfile(audio_item.file):
+                LOGGER.error("Invalid file value cannot be found: [%s]", audio_item.file)
+                continue
+            rename_name = rename_format.lower() % audio_item
+            rename_name = slugify_file_name(rename_name)
+            rename_path, origin_name = os.path.split(audio_item.file)
+            origin_name, origin_ext = os.path.splitext(origin_name)
+            rename_path = os.path.join(rename_path, rename_name + origin_ext)
+            os.rename(audio_item.file, rename_path)
+            audio_item.file = rename_path
+            LOGGER.info("Renamed file: [%s] => [%s]", origin_name, rename_name)
+    return audio_config

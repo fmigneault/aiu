@@ -7,7 +7,7 @@ from aiu.parser import (
     FORMAT_MODE_ANY,
     FORMAT_MODE_YAML,
 )
-from aiu.updater import merge_audio_configs, apply_audio_config
+from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
 from aiu.utils import look_for_default_file, validate_output_file, get_logger, log_exception
 from aiu.typedefs import AudioConfig, Duration
 from aiu import __meta__, tags as t
@@ -29,9 +29,9 @@ def main(
          all_info_file=None,            # type: Optional[AnyStr]
          cover_file=None,               # type: Optional[AnyStr]
          output_file=None,              # type: Optional[AnyStr]
-         output_mode=FORMAT_MODE_YAML,  # type: Optional[Union[format_modes]]
-         parser_mode=FORMAT_MODE_ANY,   # type: Optional[Union[parser_modes]]
-         logger_level=INFO,             # type: Optional[Union[AnyStr, int]],
+         output_mode=FORMAT_MODE_YAML,  # type: Union[format_modes]
+         parser_mode=FORMAT_MODE_ANY,   # type: Union[parser_modes]
+         logger_level=INFO,             # type: Union[AnyStr, int],
          # --- specific meta fields ---
          artist=None,                   # type: Optional[AnyStr]
          album=None,                    # type: Optional[AnyStr]
@@ -41,7 +41,11 @@ def main(
          genre=None,                    # type: Optional[AnyStr]
          duration=None,                 # type: Optional[Union[Duration, AnyStr]]
          year=None,                     # type: Optional[int]
-         match_artist=True,             # type: Optional[bool]
+         match_artist=True,             # type: bool
+         # --- other operation flags ---
+         rename_title=False,            # type: bool
+         prefix_track=False,            # type: bool
+         rename_format=False,           # type: Optional[AnyStr]
          ):                             # type: (...) -> AudioConfig
     LOGGER.setLevel(logger_level)
     search_path = os.path.abspath(search_path or os.path.curdir)
@@ -83,6 +87,7 @@ def main(
     audio_config = merge_audio_configs(config_combo, match_artist)
     LOGGER.info("Applying config...")
     output_config = apply_audio_config(audio_files, audio_config)
+    output_config = update_file_names(output_config, rename_title, rename_format, prefix_track)
     if not save_audio_config(output_config, output_file, mode=output_mode):
         LOGGER.error("Failed saving file, but no unhandled exception occurred.")
     LOGGER.info("Operation complete.")
@@ -100,14 +105,23 @@ def cli():
     Usage:
         aiu [-h] [--help] [-p PATH | -f FILE] [-i INFO] [-a ALL] [--image IMAGE | --cover COVER]
             [--artist ARTIST] [--title TITLE] [--album ALBUM] [--album-artist ALBUM_ARTIST] [--year YEAR]
-            [--genre GENRE] [--parser PARSER] [-o OUTPUT] [--format FORMAT] [--quiet | --warn | --verbose | --debug]
+            [--genre GENRE] [--parser PARSER] [-o OUTPUT] [--format FORMAT]
+            [--rename-format | --rename-title [--prefix-track]]
+            [--quiet | --warn | --verbose | --debug]
         aiu --help
         aiu --version
 
     Options:
+
+        Generic Arguments
+        =================
+
         -h, --help                      Show this help message.
 
         --version                       Show the package version.
+
+        Parsing Arguments
+        ===================
 
         -p, --path PATH                 Path where to search for audio and metadata info files to process.
                                         [default: '.']
@@ -122,11 +136,38 @@ def cli():
                                         (default: looks for text file compatible format named `all`, `any` or
                                         `every` under `path`, uses the first match with ``any`` format).
 
+        --parser PARSER                 Parsing mode to enforce, one of ``[any, csv, tab, json, yaml]``.
+                                        [default: any]
+
+        -o, --output OUTPUT             Location where to save applied output configurations. Directory must exist.
+                                        (default: `output.cfg` located under `path`).
+
+        --format FORMAT                 Output format of applied metadata details, one of ``[csv, json, yaml, raw]``.
+                                        [default: yaml]
+
+        Operation Arguments
+        ===================
+
+        --rename-title                  Specifies to rename matched audio files with their corresponding ``TITLE``.
+                                        This is equivalent to ``--rename-format '%(TITLE)s'``.
+
+        --prefix-track                  Specifies to prefix the file name with ``TRACK`` when combined with
+                                        ``--rename-title`` option.
+                                        This is equivalent to ``--rename-format '%(TRACK)s %(TITLE)s'``.
+
+        --rename-format FORMAT          Specify the specific ``FORMAT`` to employ for renaming files.
+                                        Formatting follows the %-style syntax. Supported arguments are the below
+                                        tags except image-related items.
+
+        ID3 Tags Arguments
+        ==================
+
         --cover COVER                   Path where to find image file to use as audio file album cover.
                                         (default: locks for image compatible format named `cover`, `artwork` or `art`
                                         under `path`, uses the first match).
 
         --image IMAGE                   Alias for ``--cover``. See corresponding details.
+
 
         --title TITLE                   Name to apply as ``TAG_TITLE`` metadata attribute to file(s).
 
@@ -150,14 +191,8 @@ def cli():
         --no-match-artist               Don't use the ``TAG_ARTIST`` metadata as ``TAG_ALBUM_ARTIST`` when missing.
                                         See option `album-artist`.
 
-        --parser PARSER                 Parsing mode to enforce, one of ``[any, csv, tab, json, yaml]``.
-                                        [default: any]
-
-        -o, --output OUTPUT             Location where to save applied output configurations. Directory must exist.
-                                        (default: `output.cfg` located under `path`).
-
-        --format FORMAT                 Output format of applied metadata details, one of ``[csv, json, yaml, raw]``.
-                                        [default: yaml]
+        Logging Arguments
+        =================
 
         -q, --quiet                     Do not provide any logging details.
 
@@ -195,7 +230,7 @@ def cli():
         'output_mode': args.pop('format'),
         'parser_mode': args.pop('parser'),
         'logger_level': logger_level or ERROR,
-        'match_artist': not args.pop('no_match_artist', False)
+        'match_artist': not args.pop('no_match_artist', False),
     })
     sig = signature(main, follow_wrapped=True)
     args = dict((k, v) for k, v in args.items() if k in sig.parameters)

@@ -334,6 +334,16 @@ class AudioInfo(dict):
 
     duration = property(_get_duration, _set_duration)
 
+    def _get_file(self):
+        # type: (...) -> Optional[AnyStr]
+        return self.get('file', None)
+
+    def _set_file(self, file):
+        # type: (Optional[AnyStr]) -> None
+        self['file'] = StrField(file, allow_none=True)
+
+    file = property(_get_file, _set_file)
+
 
 class AudioConfig(list):
     """
