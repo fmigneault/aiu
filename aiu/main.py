@@ -175,7 +175,8 @@ def cli():
 
     """
     # noinspection PyTypeChecker
-    args = docopt(cli.__doc__, help=True, version=__meta__.__version__)
+    args = sys.argv[1:] or "--help"
+    args = docopt(cli.__doc__, argv=args, help=True, version=__meta__.__version__)
 
     # substitute args names as required, and remove '--'
     args_keys = list(args)

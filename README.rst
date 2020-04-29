@@ -24,6 +24,7 @@ At the command line
 
     aiu "<args>"
 
+See ``aiu --help`` for specific argument details.
 
 Audio Info Specification Formats
 ======================================

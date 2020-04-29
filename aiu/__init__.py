@@ -1,7 +1,11 @@
 from typing import AnyStr, List, Optional
 import logging
 import os
-import __meta__
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+import __meta__  # noqa
 
 AIU_PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
 AIU_ROOT_DIR = os.path.dirname(AIU_PACKAGE_DIR)
