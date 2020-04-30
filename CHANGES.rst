@@ -1,3 +1,12 @@
+CHANGES
+=======
+
+0.3.0
+---------------------
+
+* Add ``--dry`` option to run process without applying modifications/actions.
+* Fix handling the default value for ``--path``.
+* Fixes to logging formats.
 
 0.2.0
 ---------------------

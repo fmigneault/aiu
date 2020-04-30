@@ -173,8 +173,8 @@ def write_config(audio_config, file_path, fmt_mode):
             raise NotImplementedError("format [{}] writing to file unknown".format(fmt_mode))
 
 
-def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML):
-    # type: (AudioConfig, AnyStr, Optional[Union[AnyStr, FormatInfo]]) -> bool
+def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False):
+    # type: (AudioConfig, AnyStr, Optional[Union[AnyStr, FormatInfo]], bool) -> bool
     """Saves the audio config if permitted by the OS and using the corrected file extension."""
     fmt_mode = find_mode(mode, format_modes)
     if not mode:
@@ -186,8 +186,14 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML):
         ext = fmt_mode.extension
     file_path = "{}{}{}".format(name, '' if ext.startswith('.') else '.', ext)
     if os.path.isfile(file_path):
-        os.remove(file_path)
-    write_config(audio_config, file_path, fmt_mode)
+        if dry:
+            LOGGER.debug("Would have removed file: [%s]", file_path)
+        else:
+            os.remove(file_path)
+    if dry:
+        LOGGER.info("Would have saved the output configuration in file: [%s]", file_path)
+    else:
+        write_config(audio_config, file_path, fmt_mode)
     return os.path.isfile(file_path)
 
 

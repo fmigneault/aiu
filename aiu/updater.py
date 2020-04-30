@@ -74,8 +74,8 @@ def update_cover_image(audio_file, cover_file, overwrite=True):
     raise NotImplementedError  # TODO
 
 
-def apply_audio_config(audio_files, audio_config):
-    # type: (Iterable[str], AudioConfig, Optional[str]) -> AudioConfig
+def apply_audio_config(audio_files, audio_config, dry=False):
+    # type: (Iterable[str], AudioConfig, bool) -> AudioConfig
     """
     Applies the metadata fields to the corresponding audio files.
     Matching is attempted first with file names, and other heuristics as required afterward.
@@ -95,8 +95,17 @@ def apply_audio_config(audio_files, audio_config):
                 continue
             matched_info.file = file_path
             audio_file = get_audio_file(file_path)
-            for tag_name, tag_value in audio_info.items():
+            for tag_name, tag_value in matched_info.items():
+                if dry:
+                    LOGGER.debug("Would apply tag [%s] to file [%s]", tag_name, file_path)
+                    continue
                 setattr(audio_file.tag, tag_name, tag_value)
+            if dry:
+                tag_info = list(sorted((k, v) for k, v in matched_info.items() if k not in ['file']))
+                tag_info = [('file', matched_info.file)] + tag_info
+                tags_value_list = '\n'.join('  {}: {}'.format(k, v) for k, v in tag_info)
+                LOGGER.info("Would apply tag updates:\n%s", tags_value_list)
+                continue
             audio_file.tag.save()
         else:
             LOGGER.warning("No audio information was matched for file: [%s]", file_path)
@@ -104,8 +113,8 @@ def apply_audio_config(audio_files, audio_config):
     return audio_config  # FIXME: should return applied with respect to saved audio file tags
 
 
-def update_file_names(audio_config, rename_title, rename_format, prefix_track):
-    # type: (AudioConfig, bool, bool, Optional[str]) -> AudioConfig
+def update_file_names(audio_config, rename_format, rename_title=False, prefix_track=False, dry=False):
+    # type: (AudioConfig, Optional[str], bool, bool, bool) -> AudioConfig
     """
     Renames the files and updates the configuration according to specified formats.
     """
@@ -115,7 +124,8 @@ def update_file_names(audio_config, rename_title, rename_format, prefix_track):
     if rename_title:
         if prefix_track:
             LOGGER.debug("Updating rename format with title and prefix.")
-            rename_format = "%(TRACK)s %(TITLE)s"
+            track_digits = len(str(len(audio_config)))
+            rename_format = "%(TRACK)0{}d %(TITLE)s".format(track_digits)
         else:
             LOGGER.debug("Updating rename format with title only.")
             rename_format = "%(TITLE)s"
@@ -131,6 +141,9 @@ def update_file_names(audio_config, rename_title, rename_format, prefix_track):
             rename_path, origin_name = os.path.split(audio_item.file)
             origin_name, origin_ext = os.path.splitext(origin_name)
             rename_path = os.path.join(rename_path, rename_name + origin_ext)
+            if dry:
+                LOGGER.info("Would rename [%s] => [%s]", origin_name, rename_name)
+                continue
             os.rename(audio_item.file, rename_path)
             audio_item.file = rename_path
             LOGGER.info("Renamed file: [%s] => [%s]", origin_name, rename_name)

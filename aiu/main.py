@@ -43,23 +43,25 @@ def main(
          year=None,                     # type: Optional[int]
          match_artist=True,             # type: bool
          # --- other operation flags ---
+         rename_format=False,           # type: Optional[AnyStr]
          rename_title=False,            # type: bool
          prefix_track=False,            # type: bool
-         rename_format=False,           # type: Optional[AnyStr]
+         dry=False,                     # type: bool
          ):                             # type: (...) -> AudioConfig
     LOGGER.setLevel(logger_level)
+    search_path = '.' if search_path == "'.'" else search_path  # default provided as literal string with quotes
     search_path = os.path.abspath(search_path or os.path.curdir)
-    LOGGER.info("Search path is: [{}]".format(search_path))
+    LOGGER.info("Search path is: [%s]", search_path)
     cfg_info_file = info_file if info_file else look_for_default_file(search_path, ['info', 'config', 'meta'])
-    LOGGER.info("Matched config info file: [{}]".format(cfg_info_file))
+    LOGGER.info("Matched config 'info' file: [%s]", cfg_info_file)
     all_info_file = all_info_file if all_info_file else look_for_default_file(search_path, ['all', 'any', 'every'])
-    LOGGER.info("Matched config 'all' file: [{}]".format(all_info_file))
+    LOGGER.info("Matched config 'all' file: [%s]", all_info_file)
     cover_file = cover_file if cover_file else look_for_default_file(cover_file, ['covert', 'artwork'])
-    LOGGER.info("Matched cover image file: [{}]".format(cover_file))
+    LOGGER.info("Matched cover image file: [%s]", cover_file)
     output_file = validate_output_file(output_file, search_path, default_name='output.cfg')
-    LOGGER.info("Output config file will be: [{}]".format(output_file))
+    LOGGER.info("Output config file %s be: [%s]", 'would' if dry else 'will', output_file)
     audio_files = get_audio_files(search_path)
-    LOGGER.info("Found audio files to process: {}".format(audio_files))
+    LOGGER.info("Found audio files to process:\n  %s", "\n  ".join(audio_files))
     config_combo = []
     if cfg_info_file:
         LOGGER.info("Running audio config parsing...")
@@ -77,19 +79,20 @@ def main(
     if cover_file:
         config_combo.append((True, {'cover': cover_file}))
     if literal_fields:
-        LOGGER.info("Literal fields to apply: [{}]".format(literal_fields))
+        LOGGER.info("Literal fields to apply: [%s]", literal_fields)
         config_combo.append((True, literal_fields))
     if not config_combo:
-        LOGGER.error("Couldn't find any config to apply.")
+        LOGGER.error("Couldn't find any config to process.")
         sys.exit(-1)
     LOGGER.info("Resolving metadata config fields...")
-    LOGGER.debug("Match artist parameter: {}".format(match_artist))
+    LOGGER.debug("Match artist parameter: %s", match_artist)
     audio_config = merge_audio_configs(config_combo, match_artist)
     LOGGER.info("Applying config...")
-    output_config = apply_audio_config(audio_files, audio_config)
-    output_config = update_file_names(output_config, rename_title, rename_format, prefix_track)
-    if not save_audio_config(output_config, output_file, mode=output_mode):
-        LOGGER.error("Failed saving file, but no unhandled exception occurred.")
+    output_config = apply_audio_config(audio_files, audio_config, dry=dry)
+    output_config = update_file_names(output_config, rename_format, rename_title, prefix_track, dry=dry)
+    if not save_audio_config(output_config, output_file, mode=output_mode, dry=dry):
+        if not dry:  # when dry mode, it is normal that the file was not written
+            LOGGER.error("Failed saving file, but no unhandled exception occurred.")
     LOGGER.info("Operation complete.")
     return output_config
 
@@ -107,7 +110,7 @@ def cli():
             [--artist ARTIST] [--title TITLE] [--album ALBUM] [--album-artist ALBUM_ARTIST] [--year YEAR]
             [--genre GENRE] [--parser PARSER] [-o OUTPUT] [--format FORMAT]
             [--rename-format | --rename-title [--prefix-track]]
-            [--quiet | --warn | --verbose | --debug]
+            [--quiet | --warn | --verbose | --debug] [--dry]
         aiu --help
         aiu --version
 
@@ -124,7 +127,7 @@ def cli():
         ===================
 
         -p, --path PATH                 Path where to search for audio and metadata info files to process.
-                                        [default: '.']
+                                        [default: '.'] (current directory)
 
         -f, --file FILE                 Path to a single audio file to edit metadata. (default: `path`)
 
@@ -147,6 +150,9 @@ def cli():
 
         Operation Arguments
         ===================
+
+        --dry                           Do not do any modification, just pretend.
+                                        (note: works best when combined with ``--verbose`` or ``--debug``)
 
         --rename-title                  Specifies to rename matched audio files with their corresponding ``TITLE``.
                                         This is equivalent to ``--rename-format '%(TITLE)s'``.
