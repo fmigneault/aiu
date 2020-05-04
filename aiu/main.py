@@ -8,17 +8,15 @@ from aiu.parser import (
     FORMAT_MODE_YAML,
 )
 from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
-from aiu.utils import look_for_default_file, validate_output_file, get_logger, log_exception
+from aiu.utils import look_for_default_file, validate_output_file, log_exception
 from aiu.typedefs import AudioConfig, Duration
-from aiu import __meta__, tags as t
+from aiu import __meta__, tags as t, LOGGER
 from typing import AnyStr, Optional, Union
 from inspect import signature
 from docopt import docopt
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
 import sys
 import os
-
-LOGGER = get_logger()
 
 
 @log_exception(LOGGER)
@@ -47,6 +45,9 @@ def main(
          rename_title=False,            # type: bool
          prefix_track=False,            # type: bool
          dry=False,                     # type: bool
+         no_rename=False,               # type: bool
+         no_update=False,               # type: bool
+         no_output=False,               # type: bool
          ):                             # type: (...) -> AudioConfig
     LOGGER.setLevel(logger_level)
     search_path = '.' if search_path == "'.'" else search_path  # default provided as literal string with quotes
@@ -79,7 +80,7 @@ def main(
     if cover_file:
         config_combo.append((True, {'cover': cover_file}))
     if literal_fields:
-        LOGGER.info("Literal fields to apply: [%s]", literal_fields)
+        LOGGER.info("Literal fields %s: [%s]", 'that would be applied' if dry else 'to apply', literal_fields)
         config_combo.append((True, literal_fields))
     if not config_combo:
         LOGGER.error("Couldn't find any config to process.")
@@ -87,12 +88,15 @@ def main(
     LOGGER.info("Resolving metadata config fields...")
     LOGGER.debug("Match artist parameter: %s", match_artist)
     audio_config = merge_audio_configs(config_combo, match_artist)
-    LOGGER.info("Applying config...")
-    output_config = apply_audio_config(audio_files, audio_config, dry=dry)
-    output_config = update_file_names(output_config, rename_format, rename_title, prefix_track, dry=dry)
-    if not save_audio_config(output_config, output_file, mode=output_mode, dry=dry):
+    if not dry:
+        LOGGER.info("Applying config...")
+    output_config = apply_audio_config(audio_files, audio_config, dry=dry or no_update)
+    output_config = update_file_names(output_config, rename_format, rename_title, prefix_track, dry=dry or no_rename)
+    if not no_output and not save_audio_config(output_config, output_file, mode=output_mode, dry=dry):
         if not dry:  # when dry mode, it is normal that the file was not written
             LOGGER.error("Failed saving file, but no unhandled exception occurred.")
+    elif no_output:
+        LOGGER.debug("Saving output configuration was disabled.")
     LOGGER.info("Operation complete.")
     return output_config
 
@@ -110,7 +114,7 @@ def cli():
             [--artist ARTIST] [--title TITLE] [--album ALBUM] [--album-artist ALBUM_ARTIST] [--year YEAR]
             [--genre GENRE] [--parser PARSER] [-o OUTPUT] [--format FORMAT]
             [--rename-format | --rename-title [--prefix-track]]
-            [--quiet | --warn | --verbose | --debug] [--dry]
+            [--quiet | --warn | --verbose | --debug] [--dry] [--no-rename] [--no-update]
         aiu --help
         aiu --version
 
@@ -165,6 +169,19 @@ def cli():
                                         Formatting follows the %-style syntax. Supported arguments are the below
                                         tags except image-related items.
 
+        --no-rename                     Do not apply any file rename operation.
+                                        (note: implied when ``--dry`` is provided)
+
+        --no-update                     Do not apply any ID3-Tags updates.
+                                        (note: implied when ``--dry`` is provided)
+
+        --no-output                     Do not save results to output configurations file.
+                                        (see: ``--output``)
+
+        --no-result                     Do not print results to console output.
+                                        Be default result will be reported if logging level is ``--verbose``
+                                        or ``--debug``. This flag is redundant for more restrictive logging levels.
+
         ID3 Tags Arguments
         ==================
 
@@ -215,33 +232,51 @@ def cli():
         aiu --cover "<path-to-cover>/some-album-cover.jpg"
 
     """
-    # noinspection PyTypeChecker
-    args = sys.argv[1:] or "--help"
-    args = docopt(cli.__doc__, argv=args, help=True, version=__meta__.__version__)
+    try:
+        args = sys.argv[1:] or "--help"
+        args = docopt(str(cli.__doc__), argv=args, help=True, version=__meta__.__version__)
 
-    # substitute args names as required, and remove '--'
-    args_keys = list(args)
-    for arg in args_keys:
-        args[arg.replace('--', '').replace('-', '_')] = args.pop(arg)
-    logger_level = NOTSET
-    for arg, lvl in [('debug', DEBUG), ('verbose', INFO), ('warn', WARNING), ('quiet', CRITICAL)]:
-        if args.pop(arg, False):
-            logger_level = lvl
-    args.update({
-        'search_path': args.pop('path', None) or args.pop('file', None),
-        'info_file': args.pop('info'),
-        'all_info_file': args.pop('all'),
-        'cover_file': args.pop('cover', None) or args.pop('image', None),
-        'output_file': args.pop('output'),
-        'output_mode': args.pop('format'),
-        'parser_mode': args.pop('parser'),
-        'logger_level': logger_level or ERROR,
-        'match_artist': not args.pop('no_match_artist', False),
-    })
-    sig = signature(main, follow_wrapped=True)
-    args = dict((k, v) for k, v in args.items() if k in sig.parameters)
-    main(**args)
+        # substitute args names as required, and remove '--'
+        args_keys = list(args)
+        for arg in args_keys:
+            args[arg.replace('--', '').replace('-', '_')] = args.pop(arg)
+        logger_level = NOTSET
+        for arg, lvl in [('debug', DEBUG), ('verbose', INFO), ('warn', WARNING), ('quiet', CRITICAL)]:
+            if args.pop(arg, False):
+                logger_level = lvl
+        no_result = bool(args.pop('no_result', False))
+        args.update({
+            'search_path': args.pop('path', None) or args.pop('file', None),
+            'info_file': args.pop('info'),
+            'all_info_file': args.pop('all'),
+            'cover_file': args.pop('cover', None) or args.pop('image', None),
+            'output_file': args.pop('output'),
+            'output_mode': args.pop('format'),
+            'parser_mode': args.pop('parser'),
+            'logger_level': logger_level or ERROR,
+            'match_artist': not args.pop('no_match_artist', False),
+            'no_rename': bool(args.pop('no_rename', False)),
+            'no_update': bool(args.pop('no_update', False)),
+            'no_output': bool(args.pop('no_output', False)),
+        })
+        sig = signature(main, follow_wrapped=True)
+        args = dict((k, v) for k, v in args.items() if k in sig.parameters)
+    except Exception as exc:
+        exc = exc if LOGGER.isEnabledFor(DEBUG) else False
+        LOGGER.error("Internal error during parsing.", exc_info=exc)
+        return 3
+    try:
+        result = main(**args)
+        if result:
+            if not no_result and LOGGER.isEnabledFor(INFO):
+                LOGGER.to_yaml(result.value)
+            return 0
+    except Exception as exc:
+        exc = exc if LOGGER.isEnabledFor(DEBUG) else False
+        LOGGER.error("Internal error during operation.", exc_info=exc)
+        return 2
+    return 1
 
 
 if __name__ == '__main__':
-    cli()
+    sys.exit(cli())

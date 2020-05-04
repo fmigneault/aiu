@@ -1,10 +1,10 @@
 from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
-from aiu.utils import get_audio_file, get_cover_file, get_logger, slugify_file_name
+from aiu.utils import get_audio_file, get_cover_file
+from aiu import LOGGER
 from typing import Iterable, Optional, Tuple
+from unicodedata import normalize
 import eyed3
 import os
-
-LOGGER = get_logger()
 
 
 def merge_audio_configs(configs, match_artist=False):
@@ -137,14 +137,18 @@ def update_file_names(audio_config, rename_format, rename_title=False, prefix_tr
                 LOGGER.error("Invalid file value cannot be found: [%s]", audio_item.file)
                 continue
             rename_name = rename_format.lower() % audio_item
-            rename_name = slugify_file_name(rename_name)
+            rename_norm = normalize('NFKD', rename_name)
+            LOGGER.debug("Before/after normalization: [%s] => [%s]", rename_name, rename_norm)
             rename_path, origin_name = os.path.split(audio_item.file)
             origin_name, origin_ext = os.path.splitext(origin_name)
-            rename_path = os.path.join(rename_path, rename_name + origin_ext)
+            rename_path = os.path.join(rename_path, rename_norm + origin_ext)
             if dry:
-                LOGGER.info("Would rename [%s] => [%s]", origin_name, rename_name)
+                LOGGER.info("Would rename [%s] => [%s]", origin_name, rename_norm)
                 continue
             os.rename(audio_item.file, rename_path)
             audio_item.file = rename_path
-            LOGGER.info("Renamed file: [%s] => [%s]", origin_name, rename_name)
+            if origin_name == rename_norm:
+                LOGGER.info("File already named: [%s]", origin_name)
+            else:
+                LOGGER.info("Adjusted file name: [%s] => [%s]", origin_name, rename_norm)
     return audio_config

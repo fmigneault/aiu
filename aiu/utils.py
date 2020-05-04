@@ -1,35 +1,22 @@
 from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
-from typing import AnyStr, Callable, List, Optional, Union
+from typing import Any, AnyStr, Callable, List, Optional, Union
 from PIL import Image
 from functools import wraps
 import eyed3
 import six
 import os
-import re
-
-
-def get_logger():
-    # type: (...) -> LoggerType
-    """
-    Get a generic logger configured for the ``aiu`` package.
-
-    .. seealso::
-        aiu.LOGGER
-    """
-    return LOGGER
 
 
 def log_exception(logger=None):
     # type: (LoggerType) -> Callable
     """Decorator that logs an exception on raise within the passed ``function``."""
     if not isinstance(logger, LoggerType):
-        logger = get_logger()
+        logger = LOGGER
 
     def decorator(function):
         @wraps(function)
         def log_exc(*args, **kwargs):
-            # noinspection PyBroadException
             try:
                 return function(*args, **kwargs)
             except Exception as ex:
@@ -79,8 +66,3 @@ def validate_output_file(output_file_path, search_path, default_name='output.cfg
     if not os.path.isdir(os.path.dirname(output_file_path)):
         raise ValueError("invalid save location: [{}]".format(output_file_path))
     return output_file_path
-
-
-def slugify_file_name(file_name):
-    # type: (AnyStr) -> AnyStr
-    return re.sub(r'(?u)[^-\w.\s_\-\!]', '_', file_name)

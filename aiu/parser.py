@@ -1,6 +1,6 @@
 from aiu.typedefs import AudioFile, AudioConfig, FormatInfo
-from aiu.utils import get_logger
 from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
+from aiu import LOGGER
 from eyed3.mp3 import isMp3File
 from typing import AnyStr, Iterable, List, Optional, Union
 import math
@@ -9,8 +9,6 @@ import json
 import csv
 import os
 import re
-
-LOGGER = get_logger()
 
 numbered_list = re.compile(r"^[\s\-#.]*([0-9]+)[\s\-#.]*(.*)")
 duration_info = re.compile(r"""     # Match any 'duration' representation, need to filter if many (ex: one in title)

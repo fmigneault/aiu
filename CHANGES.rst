@@ -1,6 +1,16 @@
 CHANGES
 =======
 
+0.4.0
+---------------------
+
+* Add file renaming operations using flags ``--rename-title``, ``--rename-format`` and ``--prefix-track``.
+* Add ``config/exceptions.cfg`` file that provides a map of exceptions to ignore for rename/beautify operations.
+* Add more reporting and processing control with flags ``--no-rename``,  ``--no-update``,  ``--no-output``
+  and ``--no-result``.
+* Improve error code reporting with corresponding sections.
+* Avoid full traceback dump of error unless ``--debug`` was requested. Only display where error happened.
+
 0.3.0
 ---------------------
 
