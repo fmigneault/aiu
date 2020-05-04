@@ -48,6 +48,7 @@ def main(
          no_rename=False,               # type: bool
          no_update=False,               # type: bool
          no_output=False,               # type: bool
+         no_result=False,               # type: bool
          ):                             # type: (...) -> AudioConfig
     LOGGER.setLevel(logger_level)
     search_path = '.' if search_path == "'.'" else search_path  # default provided as literal string with quotes
@@ -114,7 +115,7 @@ def cli():
             [--artist ARTIST] [--title TITLE] [--album ALBUM] [--album-artist ALBUM_ARTIST] [--year YEAR]
             [--genre GENRE] [--parser PARSER] [-o OUTPUT] [--format FORMAT]
             [--rename-format | --rename-title [--prefix-track]]
-            [--quiet | --warn | --verbose | --debug] [--dry] [--no-rename] [--no-update]
+            [--quiet | --warn | --verbose | --debug] [--dry] [--no-rename] [--no-update] [--no-output] [--no-result]
         aiu --help
         aiu --version
 
