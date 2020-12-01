@@ -1,11 +1,12 @@
 from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
-from typing import Any, AnyStr, Callable, List, Optional, Union
+from typing import AnyStr, Callable, Iterable, List, Optional, Union
 from PIL import Image
 from functools import wraps
 import eyed3
-import six
 import os
+import six
+import shutil
 
 
 def log_exception(logger=None):
@@ -38,6 +39,15 @@ def look_for_default_file(path, names):
         if c_name in names and c_ext != '':
             return os.path.abspath(os.path.join(path, c))
     return None
+
+
+def backup_files(file_paths, backup_dir):
+    # type: (Iterable[AnyStr], AnyStr) -> None
+    os.makedirs(backup_dir, exist_ok=True)
+    for file_path in file_paths:
+        copy_path = os.path.join(backup_dir, os.path.split(file_path)[-1])
+        LOGGER.debug("Backup [%s]", copy_path)
+        shutil.copyfile(file_path, copy_path)
 
 
 def get_audio_file(audio_file):

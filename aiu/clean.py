@@ -1,4 +1,4 @@
-from typing import AnyStr, List, Optional, Union
+from typing import AnyStr
 import aiu
 import string
 import six
@@ -14,12 +14,12 @@ def load_config(maybe_config, wanted_config, is_map):
     if maybe_config is None and isinstance(wanted_config, six.string_types) and os.path.isfile(wanted_config):
         try:
             with open(wanted_config, 'r') as f:
-                lines = [w.strip() for w in f.readlines()]
+                lines = [w.strip() for w in f.readlines() if not w.startswith('#')]
                 if is_map:
                     lines = [line.split(':') for line in lines]
                     maybe_config = {k.strip().lower(): w.strip() for k, w in lines}
                 else:
-                    maybe_config
+                    maybe_config = lines
         except Exception:
             raise ValueError("Invalid configuration file could not be parsed:\n  file: [{!s}]\n  map?: [{}]".format(
                 wanted_config, is_map
@@ -29,8 +29,8 @@ def load_config(maybe_config, wanted_config, is_map):
     return maybe_config
 
 
-def beautify_string(s, stopwords_config=aiu.DEFAULT_STOPWORDS_CONFIG, exceptions_config=aiu.DEFAULT_EXCEPTIONS_CONFIG):
-    # type: (AnyStr, aiu.StopwordsType, aiu.ExceptionsType) -> AnyStr
+def beautify_string(s):
+    # type: (AnyStr) -> AnyStr
     """
     Applies `beatification` operations for a `field` string.
         - removes invalid whitespaces
@@ -40,8 +40,6 @@ def beautify_string(s, stopwords_config=aiu.DEFAULT_STOPWORDS_CONFIG, exceptions
         - literal replacement of case-insensitive match of `exceptions` by their explicit value
         - capitalizes the first word of each sentence
     """
-    aiu.STOPWORDS = load_config(aiu.STOPWORDS, stopwords_config, is_map=False)
-    aiu.EXCEPTIONS = load_config(aiu.EXCEPTIONS, exceptions_config, is_map=True)
     for c in WHITESPACES_NO_SPACE:
         if c in s:
             s = s.replace(c, ' ')

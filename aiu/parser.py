@@ -1,4 +1,4 @@
-from aiu.typedefs import AudioFile, AudioConfig, FormatInfo
+from aiu.typedefs import AudioConfig, FormatInfo
 from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
 from aiu import LOGGER
 from eyed3.mp3 import isMp3File
@@ -19,12 +19,12 @@ duration_info = re.compile(r"""     # Match any 'duration' representation, need 
      (?::[0-5][0-9])?)                          # seconds time part (00-59)
 """, re.VERBOSE)
 
-FORMAT_MODE_ANY = FormatInfo('any', '*')
-FORMAT_MODE_CSV = FormatInfo('csv', 'csv')
-FORMAT_MODE_TAB = FormatInfo('tab', ['tab', 'cfg', 'config', 'meta', 'info', 'txt'])
-FORMAT_MODE_JSON = FormatInfo('json', 'json')
-FORMAT_MODE_YAML = FormatInfo('yaml', ['yml', 'yaml'])
-FORMAT_MODE_RAW = FormatInfo('raw', ['raw', 'cls', 'class', 'ref'])     # YAML with full class and properties values
+FORMAT_MODE_ANY = FormatInfo("any", "*")
+FORMAT_MODE_CSV = FormatInfo("csv", "csv")
+FORMAT_MODE_TAB = FormatInfo("tab", ["tab", "cfg", "config", "meta", "info", "txt"])
+FORMAT_MODE_JSON = FormatInfo("json", "json")
+FORMAT_MODE_YAML = FormatInfo("yaml", ["yml", "yaml"])
+FORMAT_MODE_RAW = FormatInfo("raw", ["raw", "cls", "class", "ref"])     # YAML with full class and properties values
 format_modes = frozenset([
     FORMAT_MODE_CSV,
     FORMAT_MODE_TAB,
@@ -144,7 +144,7 @@ def write_config(audio_config, file_path, fmt_mode):
         fmt_mode = FORMAT_MODE_YAML
     else:
         audio_config = audio_config.value
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         if fmt_mode is FORMAT_MODE_JSON:
             json.dump(audio_config, f)
         elif fmt_mode is FORMAT_MODE_YAML:
@@ -158,14 +158,14 @@ def write_config(audio_config, file_path, fmt_mode):
             max_title_len = len(max(audio_config, key=lambda _: _.title).title)
             max_track_len = 0 if not all_have_track else int(math.log10(max(_.track for _ in audio_config))) + 1
             max_track_dot = max_track_len + 1   # extra space for '.' after track number
-            line_fmt = '{track:track_tab}{title:title_tab}{duration}' \
-                .replace('title_tab', str(max_title_len)) \
-                .replace('track_tab', str(max_track_dot))
+            line_fmt = "{track:track_tab}{title:title_tab}{duration}" \
+                .replace("title_tab", str(max_title_len)) \
+                .replace("track_tab", str(max_track_dot))
             for ac in audio_config:
                 f.write(line_fmt.format(
-                    track='{}.'.format(ac.track) if all_have_track else '',
+                    track="{}.".format(ac.track) if all_have_track else "",
                     title=ac.title,
-                    duration=ac.duration if ac.duration else '')
+                    duration=ac.duration if ac.duration else "")
                 )
         else:
             raise NotImplementedError("format [{}] writing to file unknown".format(fmt_mode))
@@ -182,7 +182,7 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False)
         LOGGER.warning("file extension [{}] doesn't match requested save format [{}], fixing to [{}]."
                        .format(ext, mode, fmt_mode.name))
         ext = fmt_mode.extension
-    file_path = "{}{}{}".format(name, '' if ext.startswith('.') else '.', ext)
+    file_path = "{}{}{}".format(name, "" if ext.startswith(".") else ".", ext)
     if os.path.isfile(file_path):
         if dry:
             LOGGER.debug("Would have removed file: [%s]", file_path)

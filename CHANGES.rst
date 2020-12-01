@@ -1,7 +1,15 @@
 CHANGES
 =======
 
-0.4.0
+0.5.0
+---------------------
+
+* Add argument ``--backup`` that will enforce saving a copy of audio files to be edited beforehand.
+* Add argument ``--exceptions`` to override default file ``config/exceptions.cfg``.
+* Add argument ``--stopwords`` to override default file ``config/stopwords.cfg``.
+* Fix parsing of single ``--file`` path to search default directory locations of other arguments (e.g.: ``--info``).
+
+0.4.0 (2020-05-03)
 ---------------------
 
 * Add file renaming operations using flags ``--rename-title``, ``--rename-format`` and ``--prefix-track``.
@@ -11,21 +19,21 @@ CHANGES
 * Improve error code reporting with corresponding sections.
 * Avoid full traceback dump of error unless ``--debug`` was requested. Only display where error happened.
 
-0.3.0
+0.3.0 (2020-04-30)
 ---------------------
 
 * Add ``--dry`` option to run process without applying modifications/actions.
 * Fix handling the default value for ``--path``.
 * Fixes to logging formats.
 
-0.2.0
+0.2.0 (2020-04-29)
 ---------------------
 
 * Add audio file rename options.
 * Fix no arguments raising parsing error. Know does default ``--help``.
 * Fix runtime execution path not found to metadata.
 
-0.1.0
+0.1.0 (2019-10-26)
 ---------------------
 
 * First structured release.
