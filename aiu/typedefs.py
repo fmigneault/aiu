@@ -32,8 +32,8 @@ class FormatInfo(object):
         return self._name
 
     @property
-    def extension(self):
-        return self._ext[0]
+    def extensions(self):
+        return self._ext
 
     def matches(self, extension):
         return extension in self._ext

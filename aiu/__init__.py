@@ -35,7 +35,7 @@ class YamlEnabledLogger(logging.Logger):
 
 
 # logging
-VERBOSE = int(logging.DEBUG/2)
+VERBOSE = logging.DEBUG // 2
 logging.addLevelName(VERBOSE, "VERBOSE")
 logging.setLoggerClass(YamlEnabledLogger)
 LOGGER = logging.getLogger(__meta__.__package__)

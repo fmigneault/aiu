@@ -1,204 +1,220 @@
 #!/usr/bin/env python
+"""
+Main process for updating audio files metadata from parsed configuration files.
+
+All options defining specific metadata fields (``--artist``, ``--year``, etc.) override any
+corresponding information fields found in configurations files from options ``--info`` or ``--all``.
+Applied changes listed in ``--output`` file.
+"""
 import aiu
 from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG
 from aiu.clean import load_config
 from aiu.parser import (
+    ALL_PARSER_EXTENSIONS,
     FORMAT_MODE_ANY,
     FORMAT_MODE_YAML,
     get_audio_files,
     save_audio_config,
     parse_audio_config,
-    parser_modes,
-    format_modes,
+    PARSER_MODES,
+    FORMAT_MODES,
 )
-from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
+from aiu.updater import ALL_IMAGE_EXTENSIONS, merge_audio_configs, apply_audio_config, update_file_names
 from aiu.utils import backup_files, look_for_default_file, validate_output_file, log_exception
 from aiu.typedefs import AudioConfig, Duration
 from aiu import __meta__, tags as t, LOGGER
 from typing import AnyStr, Optional, Union
-from inspect import signature
-from docopt import docopt
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+import argparse
 import sys
 import os
 
 
 def cli():
-    """Audio Info Updater (aiu)
-    Main process for updating audio files metadata from parsed configuration files.
+    _PROG = "aiu"
+    _NAME = "Audio Info Updater ({})".format(_PROG)
+    _DESC = "{}. {}".format(_NAME, __doc__)
+    _HELP_FORMAT = """{} Format Modes
+    
+    Below are the applicable format modes for format/parser options. 
+    Note that not all modes necessarily apply to both. 
+    Refer to their option of applicable values.
+    
+        ``any``
+            Attempts to automatically determine which of the formats to apply based
+            on the contents of the provided information file. If this is causing
+            problems, switch to explicit specification of the provided format.
+    
+        ``csv``
+            Expects an header row indicating the fields retrieved on following lines.
+            Then, each line provide an entry to attempt matching against an audio file.
+    
+        ``tab``
+            Takes a plain list of (any amount of) tab delimited rows where each one
+            represents a potential audio file to find. Rows are expected to have
+            following format (bracket fields are optional):
+    
+                [track]     title       duration
+    
+        ``json`` / ``yaml``
+            Standard representation of corresponding formats of a list of objects.
+            Each object provides fields and values to attempt match against audio files.
+            Fields names correspond to the lower case values
+    
+        ``list``
+            Parses a plain list with each field placed on a separate row. Rows are
+            expected to provide continuous intervals between corresponding field, as
+            presented below, for each audio files to attempt match. Corresponding fields 
+            must be provided for each entry. Either one or both of the TRACK/DURATION 
+            fields are mandatory.
+    
+                [track-1]
+                title-1
+                [duration-1]
+                [track-2]
+                title-2
+                [duration-2]
+                ...
+    """.format(_NAME)
 
-    All options defining specific metadata fields (`artist`, `year`, etc.) override any matching
-    information fields found in configurations files via options `info` or `all`.
-    Applied changes are saved to `output` file.
-
-    Usage:
-        aiu [-h] [--help] [-p PATH | -f FILE] [-i INFO] [-a ALL] [--image IMAGE | --cover COVER]
-            [--artist ARTIST] [--title TITLE] [--album ALBUM] [--album-artist ALBUM_ARTIST] [--year YEAR]
-            [--genre GENRE] [--parser PARSER] [-o OUTPUT] [--format FORMAT]
-            [--rename-format | --rename-title [--prefix-track]]
-            [--quiet | --warn | --verbose | --debug] [--dry] [--no-rename] [--no-update] [--no-output] [--no-result]
-        aiu --help
-        aiu --version
-
-    Options:
-
-        Generic Arguments
-        =================
-
-        -h, --help                      Show this help message.
-
-        --version                       Show the package version.
-
-        Parsing Arguments
-        ===================
-
-        -p, --path PATH                 Path where to search for audio and metadata info files to process.
-                                        [default: '.'] (current directory)
-
-        -f, --file FILE                 Path to a single audio file to edit metadata. (default: `path`)
-
-        -i, --info INFO                 Path to audio metadata info file to be applied to matched audio files.
-                                        (default: looks for text file compatible format named `info`, `config` or
-                                        `meta` under `path`, uses the first match with ``any`` format).
-
-        -a, --all ALL                   Path to audio info file of metadata to apply to all matched audio files.
-                                        (default: looks for text file compatible format named `all`, `any` or
-                                        `every` under `path`, uses the first match with ``any`` format).
-
-        -P, --parser PARSER             Parsing mode to enforce, one of ``[any, csv, tab, json, yaml]``.
-                                        [default: any]
-
-        -o, --output OUTPUT             Location where to save applied output configurations. Directory must exist.
-                                        (default: `output.cfg` located under `path`).
-
-        -F, --format FORMAT             Output format of applied metadata details, one of ``[csv, json, yaml, raw]``.
-                                        [default: yaml]
-
-        -E, --exceptions EXCEPTIONS     Path to custom exceptions configuration file
-                                        (default: ``config/exceptions.cfg``).
-                                        During formatting of fields, words matched against keys in the file will be
-                                        replaced by the specified value instead of default word capitalization.
-
-        -S, --stopwords STOPWORDS       Path to custom stopwords configuration file (default: ``config/stopwords.cfg``).
-                                        When formatting fields of ID3 tags and file names, the resulting words
-                                        matched against listed words from that file will be converted to lowercase
-                                        instead of the default word capitalization.
-
-        Operation Arguments
-        ===================
-
-        --dry                           Do not do any modification, just pretend.
-                                        (note: works best when combined with ``--verbose`` or ``--debug``)
-
-        -b, --backup                    Create a backup of files to be modified. Files are saved in directory named 
-                                        ``backup`` under the ``--path`` or parent directory of ``--file``. 
-                                        No backup is accomplished otherwise.
-
-        --rename-title                  Specifies to rename matched audio files with their corresponding ``TITLE``.
-                                        This is equivalent to ``--rename-format '%(TITLE)s'``.
-
-        --prefix-track                  Specifies to prefix the file name with ``TRACK`` when combined with
-                                        ``--rename-title`` option.
-                                        This is equivalent to ``--rename-format '%(TRACK)s %(TITLE)s'``.
-
-        --rename-format FORMAT          Specify the specific ``FORMAT`` to employ for renaming files.
-                                        Formatting follows the %-style syntax. Supported arguments are the below
-                                        tags except image-related items.
-
-        --no-rename                     Do not apply any file rename operation.
-                                        (note: implied when ``--dry`` is provided)
-
-        --no-update                     Do not apply any ID3-Tags updates.
-                                        (note: implied when ``--dry`` is provided)
-
-        --no-output                     Do not save results to output configurations file.
-                                        (see: ``--output``)
-
-        --no-result                     Do not print results to console output.
-                                        Be aware that result will be reported only if logging level is ``--verbose``
-                                        or ``--debug``. This flag is redundant for more restrictive logging levels.
-
-        ID3 Tags Arguments
-        ==================
-
-        --cover COVER                   Path where to find image file to use as audio file album cover.
-                                        (default: locks for image compatible format named `cover`, `artwork` or `art`
-                                        under `path`, uses the first match).
-
-        --image IMAGE                   Alias for ``--cover``. See corresponding details.
-
-
-        --title TITLE                   Name to apply as ``TAG_TITLE`` metadata attribute to file(s).
-
-        --track TRACK                   Name to apply as ``TAG_TRACK`` metadata attribute to file(s).
-
-        --year YEAR                     Name to apply as ``TAG_YEAR`` metadata attribute to file(s).
-
-        --duration DURATION             Name to apply as ``TAG_DURATION`` metadata attribute to file(s).
-
-        --genre GENRE                   Name to apply as ``TAG_GENRE`` metadata attribute to file(s).
-
-        --artist ARTIST                 Name to apply as ``TAG_ARTIST`` metadata attribute to file(s).
-
-        --album ALBUM                   Name to apply as ``TAG_ALBUM`` metadata attribute to file(s).
-
-        --album-artist ALBUM_ARTIST     Name to apply as ``TAG_ALBUM_ARTIST`` metadata attribute to audio file(s).
-                                        If not provided, but ``TAG_ARTIST`` can be found via option `artist` or some
-                                        configuration file (`--info` or `--all`), the same value is employed
-                                        unless also providing option `--no-match-artist`.
-
-        --no-match-artist               Don't use the ``TAG_ARTIST`` metadata as ``TAG_ALBUM_ARTIST`` when missing.
-                                        See option `--album-artist`.
-
-        Logging Arguments
-        =================
-
-        -q, --quiet                     Do not provide any logging details.
-
-        -w, --warn                      Provide minimal logging details (warnings and errors only).
-
-        -v, --verbose                   Provide additional information logging.
-
-        -d, --debug                     Provide even more logging details (enable debug information).
-
-    Examples::
-
-        aiu
-        aiu --path "<specific-dir-path>"
-        aiu --cover "<path-to-cover>/some-album-cover.jpg"
-
-    """
     try:
-        args = sys.argv[1:] or "--help"
-        args = docopt(str(cli.__doc__), argv=args, help=True, version=__meta__.__version__)
+        ap = argparse.ArgumentParser(prog=_PROG, description=_DESC, add_help=False,
+                                     formatter_class=lambda prog: argparse.HelpFormatter(prog, width=120))
+        gen_args = ap.add_argument_group(title="General Arguments",
+                                         description="Arguments that provides information about the application "
+                                                     "or usage related details.")
+        gen_args.add_argument("-h", "--help", action="help", help="Display this help message.")
+        gen_args.add_argument("--help-format", action="store_true",
+                              help="Display additional help details about formatter/parser modes.")
+        gen_args.add_argument("--version", action="version", version=__meta__.__version__,
+                              help="Display the program's version.")
+        parser_args = ap.add_argument_group(title="Parsing Arguments",
+                                            description="Arguments that control parsing methodologies and "
+                                                        "configurations to update matched audio files metadata.")
+        search_path = parser_args.add_mutually_exclusive_group(required=True)
+        search_path.add_argument("-p", "--path", default=".",
+                                 help="Path where to search for audio and metadata info files to process. "
+                                      "(default: %(default)s).")
+        search_path.add_argument("-f", "--file",
+                                 help="Path to a single audio file to edit metadata (default: %(default)s).")
+        parser_args.add_argument("-i", "--info", dest="info_file",
+                                 help="Path to audio metadata information file to be applied to format matched with "
+                                      "audio files. (default: looks for text file compatible format named `info`, "
+                                      "`config` or `meta` under `path`, uses the first match with ``any`` format).")
+        parser_args.add_argument("-a", "--all", dest="all_info_file",
+                                 help="Path to audio info file of metadata to apply to every matched audio files. "
+                                      "This is mainly to apply shared tags across a list of matched audio files such "
+                                      "as the same ARTIST, ALBUM or YEAR values for a set of grouped tracks. "
+                                      "(default: looks for text file compatible format named `all`, `any` or "
+                                      "`every` under `path`, uses the first match with ``any`` format).")
+        parser_args.add_argument("-P", "--parser", dest="parser_mode",
+                                 default="any", choices=[p.name for p in PARSER_MODES],
+                                 help="Parsing mode to enforce. See also ``--help-format`` for details. "
+                                      "(default: %(default)s)")
+        parser_args.add_argument("-o", "--output", dest="output_file",
+                                 help="Location where to save applied output configurations. Directory must exist. "
+                                      "(default: ``output.cfg`` located under ``--path``"
+                                      " or parent directory of ``--file``).")
+        parser_args.add_argument("-F", "--format", dest="output_mode",
+                                 default=FORMAT_MODE_YAML, choices=[f.name for f in FORMAT_MODES],
+                                 help="Output format of applied metadata details. "
+                                      "See also ``--help-format`` for details. (default: %(default)s)")
+        parser_args.add_argument("-E", "--exceptions", default=DEFAULT_EXCEPTIONS_CONFIG, dest="exceptions_config",
+                                 help="Path to custom exceptions configuration file "
+                                      "(default: ``config/exceptions.cfg``). "
+                                      "During formatting of fields, words matched against keys in the file will be "
+                                      "replaced by the specified value instead of default word capitalization.")
+        parser_args.add_argument("-S", "--stopwords", default=DEFAULT_STOPWORDS_CONFIG, dest="stopwords_config",
+                                 help="Path to custom stopwords configuration file "
+                                      "(default: ``config/stopwords.cfg``). "
+                                      "When formatting fields of ID3 tags and file names, the resulting words "
+                                      "matched against listed words from that file will be converted to lowercase "
+                                      "instead of the default word capitalization.")
+        op_args = ap.add_argument_group(title="Operation Arguments",
+                                        description="Arguments to control which subset of operations to apply on "
+                                                    "matched audio files and parsed metadata.")
+        op_args.add_argument("--dry", action="store_true",
+                             help="Do not execute any modification, just pretend. "
+                                  "(note: works best when combined with outputs of ``--verbose`` or ``--debug``)")
+        op_args.add_argument("-b", "--backup", action="store_true",
+                             help="Create a backup of files to be modified. Files are saved in directory named "
+                                  "``backup`` under the ``--path`` or parent directory of ``--file``. " 
+                                  "No backup is accomplished otherwise.")
+        op_args.add_argument("--rename-title", "--RT", action="store_true",
+                             help="Specifies whether to rename matched audio files with their corresponding ``TITLE``. "
+                                  "This is equivalent to ``--rename-format '%%(TITLE)s'``.")
+        op_args.add_argument("--prefix-track", "--PT", action="store_true",
+                             help="Specifies whether to prefix the file name with ``TRACK`` when combined with "
+                                  "``--rename-title`` option. "
+                                  "This is equivalent to ``--rename-format '%%(TRACK)s %%(TITLE)s'``.")
+        op_args.add_argument("--rename-format", "--RF",
+                             help="Specify the specific ``FORMAT`` to employ for renaming files. "
+                                  "Formatting template follows the ``%%(<TAG>)`` syntax. "
+                                  "Supported ``<TAG>`` fields are listed in ID3 TAG names except image-related items.")
+        op_args.add_argument("--no-rename", "--nR", action="store_true",
+                             help="Do not apply any file rename operation. (note: implied when ``--dry`` is provided)")
+        op_args.add_argument("--no-update", "--nU", action="store_true",
+                             help="Do not apply any ID3-Tags updates. (note: implied when ``--dry`` is provided)")
+        op_args.add_argument("--no-output", "--nO", action="store_true",
+                             help="Do not save results to output configurations file. (see: ``--output``)")
+        op_args.add_argument("--no-result", "--nP", action="store_true",
+                             help="Do not print results to console output. "
+                                  "Be aware that result will be reported only if logging level is ``--verbose`` "
+                                  "or ``--debug``. This flag is redundant for more restrictive logging levels.")
+        id3_args = ap.add_argument_group(title="ID3 Tags Arguments",
+                                         description="Options to directly provide specific ID3 tag values to one or "
+                                                     "many audio files matched instead of through ``--info`` "
+                                                     "and ``--all`` configuration files.")
+        id3_args.add_argument("-c", "--cover", "-I", "--image", dest="cover_file",
+                              help="Path where to find image file to use as audio file album cover. "
+                                   "(default: looks for image of compatible format named "
+                                   "`cover`, `artwork`, `art` or `image` under ``--path`` or parent directory "
+                                   "of ``--file``, using the first match).")
+        id3_args.add_argument("-T", "--title", dest=t.TAG_TITLE,
+                              help="Name to apply as ``TAG_TITLE`` metadata attribute to file(s).")
+        id3_args.add_argument("-N", "--track", "--track-number", dest=t.TAG_TRACK,
+                              help="Name to apply as ``TAG_TRACK`` metadata attribute to file(s).")
+        id3_args.add_argument("-Y", "--year", dest=t.TAG_YEAR,
+                              help="Name to apply as ``TAG_YEAR`` metadata attribute to file(s).")
+        id3_args.add_argument("-D", "--duration", dest=t.TAG_DURATION,
+                              help="Name to apply as ``TAG_DURATION`` metadata attribute to file(s).")
+        id3_args.add_argument("-G", "--genre", dest=t.TAG_GENRE,
+                              help="Name to apply as ``TAG_GENRE`` metadata attribute to file(s).")
+        id3_args.add_argument("--CA", "--contrib-artist", "--artist", dest=t.TAG_ARTIST,
+                              help="Name to apply as ``TAG_ARTIST`` metadata attribute to file(s).")
+        id3_args.add_argument("-A", "--album", dest=t.TAG_ALBUM,
+                              help="Name to apply as ``TAG_ALBUM`` metadata attribute to file(s).")
+        id3_args.add_argument("--AA", "--album-artist", dest=t.TAG_ALBUM_ARTIST,
+                              help="Name to apply as ``TAG_ALBUM_ARTIST`` metadata attribute to audio file(s). "
+                                   "If not provided, but ``TAG_ARTIST`` can be found via option ``--artist`` or some "
+                                   "other configuration file (``--info`` or ``--all``), the same value is employed "
+                                   "unless requested not to do so using option ``--no-match-artist``.")
+        id3_args.add_argument("--no-match-artist", "--nA", action="store_true", dest="match_artist")
+        log_args = ap.add_argument_group(title="Logging Arguments",
+                                         description="Arguments that control logging and reporting verbosity.")
+        log_args.add_argument("-q", "--quiet", help="Do not provide any logging details except error.")
+        log_args.add_argument("-w", "--warn", help="Provide minimal logging details (warnings and errors only). "
+                                                   "Warnings can include important notices about taken decisions or "
+                                                   "unexpected yet handled parsing of values.")
+        log_args.add_argument("-v", "--verbose", help="Provide additional information logging.")
+        log_args.add_argument("-d", "--debug", help="Provide as much logging details as possible.")
 
-        # substitute args names as required, and remove '--'
-        args_keys = list(args)
-        for arg in args_keys:
-            args[arg.replace("--", "").replace("-", "_")] = args.pop(arg)
-        logger_level = NOTSET
+        argv = None if sys.argv[1:] else ["--help"]  # auto-help message if no args
+        ns = ap.parse_args(args=argv)
+        if ns.help_format:
+            print(_HELP_FORMAT)
+            return 0
+        args = vars(ns)
+        logger_level = ERROR
         for arg, lvl in [("debug", DEBUG), ("verbose", INFO), ("warn", WARNING), ("quiet", CRITICAL)]:
             if args.pop(arg, False):
                 logger_level = lvl
-        no_result = bool(args.pop("no_result", False))
+        LOGGER.setLevel(logger_level)
+        args["search_path"] = args.pop("path", None) or args.pop("file", None)
+
         args.update({
-            "search_path": args.pop("path", None) or args.pop("file", None),
-            "info_file": args.pop("info"),
-            "all_info_file": args.pop("all"),
-            "exceptions_config": args.pop("exceptions"),
-            "stopwords_config": args.pop("stopwords"),
-            "cover_file": args.pop("cover", None) or args.pop("image", None),
-            "output_file": args.pop("output"),
-            "output_mode": args.pop("format"),
-            "parser_mode": args.pop("parser"),
-            "logger_level": logger_level or ERROR,
             "match_artist": not args.pop("no_match_artist", False),
-            "no_rename": bool(args.pop("no_rename", False)),
-            "no_update": bool(args.pop("no_update", False)),
-            "no_output": bool(args.pop("no_output", False)),
         })
-        sig = signature(main, follow_wrapped=True)
-        args = dict((k, v) for k, v in args.items() if k in sig.parameters)
     except Exception as exc:
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
         LOGGER.error("Internal error during parsing.", exc_info=exc)
@@ -206,8 +222,6 @@ def cli():
     try:
         result = main(**args)
         if result:
-            if not no_result and LOGGER.isEnabledFor(INFO):
-                LOGGER.to_yaml(result.value)
             return 0
     except Exception as exc:
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
@@ -224,8 +238,8 @@ def main(
          all_info_file=None,            # type: Optional[AnyStr]
          cover_file=None,               # type: Optional[AnyStr]
          output_file=None,              # type: Optional[AnyStr]
-         output_mode=FORMAT_MODE_YAML,  # type: Union[format_modes]
-         parser_mode=FORMAT_MODE_ANY,   # type: Union[parser_modes]
+         output_mode=FORMAT_MODE_YAML,  # type: Union[FORMAT_MODES]
+         parser_mode=FORMAT_MODE_ANY,   # type: Union[PARSER_MODES]
          logger_level=INFO,             # type: Union[AnyStr, int]
          exceptions_config=None,        # type: Optional[AnyStr]
          stopwords_config=None,         # type: Optional[AnyStr]
@@ -255,11 +269,15 @@ def main(
     search_path = os.path.abspath(search_path or os.path.curdir)
     search_dir = search_path if os.path.isdir(search_path) else os.path.split(search_path)[0]
     LOGGER.info("Search path is: [%s]", search_path)
-    cfg_info_file = info_file if info_file else look_for_default_file(search_dir, ["info", "config", "meta"])
+    cfg_info_file = info_file
+    if not cfg_info_file:
+        cfg_info_file = look_for_default_file(search_dir, ["info", "config", "meta"], ALL_PARSER_EXTENSIONS)
     LOGGER.info("Matched config 'info' file: [%s]", cfg_info_file)
-    all_info_file = all_info_file if all_info_file else look_for_default_file(search_dir, ["all", "any", "every"])
+    if not all_info_file:
+        all_info_file = look_for_default_file(search_dir, ["all", "any", "every"], ALL_PARSER_EXTENSIONS)
     LOGGER.info("Matched config 'all' file: [%s]", all_info_file)
-    cover_file = cover_file if cover_file else look_for_default_file(search_dir, ["cover", "artwork"])
+    if not cover_file:
+        cover_file = look_for_default_file(search_dir, ["cover", "artwork", "art", "image"], ALL_IMAGE_EXTENSIONS)
     LOGGER.info("Matched cover image file: [%s]", cover_file)
     output_file = validate_output_file(output_file, search_dir, default_name="output.cfg")
     LOGGER.info("Output config file %s be: [%s]", "would" if dry else "will", output_file)
@@ -311,6 +329,10 @@ def main(
             LOGGER.error("Failed saving file, but no unhandled exception occurred.")
     elif no_output:
         LOGGER.debug("Saving output configuration was disabled.")
+    if not no_result and output_config and LOGGER.isEnabledFor(INFO):
+        LOGGER.to_yaml(output_config .value)
+    elif no_result:
+        LOGGER.debug("Logging result configuration was disabled.")
     LOGGER.info("Operation complete.")
     return output_config
 

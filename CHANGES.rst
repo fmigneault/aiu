@@ -8,6 +8,7 @@ CHANGES
 * Add argument ``--exceptions`` to override default file ``config/exceptions.cfg``.
 * Add argument ``--stopwords`` to override default file ``config/stopwords.cfg``.
 * Fix parsing of single ``--file`` path to search default directory locations of other arguments (e.g.: ``--info``).
+* Drop ``docopt`` in favor of ``argparse`` which offer more explicit and versatile configuration of options.
 
 0.4.0 (2020-05-03)
 ---------------------

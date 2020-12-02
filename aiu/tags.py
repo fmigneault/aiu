@@ -1,8 +1,8 @@
-TAG_ALBUM = 'album'
-TAG_ALBUM_ARTIST = 'album_artist'
-TAG_ARTIST = 'artist'
-TAG_DURATION = 'duration'
-TAG_GENRE = 'genre'
-TAG_TITLE = 'title'
-TAG_TRACK = 'track'
-TAG_YEAR = 'year'
+TAG_ALBUM = "album"
+TAG_ALBUM_ARTIST = "album_artist"
+TAG_ARTIST = "artist"
+TAG_DURATION = "duration"
+TAG_GENRE = "genre"
+TAG_TITLE = "title"
+TAG_TRACK = "track"
+TAG_YEAR = "year"

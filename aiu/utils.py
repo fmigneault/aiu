@@ -26,18 +26,22 @@ def log_exception(logger=None):
     return decorator
 
 
-def look_for_default_file(path, names):
-    # type: (AnyStr, Union[List[AnyStr], AnyStr]) -> Union[AnyStr, None]
+def look_for_default_file(path, allowed_names, allowed_extensions=None):
+    # type: (AnyStr, Union[List[AnyStr], AnyStr], Optional[Union[List[AnyStr], AnyStr]]) -> Union[AnyStr, None]
     """
     Looks in `path` for any file matching any of the `names`.
+
     :returns: full path of first matching occurrence, or `None`.
     """
-    names = names if isinstance(names, list) else [names]
+    names = allowed_names if isinstance(allowed_names, (list, set)) else [allowed_names]
+    if allowed_extensions:
+        allowed_extensions = allowed_extensions if isinstance(allowed_extensions, (list, set)) else [allowed_extensions]
     contents = sorted(os.listdir(path))
     for c in contents:
         c_name, c_ext = os.path.splitext(c)
-        if c_name in names and c_ext != '':
-            return os.path.abspath(os.path.join(path, c))
+        if c_name in names and c_ext != "":
+            if not allowed_extensions or c_ext in allowed_extensions:
+                return os.path.abspath(os.path.join(path, c))
     return None
 
 

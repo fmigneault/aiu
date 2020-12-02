@@ -7,6 +7,9 @@ import eyed3
 import os
 
 
+ALL_IMAGE_EXTENSIONS = frozenset([".tif", ".png", ".jpg", ".jpeg"])
+
+
 def merge_audio_configs(configs, match_artist=False):
     # type: (Iterable[Tuple[bool, AudioConfig]], Optional[bool]) -> AudioConfig
     """

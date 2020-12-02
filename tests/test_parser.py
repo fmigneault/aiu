@@ -1,8 +1,7 @@
 from aiu.parser import parse_audio_config, FORMAT_MODE_CSV, FORMAT_MODE_TAB, FORMAT_MODE_JSON, FORMAT_MODE_YAML
 from aiu.typedefs import Duration, IntField, StrField, AudioConfig, AudioInfo
 import aiu
-# noinspection PyPackageRequirements
-import pytest
+import pytest  # noqa
 import os
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), 'configs')
 
@@ -54,17 +53,14 @@ def test_parser_config_tab_basic():
     config = parse_audio_config(os.path.join(CONFIG_DIR, 'config-tab-basic.txt'), FORMAT_MODE_TAB)
     assert isinstance(config, list)
     assert len(config) == 3
-    # noinspection PyComparisonWithNone
     assert config[0]['track'].raw == None   # noqa
     assert config[0]['title'].raw == 'some song'
     assert isinstance(config[0]['duration'], Duration)
     assert config[0]['duration'] == Duration(minutes=1, seconds=23)
-    # noinspection PyComparisonWithNone
     assert config[1]['track'].raw == None   # noqa
     assert config[1]['title'].raw == 'song'
     assert isinstance(config[1]['duration'], Duration)
     assert config[1]['duration'] == Duration(minutes=4, seconds=56)
-    # noinspection PyComparisonWithNone
     assert config[2]['track'].raw == None   # noqa
     assert config[2]['title'].raw == 'I Love Long Songs'
     assert isinstance(config[2]['duration'], Duration)
