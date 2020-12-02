@@ -83,7 +83,7 @@ def cli():
         gen_args = ap.add_argument_group(title="General Arguments",
                                          description="Arguments that provides information about the application "
                                                      "or usage related details.")
-        gen_args.add_argument("-h", "--help", action="help", help="Display this help message.")
+        gen_args.add_argument("--help", "-h", action="help", help="Display this help message.")
         gen_args.add_argument("--help-format", action="store_true",
                               help="Display additional help details about formatter/parser modes.")
         gen_args.add_argument("--version", action="version", version=__meta__.__version__,
@@ -91,7 +91,7 @@ def cli():
         parser_args = ap.add_argument_group(title="Parsing Arguments",
                                             description="Arguments that control parsing methodologies and "
                                                         "configurations to update matched audio files metadata.")
-        search_path = parser_args.add_mutually_exclusive_group(required=True)
+        search_path = parser_args.add_mutually_exclusive_group(required=False)
         search_path.add_argument("-p", "--path", default=".",
                                  help="Path where to search for audio and metadata info files to process. "
                                       "(default: %(default)s).")
@@ -211,10 +211,6 @@ def cli():
                 logger_level = lvl
         LOGGER.setLevel(logger_level)
         args["search_path"] = args.pop("path", None) or args.pop("file", None)
-
-        args.update({
-            "match_artist": not args.pop("no_match_artist", False),
-        })
     except Exception as exc:
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
         LOGGER.error("Internal error during parsing.", exc_info=exc)

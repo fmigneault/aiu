@@ -3,12 +3,12 @@ import datetime
 
 
 def test_duration_from_str():
-    d = Duration('1:23')
+    d = Duration("1:23")
     assert d.seconds == 23
     assert d.minutes == 1
     assert d.hours == 0
 
-    d = Duration('1:23:45')
+    d = Duration("1:23:45")
     assert d.seconds == 45
     assert d.minutes == 23
     assert d.hours == 1
