@@ -1,10 +1,11 @@
 from aiu.clean import beautify_string
-from typing import AnyStr, Dict, List, Optional, Union
+from typing import Any, AnyStr, Dict, List, Optional, Union
 from PIL import Image, ImageFile
 from slugify import slugify
+from eyed3.id3.tag import Tag
+import eyed3
 import logging
 import datetime
-import eyed3
 import six
 
 LoggerType = logging.Logger
@@ -40,8 +41,21 @@ class FormatInfo(object):
 
 
 class BaseField(object):
-    _raw = None
-    _value = None
+    __slots__ = ["_raw", "_value", "_field"]
+
+    def __init__(self, field=None, *_, **__):
+        if isinstance(field, property):
+            self._field = field.fget.__name__
+        else:
+            self._field = field
+
+    # def __new__(cls, field=None):
+    #     obj = super().__new__()
+    #     if isinstance(field, property):
+    #         obj._field = field.fget.__name__
+    #     else:
+    #         obj._field = field
+    #     return obj
 
     def __eq__(self, other):
         if isinstance(other, BaseField):
@@ -66,6 +80,11 @@ class BaseField(object):
         """Represents the stored value updated as required by various conditions of the class."""
         return self._value or self.raw
 
+    @property
+    def field(self):
+        """Name of the real ID3 tag to update using :mod:`eyeD3` package."""
+        return self._field
+
 
 class Duration(BaseField, datetime.timedelta):
     """Audio duration representation.
@@ -86,24 +105,28 @@ class Duration(BaseField, datetime.timedelta):
             h = int(h) if h is not None else 0
             m = int(m) if m is not None else 0
             s = int(s) if s is not None else 0
-            d = super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s)
+            for kw in ["hours", "minutes", "seconds"]:
+                kwargs.pop(kw, None)
+            d = super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s, **kwargs)
             d._raw = duration
             return d
         elif isinstance(duration, int):
-            d = Duration(datetime.timedelta(seconds=duration))
+            d = Duration(datetime.timedelta(seconds=duration), **kwargs)
             d._raw = duration
             return d
         elif duration is None:
-            h = kwargs.get("hours", 0)
-            m = kwargs.get("minutes", 0)
-            s = kwargs.get("seconds", 0)
-            d = super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s)
+            h = kwargs.pop("hours", 0)
+            m = kwargs.pop("minutes", 0)
+            s = kwargs.pop("seconds", 0)
+            d = super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s, **kwargs)
             d._raw = kwargs
             return d
         elif isinstance(duration, datetime.timedelta):
             h, r = divmod(duration.total_seconds(), 3600)
             m, s = divmod(r, 60)
-            d = Duration(hours=h, minutes=m, seconds=s)
+            for kw in ["hours", "minutes", "seconds"]:
+                kwargs.pop(kw, None)
+            d = Duration(hours=h, minutes=m, seconds=s, **kwargs)
             d._raw = duration
             return d
         raise ValueError("invalid value [{!s}] for [{}]".format(duration, cls.__name__))
@@ -151,9 +174,9 @@ Date = datetime.date
 
 # interfaces order important, inherit `BaseField` implementations before sub-type implementations
 class StrField(BaseField, str):
-    def __new__(cls, value, allow_none=True, beautify=False):
-        # type: (StrField, Union[AnyStr, None], Optional[bool], Optional[bool]) -> StrField
-        field = super(StrField, cls).__new__(cls, value)
+    def __new__(cls, value, allow_none=True, beautify=False, *_, **__):
+        # type: (StrField, Union[AnyStr, None], Optional[bool], Optional[bool], Any, Any) -> StrField
+        field = super(StrField, cls).__new__(cls, value, *_, **__)
         field._allow_none = allow_none
         field._beautify = beautify
         field.__set__(field, value)
@@ -182,9 +205,9 @@ class IntField(int, BaseField):
     _value = None
     _is_none = True
 
-    def __new__(cls, value, allow_none=True):
-        # type: (IntField, Union[AnyStr, None], Optional[bool]) -> IntField
-        field = super(IntField, cls).__new__(cls, value or 0)
+    def __new__(cls, value, allow_none=True, *_, **__):
+        # type: (IntField, Union[AnyStr, None], Optional[bool], Any, Any) -> IntField
+        field = super(IntField, cls).__new__(cls, value or 0, *_, **__)
         field._allow_none = allow_none
         field.__set__(field, value)
         return field
@@ -232,8 +255,9 @@ CoverFileAny = Union[AnyStr, CoverFileRaw]
 class CoverFile(BaseField):
     __slots__ = ["_cover", "_name"]
 
-    def __init__(self, image):
-        # type: (CoverFileAny) -> None
+    def __init__(self, image, *_, **__):
+        # type: (CoverFileAny, Any, Any) -> None
+        super(CoverFile, self).__init__(*_, **__)
         self._raw = image
         if isinstance(image, six.string_types):
             self._cover = ImageFile.ImageFile(image)
@@ -288,7 +312,7 @@ class AudioInfo(dict):
 
     def _set_title(self, title):
         # type: (AnyStr) -> None
-        self["title"] = StrField(title, allow_none=False, beautify=self._beautify)
+        self["title"] = StrField(title, allow_none=False, beautify=self._beautify, field=Tag.title)
 
     title = property(_get_title, _set_title)
 
@@ -297,7 +321,7 @@ class AudioInfo(dict):
 
     def _set_artist(self, artist):
         # type: (AnyStr) -> None
-        self["artist"] = StrField(artist, allow_none=False, beautify=self._beautify)
+        self["artist"] = StrField(artist, allow_none=False, beautify=self._beautify, field=Tag.artist)
 
     artist = property(_get_artist, _set_artist)
 
@@ -305,7 +329,7 @@ class AudioInfo(dict):
         return self["track"]
 
     def _set_track(self, track):
-        self["track"] = IntField(track)
+        self["track"] = IntField(track, field=Tag.track_num)
 
     track = property(_get_track, _set_track)
 
@@ -316,6 +340,8 @@ class AudioInfo(dict):
     def _set_cover(self, cover):
         # type: (CoverFileAny) -> None
         self["cover"] = CoverFile(cover)
+        # FIXME: which field and how to set it?
+        #   eyeD3.id3.Tag.images, eyeD3.id3.frames.ImageFrame (many types possible)
 
     cover = property(_get_cover, _set_cover)
 
