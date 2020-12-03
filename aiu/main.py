@@ -8,12 +8,12 @@ Applied changes listed in ``--output`` file.
 """
 import aiu
 from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG
-from aiu.clean import load_config
 from aiu.parser import (
     ALL_PARSER_EXTENSIONS,
     FORMAT_MODE_ANY,
     FORMAT_MODE_YAML,
     get_audio_files,
+    load_config,
     save_audio_config,
     parse_audio_config,
     PARSER_MODES,
@@ -282,11 +282,13 @@ def main(
     LOGGER.debug("Using {} exceptions configuration: [%s]",
                  "custom" if exceptions_config else "default",
                  exceptions_config if exceptions_config else DEFAULT_EXCEPTIONS_CONFIG)
-    aiu.EXCEPTIONS = load_config(aiu.EXCEPTIONS, exceptions_config or DEFAULT_EXCEPTIONS_CONFIG, is_map=True)
+    except_file = exceptions_config or DEFAULT_EXCEPTIONS_CONFIG
+    aiu.Config.EXCEPTIONS = load_config(aiu.Config.EXCEPTIONS, except_file, is_map=True)
     LOGGER.debug("Using {} stopwords configuration: [%s]",
                  "custom" if stopwords_config else "default",
                  stopwords_config if stopwords_config else DEFAULT_STOPWORDS_CONFIG)
-    aiu.STOPWORDS = load_config(aiu.STOPWORDS, stopwords_config or DEFAULT_STOPWORDS_CONFIG, is_map=False)
+    stopword_file = stopwords_config or DEFAULT_STOPWORDS_CONFIG
+    aiu.Config.STOPWORDS = load_config(aiu.Config.STOPWORDS, stopword_file, is_map=False)
     config_combo = []
     if cfg_info_file:
         LOGGER.info("Running audio config parsing...")

@@ -10,6 +10,7 @@ import yaml
 import csv
 import os
 import re
+import six
 
 numbered_list = re.compile(r"^[\s\-#.]*([0-9]+)[\s\-#.]*(.*)")
 duration_info = re.compile(r"""     # Match any 'duration' representation, need to filter if many (ex: one in title)
@@ -44,6 +45,25 @@ PARSER_MODES = frozenset([
 ])
 ALL_PARSER_EXTENSIONS = frozenset(
     itertools.chain(*(p.extensions for p in PARSER_MODES))) - {FORMAT_MODE_ANY.extensions[0]}
+
+
+def load_config(maybe_config, wanted_config, is_map):
+    if maybe_config is None and isinstance(wanted_config, six.string_types) and os.path.isfile(wanted_config):
+        try:
+            with open(wanted_config, 'r') as f:
+                lines = [w.strip() for w in f.readlines() if not w.startswith('#')]
+                if is_map:
+                    lines = [line.split(':') for line in lines]
+                    maybe_config = {k.strip().lower(): w.strip() for k, w in lines}
+                else:
+                    maybe_config = lines
+        except Exception:
+            raise ValueError("Invalid configuration file could not be parsed:\n  file: [{!s}]\n  map?: [{}]".format(
+                wanted_config, is_map
+            ))
+    if isinstance(wanted_config, (list, dict)):
+        maybe_config = wanted_config
+    return maybe_config
 
 
 def find_mode(mode, formats):
@@ -175,9 +195,9 @@ def parse_audio_config_list(config_file):
                 config = [{TAG_TRACK: track, TAG_TITLE: title} for track, title in zip(tracks, titles)]
         elif all(match is not None for match in duration_matches):
             duration_groups = [list(m.groups())[0] for m in duration_matches]
-            if all(Duration(grp[-1]) for grp in duration_groups):  # will raise on any invalid parsing
+            if all(Duration(grp) for grp in duration_groups):  # will raise on any invalid parsing
                 titles = [lines[i] for i in range(0, len(lines), 2)]
-                durations = [grp[-1] for grp in duration_groups]
+                durations = [grp for grp in duration_groups]
                 config = [{TAG_DURATION: duration, TAG_TITLE: title} for duration, title in zip(durations, titles)]
     elif fields_3:
         titles = [lines[i + 1] for i in range(0, len(lines), 3)]
@@ -186,10 +206,10 @@ def parse_audio_config_list(config_file):
         track_groups = [list(m.groups()) for m in track_matches]
         duration_groups = [list(m.groups())[0] for m in duration_matches]
         track_valid = all(grp[0].isnumeric() and grp[1] == "" for grp in track_groups)
-        duration_valid = all(Duration(grp[-1]) for grp in duration_groups)
+        duration_valid = all(Duration(grp) for grp in duration_groups)
         if track_valid and duration_valid:
             tracks = [grp[0] for grp in track_groups]
-            durations = [grp[-1] for grp in duration_groups]
+            durations = [grp for grp in duration_groups]
             config = [{TAG_TRACK: track, TAG_TITLE: title, TAG_DURATION: duration}
                       for track, title, duration in zip(tracks, titles, durations)]
 
