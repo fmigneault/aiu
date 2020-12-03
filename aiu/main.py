@@ -91,12 +91,11 @@ def cli():
         parser_args = ap.add_argument_group(title="Parsing Arguments",
                                             description="Arguments that control parsing methodologies and "
                                                         "configurations to update matched audio files metadata.")
-        search_path = parser_args.add_mutually_exclusive_group(required=False)
-        search_path.add_argument("-p", "--path", default=".",
+        parser_args.add_argument("-p", "--path", "-f", "--file", default=".", dest="search_path",
                                  help="Path where to search for audio and metadata info files to process. "
+                                      "Can either be a directory path where all containing audio files will be "
+                                      "processed or a single audio file path to process by itself "
                                       "(default: %(default)s).")
-        search_path.add_argument("-f", "--file",
-                                 help="Path to a single audio file to edit metadata (default: %(default)s).")
         parser_args.add_argument("-i", "--info", dest="info_file",
                                  help="Path to audio metadata information file to be applied to format matched with "
                                       "audio files. (default: looks for text file compatible format named `info`, "
@@ -192,12 +191,16 @@ def cli():
         id3_args.add_argument("--no-match-artist", "--nA", action="store_true", dest="match_artist")
         log_args = ap.add_argument_group(title="Logging Arguments",
                                          description="Arguments that control logging and reporting verbosity.")
-        log_args.add_argument("-q", "--quiet", help="Do not provide any logging details except error.")
-        log_args.add_argument("-w", "--warn", help="Provide minimal logging details (warnings and errors only). "
-                                                   "Warnings can include important notices about taken decisions or "
-                                                   "unexpected yet handled parsing of values.")
-        log_args.add_argument("-v", "--verbose", help="Provide additional information logging.")
-        log_args.add_argument("-d", "--debug", help="Provide as much logging details as possible.")
+        log_args.add_argument("-q", "--quiet", action="store_true",
+                              help="Do not provide any logging details except error.")
+        log_args.add_argument("-w", "--warn", action="store_true",
+                              help="Provide minimal logging details (warnings and errors only). "
+                                   "Warnings can include important notices about taken decisions or "
+                                   "unexpected yet handled parsing of values.")
+        log_args.add_argument("-v", "--verbose", action="store_true",
+                              help="Provide additional information logging.")
+        log_args.add_argument("-d", "--debug", action="store_true",
+                              help="Provide as much logging details as possible.")
 
         argv = None if sys.argv[1:] else ["--help"]  # auto-help message if no args
         ns = ap.parse_args(args=argv)
@@ -205,12 +208,12 @@ def cli():
             print(_HELP_FORMAT)
             return 0
         args = vars(ns)
+        args.pop("help_format")
         logger_level = ERROR
         for arg, lvl in [("debug", DEBUG), ("verbose", INFO), ("warn", WARNING), ("quiet", CRITICAL)]:
             if args.pop(arg, False):
                 logger_level = lvl
         LOGGER.setLevel(logger_level)
-        args["search_path"] = args.pop("path", None) or args.pop("file", None)
     except Exception as exc:
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
         LOGGER.error("Internal error during parsing.", exc_info=exc)

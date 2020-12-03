@@ -34,11 +34,12 @@ def look_for_default_file(path, allowed_names, allowed_extensions=None):
     :returns: full path of first matching occurrence, or `None`.
     """
     names = allowed_names if isinstance(allowed_names, (list, set)) else [allowed_names]
-    if allowed_extensions:
-        allowed_extensions = allowed_extensions if isinstance(allowed_extensions, (list, set)) else [allowed_extensions]
+    if allowed_extensions and isinstance(allowed_extensions, six.string_types):
+        allowed_extensions = [allowed_extensions]
     contents = sorted(os.listdir(path))
     for c in contents:
         c_name, c_ext = os.path.splitext(c)
+        c_ext = c_ext.replace(".", "")
         if c_name in names and c_ext != "":
             if not allowed_extensions or c_ext in allowed_extensions:
                 return os.path.abspath(os.path.join(path, c))
@@ -51,7 +52,7 @@ def backup_files(file_paths, backup_dir):
     for file_path in file_paths:
         copy_path = os.path.join(backup_dir, os.path.split(file_path)[-1])
         LOGGER.debug("Backup [%s]", copy_path)
-        shutil.copyfile(file_path, copy_path)
+        shutil.copyfile(file_path, copy_path, follow_symlinks=True)
 
 
 def get_audio_file(audio_file):

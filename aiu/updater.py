@@ -98,11 +98,12 @@ def apply_audio_config(audio_files, audio_config, dry=False):
                 continue
             matched_info.file = file_path
             audio_file = get_audio_file(file_path)
-            for tag_name, tag_value in matched_info.items():
+            for tag_name, tag in matched_info.items():
                 if dry:
                     LOGGER.debug("Would apply tag [%s] to file [%s]", tag_name, file_path)
                     continue
-                setattr(audio_file.tag, tag_name, tag_value)
+                if tag.field is not None:
+                    setattr(audio_file.tag, tag.field, tag.value)
             if dry:
                 tag_info = list(sorted((k, v) for k, v in matched_info.items() if k not in ['file']))
                 tag_info = [('file', matched_info.file)] + tag_info
