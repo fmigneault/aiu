@@ -8,6 +8,36 @@ This tool helps normalize album metadata that can be easily retrievable from var
 it to audio files with partially matchable names. Matching between metadata and actual audio files employs various
 lookup and pattern matching methods to be flexible against various naming conventions.
 
+
+.. start-badges
+
+.. list-table::
+    :stub-columns: 1
+
+    * - dependencies
+      - | |py_ver| |dependencies|
+    * - releases
+      - | |version| |commits-since|
+
+.. |py_ver| image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
+    :alt: Requires Python 3.5+
+    :target: https://www.python.org/getit
+
+.. |commits-since| image:: https://img.shields.io/github/commits-since/fmigneault/aiu/0.4.0.svg
+    :alt: Commits since latest release
+    :target: https://github.com/fmigneault/aiu/compare/0.4.0...master
+
+.. |version| image:: https://img.shields.io/badge/tag-0.4.0-blue.svg?style=flat
+    :alt: Latest Tag
+    :target: https://github.com/fmigneault/aiu/tree/0.4.0
+
+.. |dependencies| image:: https://pyup.io/repos/github/fmigneault/aiu/shield.svg
+    :alt: Dependencies Status
+    :target: https://pyup.io/account/repos/github/fmigneault/aiu/
+
+.. end-badges
+
+
 Build package and install
 ======================================
 
