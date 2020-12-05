@@ -8,9 +8,11 @@ CHANGES
 * Add argument ``--exceptions`` to override default file ``config/exceptions.cfg``.
 * Add argument ``--stopwords`` to override default file ``config/stopwords.cfg``.
 * Add ``list`` parser that takes track numbers, song titles and duration on separate lines as often retrieved from raw
-  copy-paste conversion to text file from web-pages that employ HTML table/divs.
-* Fix parsing of single ``--file`` path to search default directory locations of other arguments (e.g.: ``--info``).
+  copy-paste conversion in text file from web-pages that display the information with HTML table/divs.
 * Drop ``docopt`` in favor of ``argparse`` which offer more explicit and versatile configuration of options.
+* Fix parsing of single ``--file`` path to search default directory locations of other arguments (e.g.: ``--info``).
+* Fix processing and writing of tag fields that employ different internal names (``eye3D.id3.Tags``) against generic
+  names employed by the parser (e.g.: ``track -> track_num``).
 
 0.4.0 (2020-05-03)
 ---------------------

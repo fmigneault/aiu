@@ -7,7 +7,7 @@ corresponding information fields found in configurations files from options ``--
 Applied changes listed in ``--output`` file.
 """
 import aiu
-from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG
+from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG, TRACE
 from aiu.parser import (
     ALL_PARSER_EXTENSIONS,
     FORMAT_MODE_ANY,
@@ -24,7 +24,7 @@ from aiu.utils import backup_files, look_for_default_file, validate_output_file,
 from aiu.typedefs import AudioConfig, Duration
 from aiu import __meta__, tags as t, LOGGER
 from typing import AnyStr, Optional, Union
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
 import argparse
 import sys
 import os
@@ -191,16 +191,19 @@ def cli():
         id3_args.add_argument("--no-match-artist", "--nA", action="store_true", dest="match_artist")
         log_args = ap.add_argument_group(title="Logging Arguments",
                                          description="Arguments that control logging and reporting verbosity.")
-        log_args.add_argument("-q", "--quiet", action="store_true",
+        lvl_args = log_args.add_mutually_exclusive_group(required=False)
+        lvl_args.add_argument("-q", "--quiet", action="store_true",
                               help="Do not provide any logging details except error.")
-        log_args.add_argument("-w", "--warn", action="store_true",
+        lvl_args.add_argument("-w", "--warn", action="store_true",
                               help="Provide minimal logging details (warnings and errors only). "
                                    "Warnings can include important notices about taken decisions or "
                                    "unexpected yet handled parsing of values.")
-        log_args.add_argument("-v", "--verbose", action="store_true",
+        lvl_args.add_argument("-v", "--verbose", action="store_true",
                               help="Provide additional information logging.")
-        log_args.add_argument("-d", "--debug", action="store_true",
-                              help="Provide as much logging details as possible.")
+        lvl_args.add_argument("-d", "--debug", action="store_true",
+                              help="Provide step by step logging details during operations.")
+        lvl_args.add_argument("-t", "--trace", action="store_true",
+                              help="Provide caught error detailed reporting and traceback.")
 
         argv = None if sys.argv[1:] else ["--help"]  # auto-help message if no args
         ns = ap.parse_args(args=argv)
@@ -209,10 +212,12 @@ def cli():
             return 0
         args = vars(ns)
         args.pop("help_format")
-        logger_level = ERROR
-        for arg, lvl in [("debug", DEBUG), ("verbose", INFO), ("warn", WARNING), ("quiet", CRITICAL)]:
-            if args.pop(arg, False):
+        logger_level = NOTSET
+        for arg, lvl in [("trace", TRACE), ("debug", DEBUG), ("verbose", INFO), ("warn", WARNING), ("quiet", CRITICAL)]:
+            if args.pop(arg, False) and logger_level == NOTSET:
                 logger_level = lvl
+        if logger_level == NOTSET:
+            logger_level = ERROR
         LOGGER.setLevel(logger_level)
     except Exception as exc:
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
@@ -239,7 +244,6 @@ def main(
          output_file=None,              # type: Optional[AnyStr]
          output_mode=FORMAT_MODE_YAML,  # type: Union[FORMAT_MODES]
          parser_mode=FORMAT_MODE_ANY,   # type: Union[PARSER_MODES]
-         logger_level=INFO,             # type: Union[AnyStr, int]
          exceptions_config=None,        # type: Optional[AnyStr]
          stopwords_config=None,         # type: Optional[AnyStr]
          # --- specific meta fields ---
@@ -263,7 +267,6 @@ def main(
          no_output=False,               # type: bool
          no_result=False,               # type: bool
          ):                             # type: (...) -> AudioConfig
-    LOGGER.setLevel(logger_level)
     search_path = "." if search_path == "'.'" else search_path  # default provided as literal string with quotes
     search_path = os.path.abspath(search_path or os.path.curdir)
     search_dir = search_path if os.path.isdir(search_path) else os.path.split(search_path)[0]
@@ -282,12 +285,12 @@ def main(
     LOGGER.info("Output config file %s be: [%s]", "would" if dry else "will", output_file)
     audio_files = get_audio_files(search_path)
     LOGGER.info("Found audio files to process:\n  %s", "\n  ".join(audio_files))
-    LOGGER.debug("Using {} exceptions configuration: [%s]",
+    LOGGER.debug("Using %s exceptions configuration: [%s]",
                  "custom" if exceptions_config else "default",
                  exceptions_config if exceptions_config else DEFAULT_EXCEPTIONS_CONFIG)
     except_file = exceptions_config or DEFAULT_EXCEPTIONS_CONFIG
     aiu.Config.EXCEPTIONS = load_config(aiu.Config.EXCEPTIONS, except_file, is_map=True)
-    LOGGER.debug("Using {} stopwords configuration: [%s]",
+    LOGGER.debug("Using %s stopwords configuration: [%s]",
                  "custom" if stopwords_config else "default",
                  stopwords_config if stopwords_config else DEFAULT_STOPWORDS_CONFIG)
     stopword_file = stopwords_config or DEFAULT_STOPWORDS_CONFIG

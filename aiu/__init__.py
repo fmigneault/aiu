@@ -40,11 +40,16 @@ class YamlEnabledLogger(logging.Logger):
 
 
 # logging
-VERBOSE = logging.DEBUG // 2
-logging.addLevelName(VERBOSE, "VERBOSE")
+TRACE = logging.DEBUG // 2
+logging.addLevelName(TRACE, "TRACE")
 logging.setLoggerClass(YamlEnabledLogger)
 LOGGER = logging.getLogger(__meta__.__package__)
 if not getattr(LOGGER, "__AIU_CONFIGURED__", False):
+    def log_trace(msg, *args, **kwargs):
+        if LOGGER.isEnabledFor(TRACE):
+            LOGGER._log(TRACE, msg, args, **kwargs)  # noqa
+
+    LOGGER.trace = log_trace
     if os.path.isfile(AIU_SETUP_CONFIG):
         import logging.config
         import configparser

@@ -41,21 +41,23 @@ class FormatInfo(object):
 
 
 class BaseField(object):
-    __slots__ = ["_raw", "_value", "_field"]
+    _raw = None
+    _value = None
+    _field = None
 
-    def __init__(self, field=None, *_, **__):
+    def __init__(self, *_, field=None, **__):
         if isinstance(field, property):
             self._field = field.fget.__name__
         else:
             self._field = field
 
-    # def __new__(cls, field=None):
-    #     obj = super().__new__()
-    #     if isinstance(field, property):
-    #         obj._field = field.fget.__name__
-    #     else:
-    #         obj._field = field
-    #     return obj
+    #def __new__(cls, *_, field=None):
+    #    obj = super(BaseField, cls).__new__(*_)  # can only use args for base types, no kwargs
+    #    if isinstance(field, property):
+    #        obj._field = field.fget.__name__
+    #    else:
+    #        obj._field = field
+    #    return obj
 
     def __eq__(self, other):
         if isinstance(other, BaseField):
@@ -108,6 +110,7 @@ class Duration(BaseField, datetime.timedelta):
             for kw in ["hours", "minutes", "seconds"]:
                 kwargs.pop(kw, None)
             d = super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s, **kwargs)
+            d.__init__(**kwargs)
             d._raw = duration
             return d
         elif isinstance(duration, int):
@@ -119,6 +122,7 @@ class Duration(BaseField, datetime.timedelta):
             m = kwargs.pop("minutes", 0)
             s = kwargs.pop("seconds", 0)
             d = super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s, **kwargs)
+            d.__init__(**kwargs)
             d._raw = kwargs
             return d
         elif isinstance(duration, datetime.timedelta):
@@ -127,6 +131,7 @@ class Duration(BaseField, datetime.timedelta):
             for kw in ["hours", "minutes", "seconds"]:
                 kwargs.pop(kw, None)
             d = Duration(hours=h, minutes=m, seconds=s, **kwargs)
+            d.__init__(**kwargs)
             d._raw = duration
             return d
         raise ValueError("invalid value [{!s}] for [{}]".format(duration, cls.__name__))
@@ -176,7 +181,8 @@ Date = datetime.date
 class StrField(BaseField, str):
     def __new__(cls, value, allow_none=True, beautify=False, *_, **__):
         # type: (StrField, Union[AnyStr, None], Optional[bool], Optional[bool], Any, Any) -> StrField
-        field = super(StrField, cls).__new__(cls, value, *_, **__)
+        field = super(StrField, cls).__new__(cls, value)
+        field.__init__(*_, **__)
         field._allow_none = allow_none
         field._beautify = beautify
         field.__set__(field, value)
@@ -207,7 +213,8 @@ class IntField(int, BaseField):
 
     def __new__(cls, value, allow_none=True, *_, **__):
         # type: (IntField, Union[AnyStr, None], Optional[bool], Any, Any) -> IntField
-        field = super(IntField, cls).__new__(cls, value or 0, *_, **__)
+        field = super(IntField, cls).__new__(cls, value or 0)
+        field.__init__(*_, **__)
         field._allow_none = allow_none
         field.__set__(field, value)
         return field
@@ -285,9 +292,9 @@ class AudioInfo(dict):
     """
     __slots__ = ["_beautify"]
 
-    def __init__(self, title, **kwargs):
+    def __init__(self, title=None, beautify=None, **kwargs):
         super(AudioInfo, self).__init__()
-        self._beautify = kwargs.pop("beautify", True)
+        self._beautify = beautify if beautify is not None else kwargs.pop("beautify", True)
         self.title = title or kwargs.pop("title", None)
         for kw in kwargs:
             self.__setattr__(kw, kwargs[kw])

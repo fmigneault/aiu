@@ -4,6 +4,7 @@ from aiu import LOGGER
 from eyed3.mp3 import isMp3File
 from typing import AnyStr, Iterable, List, Optional, Union
 import itertools
+import logging
 import json
 import math
 import yaml
@@ -86,6 +87,7 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
     fmt_mode = find_mode(mode, PARSER_MODES)
     if not fmt_mode:
         raise ValueError("invalid parser mode: [{}]".format(mode))
+    log_lvl = logging.WARNING if fmt_mode is FORMAT_MODE_ANY else LOGGER.ERROR
 
     # --- CSV with header row ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_CSV]:
@@ -95,22 +97,18 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
                 config = AudioConfig(list(csv.DictReader(f)))
             LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_CSV))
             return config
-        except Exception:
-            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
-            log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_CSV))
-            if fmt_mode is not FORMAT_MODE_ANY:
-                pass
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", FORMAT_MODE_CSV)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
 
     # --- TAB with/without numbering ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_TAB]:
         LOGGER.debug("parsing using mode [{}]".format(FORMAT_MODE_TAB))
         try:
             return parse_audio_config_tab(config_file)
-        except Exception:
-            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
-            log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_TAB))
-            if fmt_mode is not FORMAT_MODE_ANY:
-                pass
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", FORMAT_MODE_TAB)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
 
     # --- YAML / JSON ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_JSON, FORMAT_MODE_YAML]:
@@ -118,11 +116,9 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
         LOGGER.debug("parsing using mode [{}]".format(mode_yj))
         try:
             return parse_audio_config_objects(config_file)
-        except Exception:
-            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
-            log_func("failed parsing as [{}], moving on...".format(mode_yj))
-            if fmt_mode is not FORMAT_MODE_ANY:
-                pass
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", mode_yj)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
 
     # --- LIST ---
     # parse this format last as it is the hardest to guess, and probably easiest to incorrectly match against others
@@ -130,11 +126,9 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
         LOGGER.debug("parsing using mode [{}]".format(FORMAT_MODE_LIST))
         try:
             return parse_audio_config_list(config_file)
-        except Exception:
-            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
-            log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_LIST))
-            if fmt_mode is not FORMAT_MODE_ANY:
-                pass
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", FORMAT_MODE_LIST)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
 
     raise ValueError("no more parsing method available, aborting...")
 
