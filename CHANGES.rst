@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`0.5.0 <https://github.com/fmigneault/aiu/tree/0.5.0>`_ (2020-12-05)
+------------------------------------------------------------------------------------
+
 * Add argument ``--backup`` that will enforce saving a copy of audio files to be edited beforehand.
 * Add argument ``--exceptions`` to override default file ``config/exceptions.cfg``.
 * Add argument ``--stopwords`` to override default file ``config/stopwords.cfg``.
