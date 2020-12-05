@@ -1,4 +1,4 @@
-from typing import AnyStr, Dict, List, Optional
+from typing import AnyStr, Dict, List, Optional, TYPE_CHECKING
 import logging
 import os
 import sys
@@ -10,15 +10,20 @@ import __meta__  # noqa
 
 AIU_PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
 AIU_ROOT_DIR = os.path.dirname(AIU_PACKAGE_DIR)
-AIU_CONFIG_DIR = os.path.join(AIU_ROOT_DIR, 'config')
+AIU_CONFIG_DIR = os.path.join(AIU_ROOT_DIR, "config")
 
-StopwordsType = Optional[List[AnyStr]]
-ExceptionsType = Optional[List[Dict[AnyStr, AnyStr]]]
-STOPWORDS = None    # type: StopwordsType
-EXCEPTIONS = None   # type: ExceptionsType
-DEFAULT_STOPWORDS_CONFIG = os.path.join(AIU_CONFIG_DIR, 'stopwords.cfg')
-DEFAULT_EXCEPTIONS_CONFIG = os.path.join(AIU_CONFIG_DIR, 'exceptions.cfg')
+if TYPE_CHECKING:
+    StopwordsType = Optional[List[AnyStr]]
+    ExceptionsType = Optional[Dict[AnyStr, AnyStr]]
 
+
+class Config:
+    STOPWORDS = None    # type: StopwordsType
+    EXCEPTIONS = None   # type: ExceptionsType
+
+
+DEFAULT_STOPWORDS_CONFIG = os.path.join(AIU_CONFIG_DIR, "stopwords.cfg")
+DEFAULT_EXCEPTIONS_CONFIG = os.path.join(AIU_CONFIG_DIR, "exceptions.cfg")
 AIU_SETUP_CONFIG = os.path.join(AIU_ROOT_DIR, "setup.cfg")
 
 
@@ -35,11 +40,16 @@ class YamlEnabledLogger(logging.Logger):
 
 
 # logging
-VERBOSE = int(logging.DEBUG/2)
-logging.addLevelName(VERBOSE, "VERBOSE")
+TRACE = logging.DEBUG // 2
+logging.addLevelName(TRACE, "TRACE")
 logging.setLoggerClass(YamlEnabledLogger)
 LOGGER = logging.getLogger(__meta__.__package__)
 if not getattr(LOGGER, "__AIU_CONFIGURED__", False):
+    def log_trace(msg, *args, **kwargs):
+        if LOGGER.isEnabledFor(TRACE):
+            LOGGER._log(TRACE, msg, args, **kwargs)  # noqa
+
+    LOGGER.trace = log_trace
     if os.path.isfile(AIU_SETUP_CONFIG):
         import logging.config
         import configparser

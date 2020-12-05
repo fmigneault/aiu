@@ -1,14 +1,17 @@
-from aiu.typedefs import AudioFile, AudioConfig, FormatInfo
+from aiu.typedefs import AudioConfig, Duration, FormatInfo
 from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
 from aiu import LOGGER
 from eyed3.mp3 import isMp3File
 from typing import AnyStr, Iterable, List, Optional, Union
+import itertools
+import logging
+import json
 import math
 import yaml
-import json
 import csv
 import os
 import re
+import six
 
 numbered_list = re.compile(r"^[\s\-#.]*([0-9]+)[\s\-#.]*(.*)")
 duration_info = re.compile(r"""     # Match any 'duration' representation, need to filter if many (ex: one in title)
@@ -19,26 +22,49 @@ duration_info = re.compile(r"""     # Match any 'duration' representation, need 
      (?::[0-5][0-9])?)                          # seconds time part (00-59)
 """, re.VERBOSE)
 
-FORMAT_MODE_ANY = FormatInfo('any', '*')
-FORMAT_MODE_CSV = FormatInfo('csv', 'csv')
-FORMAT_MODE_TAB = FormatInfo('tab', ['tab', 'cfg', 'config', 'meta', 'info', 'txt'])
-FORMAT_MODE_JSON = FormatInfo('json', 'json')
-FORMAT_MODE_YAML = FormatInfo('yaml', ['yml', 'yaml'])
-FORMAT_MODE_RAW = FormatInfo('raw', ['raw', 'cls', 'class', 'ref'])     # YAML with full class and properties values
-format_modes = frozenset([
+FORMAT_MODE_ANY = FormatInfo("any", "*")
+FORMAT_MODE_CSV = FormatInfo("csv", "csv")
+FORMAT_MODE_TAB = FormatInfo("tab", ["tsv", "tab", "cfg", "config", "meta", "info", "txt"])
+FORMAT_MODE_LIST = FormatInfo("list", ["ls", "lst", "list"])
+FORMAT_MODE_JSON = FormatInfo("json", "json")
+FORMAT_MODE_YAML = FormatInfo("yaml", ["yml", "yaml"])
+FORMAT_MODE_RAW = FormatInfo("raw", ["raw", "cls", "class", "ref"])     # YAML with full class and properties values
+FORMAT_MODES = frozenset([
     FORMAT_MODE_CSV,
     FORMAT_MODE_TAB,
     FORMAT_MODE_JSON,
     FORMAT_MODE_YAML,
     FORMAT_MODE_RAW,
 ])
-parser_modes = frozenset([
+PARSER_MODES = frozenset([
     FORMAT_MODE_ANY,
     FORMAT_MODE_CSV,
     FORMAT_MODE_TAB,
+    FORMAT_MODE_LIST,
     FORMAT_MODE_JSON,
     FORMAT_MODE_YAML,
 ])
+ALL_PARSER_EXTENSIONS = frozenset(
+    itertools.chain(*(p.extensions for p in PARSER_MODES))) - {FORMAT_MODE_ANY.extensions[0]}
+
+
+def load_config(maybe_config, wanted_config, is_map):
+    if maybe_config is None and isinstance(wanted_config, six.string_types) and os.path.isfile(wanted_config):
+        try:
+            with open(wanted_config, 'r') as f:
+                lines = [w.strip() for w in f.readlines() if not w.startswith('#')]
+                if is_map:
+                    lines = [line.split(':') for line in lines]
+                    maybe_config = {k.strip().lower(): w.strip() for k, w in lines}
+                else:
+                    maybe_config = lines
+        except Exception:
+            raise ValueError("Invalid configuration file could not be parsed:\n  file: [{!s}]\n  map?: [{}]".format(
+                wanted_config, is_map
+            ))
+    if isinstance(wanted_config, (list, dict)):
+        maybe_config = wanted_config
+    return maybe_config
 
 
 def find_mode(mode, formats):
@@ -58,80 +84,168 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
     if not os.path.isfile(config_file):
         raise ValueError("invalid file path: [{}]".format(config_file))
 
-    fmt_mode = find_mode(mode, parser_modes)
+    fmt_mode = find_mode(mode, PARSER_MODES)
     if not fmt_mode:
         raise ValueError("invalid parser mode: [{}]".format(mode))
+    log_lvl = logging.WARNING if fmt_mode is FORMAT_MODE_ANY else LOGGER.ERROR
 
     # --- CSV with header row ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_CSV]:
         LOGGER.debug("parsing using mode [{}]".format(FORMAT_MODE_CSV))
-        # noinspection PyBroadException
         try:
             with open(config_file, 'r') as f:
                 config = AudioConfig(list(csv.DictReader(f)))
             LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_CSV))
             return config
-        except Exception:
-            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
-            log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_CSV))
-            if fmt_mode is not FORMAT_MODE_ANY:
-                pass
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", FORMAT_MODE_CSV)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
 
     # --- TAB with/without numbering ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_TAB]:
         LOGGER.debug("parsing using mode [{}]".format(FORMAT_MODE_TAB))
-        # noinspection PyBroadException
         try:
-            with open(config_file, 'r') as f:
-                config = f.readlines()
-            for i, row in enumerate(config):
-                row = row.strip()
-                info = re.match(numbered_list, row)
-                track, row = info.groups() if info else (None, row)
-                info = re.findall(duration_info, row)
-                # assume the duration is the last info if multiple matches
-                duration = info[-1] if info else None
-                if duration:
-                    row = row[:-len(duration)]
-                row = row.strip()
-                # noinspection PyTypeChecker
-                config[i] = {
-                    TAG_TRACK: track,
-                    TAG_TITLE: row,
-                    TAG_DURATION: duration,
-                }
-            if not all([isinstance(c, dict) for c in config]):
-                raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_TAB))
-            # noinspection PyTypeChecker
-            config = AudioConfig(config)
-            LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_TAB))
-            return config
-        except Exception:
-            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
-            log_func("failed parsing as [{}], moving on...".format(FORMAT_MODE_TAB))
-            if fmt_mode is not FORMAT_MODE_ANY:
-                pass
+            return parse_audio_config_tab(config_file)
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", FORMAT_MODE_TAB)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
 
     # --- YAML / JSON ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_JSON, FORMAT_MODE_YAML]:
         mode_yj = "{}/{}".format(FORMAT_MODE_YAML, FORMAT_MODE_JSON)
         LOGGER.debug("parsing using mode [{}]".format(mode_yj))
-        # noinspection PyBroadException
         try:
-            with open(config_file, 'r') as f:
-                config = yaml.load(f)
-            if not isinstance(config, list):
-                config = [config]
-            config = AudioConfig(config)
-            LOGGER.debug("success using mode [{}]".format(mode_yj))
-            return config
-        except Exception:
-            log_func = LOGGER.warning if fmt_mode is FORMAT_MODE_ANY else LOGGER.exception
-            log_func("failed parsing as [{}], moving on...".format(mode_yj))
-            if fmt_mode is not FORMAT_MODE_ANY:
-                pass
+            return parse_audio_config_objects(config_file)
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", mode_yj)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
+
+    # --- LIST ---
+    # parse this format last as it is the hardest to guess, and probably easiest to incorrectly match against others
+    if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_LIST]:
+        LOGGER.debug("parsing using mode [{}]".format(FORMAT_MODE_LIST))
+        try:
+            return parse_audio_config_list(config_file)
+        except Exception as exc:
+            LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", FORMAT_MODE_LIST)
+            LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
 
     raise ValueError("no more parsing method available, aborting...")
+
+
+def parse_audio_config_objects(config_file):
+    # type: (AnyStr) -> AudioConfig
+    """
+    Parse a file formatted with list of object in JSON/YAML.
+
+    Format::
+
+        - track: #
+          title: ""
+          duration: ""
+        - ...
+    """
+    with open(config_file, 'r') as f:
+        config = yaml.load(f)
+    if not isinstance(config, list):
+        config = [config]
+    config = AudioConfig(config)
+    LOGGER.debug("success using mode [{}/{}]".format(FORMAT_MODE_YAML, FORMAT_MODE_JSON))
+    return config
+
+
+def parse_audio_config_list(config_file):
+    # type: (AnyStr) -> AudioConfig
+    """
+    Parse a file formatted with list row-fields of continuous intervals.
+
+    Either ``track`` or ``duration`` or both *must* be provided.
+
+    Format::
+
+        [track-1]
+        title-1
+        [duration-1]
+        [track-2]
+        title-2
+        [duration-2]
+        ...
+    """
+    with open(config_file, 'r') as f:
+        lines = [row.strip() for row in f.readlines() if row]
+
+    # check for either track, duration or both + title for each
+    fields_2 = not len(lines) % 2
+    fields_3 = not len(lines) % 3
+    config = []
+    if fields_2:
+        track_matches = [re.match(numbered_list, lines[i]) for i in range(0, len(lines), 2)]
+        duration_matches = [re.match(duration_info, lines[i + 1]) for i in range(0, len(lines), 2)]
+        if all(match is not None for match in track_matches):
+            track_groups = [list(m.groups()) for m in track_matches]
+            if all(grp[0].isnumeric() and grp[1] == "" for grp in track_groups):
+                tracks = [grp[0] for grp in track_groups]
+                titles = [lines[i + 1] for i in range(0, len(lines), 2)]
+                config = [{TAG_TRACK: track, TAG_TITLE: title} for track, title in zip(tracks, titles)]
+        elif all(match is not None for match in duration_matches):
+            duration_groups = [list(m.groups())[0] for m in duration_matches]
+            if all(Duration(grp) for grp in duration_groups):  # will raise on any invalid parsing
+                titles = [lines[i] for i in range(0, len(lines), 2)]
+                durations = [grp for grp in duration_groups]
+                config = [{TAG_DURATION: duration, TAG_TITLE: title} for duration, title in zip(durations, titles)]
+    elif fields_3:
+        titles = [lines[i + 1] for i in range(0, len(lines), 3)]
+        track_matches = [re.match(numbered_list, lines[i]) for i in range(0, len(lines), 3)]
+        duration_matches = [re.match(duration_info, lines[i + 2]) for i in range(0, len(lines), 3)]
+        track_groups = [list(m.groups()) for m in track_matches]
+        duration_groups = [list(m.groups())[0] for m in duration_matches]
+        track_valid = all(grp[0].isnumeric() and grp[1] == "" for grp in track_groups)
+        duration_valid = all(Duration(grp) for grp in duration_groups)
+        if track_valid and duration_valid:
+            tracks = [grp[0] for grp in track_groups]
+            durations = [grp for grp in duration_groups]
+            config = [{TAG_TRACK: track, TAG_TITLE: title, TAG_DURATION: duration}
+                      for track, title, duration in zip(tracks, titles, durations)]
+
+    if not config or not all(isinstance(c, dict) for c in config):
+        raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_LIST))
+    config = AudioConfig(config)
+    LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_LIST))
+    return config
+
+
+def parse_audio_config_tab(config_file):
+    # type: (AnyStr) -> AudioConfig
+    """
+    Parse a file formatted with TAB.
+
+    Format::
+
+        [track]   title   duration
+    """
+    with open(config_file, 'r') as f:
+        lines = f.readlines()
+    config = []
+    for row in lines:
+        row = row.strip()
+        info = re.match(numbered_list, row)
+        track, row = info.groups() if info else (None, row)
+        info = re.findall(duration_info, row)
+        # assume the duration is the last info if multiple matches
+        duration = info[-1] if info else None
+        if duration:
+            row = row[:-len(duration)]
+        row = row.strip()
+        config.append({
+            TAG_TRACK: track,
+            TAG_TITLE: row,
+            TAG_DURATION: duration,
+        })
+    if not all([isinstance(c, dict) for c in config]):
+        raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_TAB))
+    config = AudioConfig(config)
+    LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_TAB))
+    return config
 
 
 def write_config(audio_config, file_path, fmt_mode):
@@ -144,7 +258,7 @@ def write_config(audio_config, file_path, fmt_mode):
         fmt_mode = FORMAT_MODE_YAML
     else:
         audio_config = audio_config.value
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         if fmt_mode is FORMAT_MODE_JSON:
             json.dump(audio_config, f)
         elif fmt_mode is FORMAT_MODE_YAML:
@@ -158,14 +272,14 @@ def write_config(audio_config, file_path, fmt_mode):
             max_title_len = len(max(audio_config, key=lambda _: _.title).title)
             max_track_len = 0 if not all_have_track else int(math.log10(max(_.track for _ in audio_config))) + 1
             max_track_dot = max_track_len + 1   # extra space for '.' after track number
-            line_fmt = '{track:track_tab}{title:title_tab}{duration}' \
-                .replace('title_tab', str(max_title_len)) \
-                .replace('track_tab', str(max_track_dot))
+            line_fmt = "{track:track_tab}{title:title_tab}{duration}" \
+                .replace("title_tab", str(max_title_len)) \
+                .replace("track_tab", str(max_track_dot))
             for ac in audio_config:
                 f.write(line_fmt.format(
-                    track='{}.'.format(ac.track) if all_have_track else '',
+                    track="{}.".format(ac.track) if all_have_track else "",
                     title=ac.title,
-                    duration=ac.duration if ac.duration else '')
+                    duration=ac.duration if ac.duration else "")
                 )
         else:
             raise NotImplementedError("format [{}] writing to file unknown".format(fmt_mode))
@@ -174,15 +288,15 @@ def write_config(audio_config, file_path, fmt_mode):
 def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False):
     # type: (AudioConfig, AnyStr, Optional[Union[AnyStr, FormatInfo]], bool) -> bool
     """Saves the audio config if permitted by the OS and using the corrected file extension."""
-    fmt_mode = find_mode(mode, format_modes)
+    fmt_mode = find_mode(mode, FORMAT_MODES)
     if not mode:
         raise ValueError("invalid output format mode [{}], aborting...".format(mode))
     name, ext = os.path.splitext(file_path)
     if not fmt_mode.matches(ext):
         LOGGER.warning("file extension [{}] doesn't match requested save format [{}], fixing to [{}]."
                        .format(ext, mode, fmt_mode.name))
-        ext = fmt_mode.extension
-    file_path = "{}{}{}".format(name, '' if ext.startswith('.') else '.', ext)
+        ext = fmt_mode.extensions[0]
+    file_path = "{}{}{}".format(name, "" if ext.startswith(".") else ".", ext)
     if os.path.isfile(file_path):
         if dry:
             LOGGER.debug("Would have removed file: [%s]", file_path)

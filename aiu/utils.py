@@ -1,11 +1,12 @@
 from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
-from typing import Any, AnyStr, Callable, List, Optional, Union
+from typing import AnyStr, Callable, Iterable, List, Optional, Union
 from PIL import Image
 from functools import wraps
 import eyed3
-import six
 import os
+import six
+import shutil
 
 
 def log_exception(logger=None):
@@ -25,19 +26,33 @@ def log_exception(logger=None):
     return decorator
 
 
-def look_for_default_file(path, names):
-    # type: (AnyStr, Union[List[AnyStr], AnyStr]) -> Union[AnyStr, None]
+def look_for_default_file(path, allowed_names, allowed_extensions=None):
+    # type: (AnyStr, Union[List[AnyStr], AnyStr], Optional[Union[List[AnyStr], AnyStr]]) -> Union[AnyStr, None]
     """
     Looks in `path` for any file matching any of the `names`.
+
     :returns: full path of first matching occurrence, or `None`.
     """
-    names = names if isinstance(names, list) else [names]
+    names = allowed_names if isinstance(allowed_names, (list, set)) else [allowed_names]
+    if allowed_extensions and isinstance(allowed_extensions, six.string_types):
+        allowed_extensions = [allowed_extensions]
     contents = sorted(os.listdir(path))
     for c in contents:
         c_name, c_ext = os.path.splitext(c)
-        if c_name in names and c_ext != '':
-            return os.path.abspath(os.path.join(path, c))
+        c_ext = c_ext.replace(".", "")
+        if c_name in names and c_ext != "":
+            if not allowed_extensions or c_ext in allowed_extensions:
+                return os.path.abspath(os.path.join(path, c))
     return None
+
+
+def backup_files(file_paths, backup_dir):
+    # type: (Iterable[AnyStr], AnyStr) -> None
+    os.makedirs(backup_dir, exist_ok=True)
+    for file_path in file_paths:
+        copy_path = os.path.join(backup_dir, os.path.split(file_path)[-1])
+        LOGGER.debug("Backup [%s]", copy_path)
+        shutil.copyfile(file_path, copy_path, follow_symlinks=True)
 
 
 def get_audio_file(audio_file):
