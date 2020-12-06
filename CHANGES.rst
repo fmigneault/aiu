@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`0.5.1 <https://github.com/fmigneault/aiu/tree/0.5.1>`_ (2020-12-05)
+------------------------------------------------------------------------------------
+
 * Fix parsing ``list`` format when number of lines can both result into 3-fields and 2-fields variant.
 * Fix handling unspecified ``--rename-format``, ``--rename-title`` and ``--prefix-track``.
 
