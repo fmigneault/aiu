@@ -66,7 +66,7 @@ def update_audio_tags(audio_file, audio_tags, overwrite=True):
             LOGGER.warning("tag '{}' already set".format(tag))
             continue
         setattr(audio_file.tag, tag, value)
-    audio_file.save()
+    audio_file.tag.save()
 
 
 def update_cover_image(audio_file, cover_file, overwrite=True):
@@ -133,15 +133,19 @@ def update_file_names(audio_config, rename_format, rename_title=False, prefix_tr
         else:
             LOGGER.debug("Updating rename format with title only.")
             rename_format = "%(TITLE)s"
-    elif not rename_format or "%(" not in rename_format or ")" not in rename_format:
-        LOGGER.error("No format or template variable specified!")
+    if not rename_format:
+        LOGGER.warning("No rename format or rename flag specified. Not renaming anything.")
+        return audio_config
+    if "%(" not in rename_format or ")" not in rename_format:
+        LOGGER.error("No rename format or template variable specified! Will not rename anything.")
+        return audio_config
     for audio_item in audio_config:  # type: AudioInfo
         if audio_item.file:
             if not os.path.isfile(audio_item.file):
                 LOGGER.error("Invalid file value cannot be found: [%s]", audio_item.file)
                 continue
             rename_name = rename_format.lower() % audio_item
-            rename_norm = normalize('NFKD', rename_name)
+            rename_norm = normalize("NFKD", rename_name)
             LOGGER.debug("Before/after normalization: [%s] => [%s]", rename_name, rename_norm)
             rename_path, origin_name = os.path.split(audio_item.file)
             origin_name, origin_ext = os.path.splitext(origin_name)
