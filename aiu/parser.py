@@ -178,36 +178,57 @@ def parse_audio_config_list(config_file):
     fields_2 = not len(lines) % 2
     fields_3 = not len(lines) % 3
     config = []
-    if fields_2:
-        track_matches = [re.match(numbered_list, lines[i]) for i in range(0, len(lines), 2)]
-        duration_matches = [re.match(duration_info, lines[i + 1]) for i in range(0, len(lines), 2)]
-        if all(match is not None for match in track_matches):
-            track_groups = [list(m.groups()) for m in track_matches]
-            if all(grp[0].isnumeric() and grp[1] == "" for grp in track_groups):
-                tracks = [grp[0] for grp in track_groups]
-                titles = [lines[i + 1] for i in range(0, len(lines), 2)]
-                config = [{TAG_TRACK: track, TAG_TITLE: title} for track, title in zip(tracks, titles)]
-        elif all(match is not None for match in duration_matches):
-            duration_groups = [list(m.groups())[0] for m in duration_matches]
-            if all(Duration(grp) for grp in duration_groups):  # will raise on any invalid parsing
-                titles = [lines[i] for i in range(0, len(lines), 2)]
-                durations = [grp for grp in duration_groups]
-                config = [{TAG_DURATION: duration, TAG_TITLE: title} for duration, title in zip(durations, titles)]
-    elif fields_3:
-        titles = [lines[i + 1] for i in range(0, len(lines), 3)]
-        track_matches = [re.match(numbered_list, lines[i]) for i in range(0, len(lines), 3)]
-        duration_matches = [re.match(duration_info, lines[i + 2]) for i in range(0, len(lines), 3)]
-        track_groups = [list(m.groups()) for m in track_matches]
-        duration_groups = [list(m.groups())[0] for m in duration_matches]
-        track_valid = all(grp[0].isnumeric() and grp[1] == "" for grp in track_groups)
-        duration_valid = all(Duration(grp) for grp in duration_groups)
-        if track_valid and duration_valid:
-            tracks = [grp[0] for grp in track_groups]
-            durations = [grp for grp in duration_groups]
-            config = [{TAG_TRACK: track, TAG_TITLE: title, TAG_DURATION: duration}
-                      for track, title, duration in zip(tracks, titles, durations)]
 
-    if not config or not all(isinstance(c, dict) for c in config):
+    def _parse_fields_3():
+        _config = []
+        try:
+            _titles = [lines[i + 1] for i in range(0, len(lines), 3)]
+            _track_matches = [re.match(numbered_list, lines[i]) for i in range(0, len(lines), 3)]
+            _duration_matches = [re.match(duration_info, lines[i + 2]) for i in range(0, len(lines), 3)]
+            _track_groups = [list(m.groups()) for m in _track_matches]
+            _duration_groups = [list(m.groups())[0] for m in _duration_matches]
+            _track_valid = all(grp[0].isnumeric() and grp[1] == "" for grp in _track_groups)
+            _duration_valid = all(Duration(grp) for grp in _duration_groups)
+            if _track_valid and _duration_valid:
+                _tracks = [grp[0] for grp in _track_groups]
+                _durations = [grp for grp in _duration_groups]
+                _config = [{TAG_TRACK: track, TAG_TITLE: title, TAG_DURATION: duration}
+                           for track, title, duration in zip(_tracks, _titles, _durations)]
+        except Exception as exc:
+            LOGGER.trace("exception during [%s] parsing attempt (assuming 3 fields):", FORMAT_MODE_LIST, exc_info=exc)
+        return _config
+
+    def _parse_fields_2():
+        _config = []
+        try:
+            _track_matches = [re.match(numbered_list, lines[i]) for i in range(0, len(lines), 2)]
+            _duration_matches = [re.match(duration_info, lines[i + 1]) for i in range(0, len(lines), 2)]
+            if all(match is not None for match in _track_matches):
+                _track_groups = [list(m.groups()) for m in _track_matches]
+                if all(grp[0].isnumeric() and grp[1] == "" for grp in _track_groups):
+                    _tracks = [grp[0] for grp in _track_groups]
+                    _titles = [lines[i + 1] for i in range(0, len(lines), 2)]
+                    _config = [{TAG_TRACK: track, TAG_TITLE: title} for track, title in zip(_tracks, _titles)]
+            elif all(match is not None for match in _duration_matches):
+                _duration_groups = [list(m.groups())[0] for m in _duration_matches]
+                if all(Duration(grp) for grp in _duration_groups):  # will raise on any invalid parsing
+                    _titles = [lines[i] for i in range(0, len(lines), 2)]
+                    _durations = [grp for grp in _duration_groups]
+                    _config = [{TAG_DURATION: duration, TAG_TITLE: title}
+                               for duration, title in zip(_durations, _titles)]
+        except Exception as exc:
+            LOGGER.trace("exception during [%s] parsing attempt (assuming 3 fields):", FORMAT_MODE_LIST, exc_info=exc)
+        return _config
+
+    # sometimes, number of lines can be ambiguous between 2/3 lines (eg: 42/3 = 14, 42/2 = 21)
+    # try first with 3 fields which is harder to match, and then retry with 2 if not successful
+    if fields_3:
+        config = _parse_fields_3()
+    if fields_2 and not config:
+        config = _parse_fields_2()
+    if not config:
+        raise ValueError("invalid number of lines to parse as [{}], moving on...".format(FORMAT_MODE_LIST))
+    if not all(isinstance(c, dict) for c in config):
         raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_LIST))
     config = AudioConfig(config)
     LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_LIST))

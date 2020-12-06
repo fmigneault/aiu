@@ -257,7 +257,7 @@ def main(
          year=None,                     # type: Optional[int]
          match_artist=True,             # type: bool
          # --- other operation flags ---
-         rename_format=False,           # type: Optional[AnyStr]
+         rename_format=None,            # type: Optional[AnyStr]
          rename_title=False,            # type: bool
          prefix_track=False,            # type: bool
          dry=False,                     # type: bool
