@@ -87,7 +87,7 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
     fmt_mode = find_mode(mode, PARSER_MODES)
     if not fmt_mode:
         raise ValueError("invalid parser mode: [{}]".format(mode))
-    log_lvl = logging.WARNING if fmt_mode is FORMAT_MODE_ANY else LOGGER.ERROR
+    log_lvl = logging.WARNING if fmt_mode is FORMAT_MODE_ANY else logging.ERROR
 
     # --- CSV with header row ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_CSV]:
