@@ -19,7 +19,7 @@ lookup and pattern matching methods to be flexible against various naming conven
     * - releases
       - | |version| |commits-since|
 
-.. |py_ver| image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
+.. |py_ver| image:: https://img.shields.io/badge/python-2.7%2C%203.5%2B-blue.svg
     :alt: Requires Python 3.5+
     :target: https://www.python.org/getit
 
