@@ -1,6 +1,6 @@
 from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
-from typing import AnyStr, Callable, Iterable, List, Optional, Union
+from typing import Callable, Iterable, List, Optional, Union
 from PIL import Image
 from functools import wraps
 import eyed3
@@ -27,7 +27,7 @@ def log_exception(logger=None):
 
 
 def look_for_default_file(path, allowed_names, allowed_extensions=None):
-    # type: (AnyStr, Union[List[AnyStr], AnyStr], Optional[Union[List[AnyStr], AnyStr]]) -> Union[AnyStr, None]
+    # type: (str, Union[List[str], str], Optional[Union[List[str], str]]) -> Union[str, None]
     """
     Looks in `path` for any file matching any of the `names`.
 
@@ -47,7 +47,7 @@ def look_for_default_file(path, allowed_names, allowed_extensions=None):
 
 
 def backup_files(file_paths, backup_dir):
-    # type: (Iterable[AnyStr], AnyStr) -> None
+    # type: (Iterable[str], str) -> None
     os.makedirs(backup_dir, exist_ok=True)
     for file_path in file_paths:
         copy_path = os.path.join(backup_dir, os.path.split(file_path)[-1])
@@ -73,11 +73,17 @@ def get_cover_file(cover_file):
     return cover_file
 
 
-def validate_output_file(output_file_path, search_path, default_name='output.cfg'):
-    # type: (AnyStr, AnyStr, Optional[AnyStr]) -> AnyStr
+def validate_output_file(output_file_path, search_path, default_name="output.cfg"):
+    # type: (str, str, Optional[str]) -> str
     if not output_file_path:
         output_file_path = os.path.join(search_path, default_name)
     output_file_path = os.path.abspath(output_file_path)
-    if not os.path.isdir(os.path.dirname(output_file_path)):
-        raise ValueError("invalid save location: [{}]".format(output_file_path))
+    if os.path.isdir(output_file_path):
+        output_dir = output_file_path
+        output_file_path = os.path.join(output_dir, default_name)
+    else:
+        output_dir = os.path.dirname(output_file_path)
+    if not os.path.isdir(output_dir):
+        LOGGER.debug("Missing output save location, creating it: [%s]", output_file_path)
+        os.makedirs(output_dir)
     return output_file_path

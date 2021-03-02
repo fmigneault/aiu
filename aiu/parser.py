@@ -2,7 +2,7 @@ from aiu.typedefs import AudioConfig, Duration, FormatInfo
 from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
 from aiu import LOGGER
 from eyed3.mp3 import isMp3File
-from typing import AnyStr, Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union
 import itertools
 import logging
 import json
@@ -68,7 +68,7 @@ def load_config(maybe_config, wanted_config, is_map):
 
 
 def find_mode(mode, formats):
-    # type: (Union[AnyStr, FormatInfo], Iterable[FormatInfo]) -> Union[FormatInfo, None]
+    # type: (Union[str, FormatInfo], Iterable[FormatInfo]) -> Union[FormatInfo, None]
     if isinstance(mode, FormatInfo):
         return mode
     for fmt in formats:
@@ -78,7 +78,7 @@ def find_mode(mode, formats):
 
 
 def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
-    # type: (AnyStr, Optional[Union[AnyStr, FormatInfo]]) -> AudioConfig
+    # type: (str, Optional[Union[str, FormatInfo]]) -> AudioConfig
     """Attempts various parsing methods to retrieve audio files metadata from a config file."""
 
     if not os.path.isfile(config_file):
@@ -134,7 +134,7 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
 
 
 def parse_audio_config_objects(config_file):
-    # type: (AnyStr) -> AudioConfig
+    # type: (str) -> AudioConfig
     """
     Parse a file formatted with list of object in JSON/YAML.
 
@@ -155,7 +155,7 @@ def parse_audio_config_objects(config_file):
 
 
 def parse_audio_config_list(config_file):
-    # type: (AnyStr) -> AudioConfig
+    # type: (str) -> AudioConfig
     """
     Parse a file formatted with list row-fields of continuous intervals.
 
@@ -236,7 +236,7 @@ def parse_audio_config_list(config_file):
 
 
 def parse_audio_config_tab(config_file):
-    # type: (AnyStr) -> AudioConfig
+    # type: (str) -> AudioConfig
     """
     Parse a file formatted with TAB.
 
@@ -270,7 +270,7 @@ def parse_audio_config_tab(config_file):
 
 
 def write_config(audio_config, file_path, fmt_mode):
-    # type: (AudioConfig, AnyStr, FormatInfo) -> None
+    # type: (AudioConfig, str, FormatInfo) -> None
     """Raw writing operation to dump audio config to file with specified format."""
     all_have_track = all(isinstance(_.track, int) for _ in audio_config)
     audio_config = AudioConfig(sorted(audio_config, key=lambda _: _.track if all_have_track else _.title))
@@ -307,7 +307,7 @@ def write_config(audio_config, file_path, fmt_mode):
 
 
 def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False):
-    # type: (AudioConfig, AnyStr, Optional[Union[AnyStr, FormatInfo]], bool) -> bool
+    # type: (AudioConfig, str, Optional[Union[str, FormatInfo]], bool) -> bool
     """Saves the audio config if permitted by the OS and using the corrected file extension."""
     fmt_mode = find_mode(mode, FORMAT_MODES)
     if not mode:
@@ -331,7 +331,7 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False)
 
 
 def get_audio_files(path):
-    # type: (AnyStr) -> List[str]
+    # type: (str) -> List[str]
     """Retrieves all supported audio files from the specified path (file or directory)."""
     if not os.path.isdir(path):
         if os.path.isfile(path):

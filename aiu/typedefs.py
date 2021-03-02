@@ -1,14 +1,26 @@
-from aiu.clean import beautify_string
-from typing import Any, AnyStr, Dict, List, Optional, Union
+import datetime
+import logging
+import typing
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+
+import eyed3
+from eyed3.id3.tag import Tag
 from PIL import Image, ImageFile
 from slugify import slugify
-from eyed3.id3.tag import Tag
-import eyed3
-import logging
-import datetime
-import six
+
+from aiu.clean import beautify_string
+
 
 LoggerType = logging.Logger
+
+if TYPE_CHECKING:
+    Number = Union[int, float]
+    ValueType = Union[str, Number, bool]
+    AnyValue = Optional[ValueType]
+    _JsonObjectItem = Dict[str, Union["JSON", "_JsonListItem"]]
+    _JsonListItem = List[Union[AnyValue, _JsonObjectItem, "_JsonListItem", "JSON"]]
+    _JsonItem = Union[AnyValue, _JsonObjectItem, _JsonListItem]
+    JSON = Union[Dict[str, _JsonItem], List[_JsonItem]]
 
 
 class FormatInfo(object):
@@ -17,13 +29,13 @@ class FormatInfo(object):
     __slots__ = ["_name", "_ext"]
 
     def __init__(self, name, extensions):
-        # type: (AnyStr, Union[AnyStr, List[AnyStr]]) -> None
+        # type: (str, Union[str, List[str]]) -> None
         """
         :param name: identifier of the format type.
         :param extensions: supported extension(s) corresponding to this format. First one is the `default`.
         """
         self._name = name
-        self._ext = [extensions] if isinstance(extensions, six.string_types) else list(extensions)
+        self._ext = [extensions] if isinstance(extensions, str) else list(extensions)
 
     def __str__(self):
         return self.name
@@ -101,7 +113,7 @@ class Duration(BaseField, datetime.timedelta):
         Duration(5025)  # int == 1*3600 + 23*60 + 45 seconds
     """
     def __new__(cls, duration=None, **kwargs):
-        if isinstance(duration, six.string_types):
+        if isinstance(duration, str):
             time_parts = duration.replace("-", ":").replace("/", ":").split(":")
             h, m, s = [None] + time_parts if len(time_parts) == 2 else time_parts
             h = int(h) if h is not None else 0
@@ -180,7 +192,7 @@ Date = datetime.date
 # interfaces order important, inherit `BaseField` implementations before sub-type implementations
 class StrField(BaseField, str):
     def __new__(cls, value, allow_none=True, beautify=False, *_, **__):
-        # type: (StrField, Union[AnyStr, None], Optional[bool], Optional[bool], Any, Any) -> StrField
+        # type: (StrField, Union[str, None], Optional[bool], Optional[bool], Any, Any) -> StrField
         field = super(StrField, cls).__new__(cls, value)
         field.__init__(*_, **__)
         field._allow_none = allow_none
@@ -189,18 +201,18 @@ class StrField(BaseField, str):
         return field
 
     def __str__(self):
-        # type: (...) -> AnyStr
+        # type: (...) -> str
         return self._value if self._value else ""
 
     def __repr__(self):
         return str(self._value)
 
     def __set__(self, instance, value):
-        # type: (StrField, Union[None, AnyStr]) -> None
-        if not (isinstance(value, six.string_types) or (self._allow_none and value is None)):
+        # type: (StrField, Union[None, str]) -> None
+        if not (isinstance(value, str) or (self._allow_none and value is None)):
             raise ValueError("invalid value [{!s}] for [{}]".format(value, type(self).__name__))
         self._raw = value
-        if self._beautify and isinstance(value, six.string_types):
+        if self._beautify and isinstance(value, str):
             # noinspection PyTypeChecker
             value = beautify_string(value)
         self._value = value
@@ -212,7 +224,7 @@ class IntField(int, BaseField):
     _is_none = True
 
     def __new__(cls, value, allow_none=True, *_, **__):
-        # type: (IntField, Union[AnyStr, None], Optional[bool], Any, Any) -> IntField
+        # type: (IntField, Union[str, None], Optional[bool], Any, Any) -> IntField
         field = super(IntField, cls).__new__(cls, value or 0)
         field.__init__(*_, **__)
         field._allow_none = allow_none
@@ -220,7 +232,7 @@ class IntField(int, BaseField):
         return field
 
     def __str__(self, digit_count=None):
-        # type: (Optional[int]) -> AnyStr
+        # type: (Optional[int]) -> str
         if self._is_none:
             return ""
         int_str = super(IntField, self).__str__()
@@ -235,13 +247,13 @@ class IntField(int, BaseField):
         return not self.__eq__(other)
 
     def __get__(self, instance, owner):
-        # type: (...) -> Union[AnyStr, None]
+        # type: (...) -> Union[str, None]
         return None if self._is_none else self._value
 
     def __set__(self, instance, value):
         self._raw = value
         self._is_none = value is None
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             try:
                 value = int(value)
             except ValueError as ex:
@@ -256,7 +268,7 @@ class IntField(int, BaseField):
 
 
 CoverFileRaw = Union[Image.Image]
-CoverFileAny = Union[AnyStr, CoverFileRaw]
+CoverFileAny = Union[str, CoverFileRaw]
 
 
 class CoverFile(BaseField):
@@ -266,7 +278,7 @@ class CoverFile(BaseField):
         # type: (CoverFileAny, Any, Any) -> None
         super(CoverFile, self).__init__(*_, **__)
         self._raw = image
-        if isinstance(image, six.string_types):
+        if isinstance(image, str):
             self._cover = ImageFile.ImageFile(image)
             self._name = slugify(image)
         elif isinstance(image, Image.Image):
@@ -279,9 +291,9 @@ class CoverFile(BaseField):
         return self._name
 
 
-AudioTagDict = Dict[AnyStr, Union[AnyStr, int]]
+AudioTagDict = Dict[str, Union[str, int]]
 AudioFile = eyed3.core.AudioFile
-AudioFileAny = Union[AnyStr, AudioFile]
+AudioFileAny = Union[str, AudioFile]
 AudioField = Union[None, int, StrField, Date, Duration, CoverFile]
 
 
@@ -318,7 +330,7 @@ class AudioInfo(dict):
         return self["title"]
 
     def _set_title(self, title):
-        # type: (AnyStr) -> None
+        # type: (str) -> None
         self["title"] = StrField(title, allow_none=False, beautify=self._beautify, field=Tag.title)
 
     title = property(_get_title, _set_title)
@@ -327,7 +339,7 @@ class AudioInfo(dict):
         return self["artist"]
 
     def _set_artist(self, artist):
-        # type: (AnyStr) -> None
+        # type: (str) -> None
         self["artist"] = StrField(artist, allow_none=False, beautify=self._beautify, field=Tag.artist)
 
     artist = property(_get_artist, _set_artist)
@@ -357,17 +369,17 @@ class AudioInfo(dict):
         return self["duration"]
 
     def _set_duration(self, duration):
-        # type: (Union[AnyStr, Duration]) -> None
+        # type: (Union[str, Duration]) -> None
         self["duration"] = Duration(duration)
 
     duration = property(_get_duration, _set_duration)
 
     def _get_file(self):
-        # type: (...) -> Optional[AnyStr]
+        # type: (...) -> Optional[str]
         return self.get("file", None)
 
     def _set_file(self, file):
-        # type: (Optional[AnyStr]) -> None
+        # type: (Optional[str]) -> None
         self["file"] = StrField(file, allow_none=True)
 
     file = property(_get_file, _set_file)
@@ -379,7 +391,7 @@ class AudioConfig(list):
     and audio file definition and fields.
     """
     def __init__(self, raw_config=None):
-        # type: (Union[AudioInfo, List[AudioInfo], Dict[AnyStr, AudioField], List[Dict[AnyStr, AudioField]]]) -> None
+        # type: (Union[AudioInfo, List[AudioInfo], Dict[str, AudioField], List[Dict[str, AudioField]]]) -> None
         if not raw_config:
             config = {}
         else:

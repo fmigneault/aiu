@@ -6,8 +6,14 @@ All options defining specific metadata fields (``--artist``, ``--year``, etc.) o
 corresponding information fields found in configurations files from options ``--info`` or ``--all``.
 Applied changes listed in ``--output`` file.
 """
+import argparse
+import os
+import sys
+from typing import List, Optional, Union, Tuple, TYPE_CHECKING
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
+
 import aiu
-from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG, TRACE
+from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG, LOGGER, TRACE, __meta__, tags as t
 from aiu.parser import (
     ALL_PARSER_EXTENSIONS,
     FORMAT_MODE_ANY,
@@ -22,12 +28,10 @@ from aiu.parser import (
 from aiu.updater import ALL_IMAGE_EXTENSIONS, merge_audio_configs, apply_audio_config, update_file_names
 from aiu.utils import backup_files, look_for_default_file, validate_output_file, log_exception
 from aiu.typedefs import AudioConfig, Duration
-from aiu import __meta__, tags as t, LOGGER
-from typing import AnyStr, Optional, Union
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
-import argparse
-import sys
-import os
+from aiu.youtube import fetch_files, get_metadata
+
+if TYPE_CHECKING:
+    from aiu.typedefs import JSON
 
 
 def cli():
@@ -91,6 +95,10 @@ def cli():
         parser_args = ap.add_argument_group(title="Parsing Arguments",
                                             description="Arguments that control parsing methodologies and "
                                                         "configurations to update matched audio files metadata.")
+        parser_args.add_argument("-l", "--link", "--youtube", dest="link",
+                                 help="YouTube music link from where to retrieve songs and album metadata. "
+                                      "When provided, other options will override whichever tag information was "
+                                      "automatically obtained from the URL reference.")
         parser_args.add_argument("-p", "--path", "-f", "--file", default=".", dest="search_path",
                                  help="Path where to search for audio and metadata info files to process. "
                                       "Can either be a directory path where all containing audio files will be "
@@ -111,7 +119,7 @@ def cli():
                                  help="Parsing mode to enforce. See also ``--help-format`` for details. "
                                       "(default: %(default)s)")
         parser_args.add_argument("-o", "--output", dest="output_file",
-                                 help="Location where to save applied output configurations. Directory must exist. "
+                                 help="Location where to save applied output configurations (file or directory). "
                                       "(default: ``output.cfg`` located under ``--path``"
                                       " or parent directory of ``--file``).")
         parser_args.add_argument("-F", "--format", dest="output_mode",
@@ -150,6 +158,24 @@ def cli():
                              help="Specify the specific ``FORMAT`` to employ for renaming files. "
                                   "Formatting template follows the ``%%(<TAG>)`` syntax. "
                                   "Supported ``<TAG>`` fields are listed in ID3 TAG names except image-related items.")
+        op_args.add_argument("--no-fetch", "--nF", action="store_true",
+                             help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
+                                  "When provided, instead of downloading music files, only metadata information will "
+                                  "be retrieved from the link in order to obtain ID3 audio tag metadata and apply them "
+                                  "to referenced pre-existing audio files in the search path. The metadata retrieved "
+                                  "this way replaces corresponding ID3 tag details otherwise provided by ``--info``.")
+        op_args.add_argument("--no-info", "--nI", action="store_true",
+                             help="Disable auto-detection of 'info' common audio metadata information file names. "
+                                  "Useful when detection of an existing file on search path should be avoided. "
+                                  "Ignored if ``--info`` is explicitly specified.")
+        op_args.add_argument("--no-all", "--nA", action="store_true",
+                             help="Disable auto-detection of 'all' common audio metadata information file names. "
+                                  "Useful when detection of an existing file on search path should be avoided. "
+                                  "Ignored if ``--all`` is explicitly specified.")
+        op_args.add_argument("--no-cover", "--nC", action="store_true",
+                             help="Disable auto-detection of common cover image file names. "
+                                  "Useful when detection of an existing file on search path should be avoided. "
+                                  "Ignored if ``--cover`` is explicitly specified.")
         op_args.add_argument("--no-rename", "--nR", action="store_true",
                              help="Do not apply any file rename operation. (note: implied when ``--dry`` is provided)")
         op_args.add_argument("--no-update", "--nU", action="store_true",
@@ -188,7 +214,7 @@ def cli():
                                    "If not provided, but ``TAG_ARTIST`` can be found via option ``--artist`` or some "
                                    "other configuration file (``--info`` or ``--all``), the same value is employed "
                                    "unless requested not to do so using option ``--no-match-artist``.")
-        id3_args.add_argument("--no-match-artist", "--nA", action="store_true", dest="match_artist")
+        id3_args.add_argument("--no-match-artist", "--nMA", action="store_false", dest="match_artist")
         log_args = ap.add_argument_group(title="Logging Arguments",
                                          description="Arguments that control logging and reporting verbosity.")
         lvl_args = log_args.add_mutually_exclusive_group(required=False)
@@ -237,54 +263,89 @@ def cli():
 @log_exception(LOGGER)
 def main(
          # --- file/parsing options ---
-         search_path=None,              # type: Optional[AnyStr]
-         info_file=None,                # type: Optional[AnyStr]
-         all_info_file=None,            # type: Optional[AnyStr]
-         cover_file=None,               # type: Optional[AnyStr]
-         output_file=None,              # type: Optional[AnyStr]
+         link=None,                     # type: Optional[str]
+         search_path=None,              # type: Optional[str]
+         info_file=None,                # type: Optional[str]
+         all_info_file=None,            # type: Optional[str]
+         cover_file=None,               # type: Optional[str]
+         output_file=None,              # type: Optional[str]
          output_mode=FORMAT_MODE_YAML,  # type: Union[FORMAT_MODES]
          parser_mode=FORMAT_MODE_ANY,   # type: Union[PARSER_MODES]
-         exceptions_config=None,        # type: Optional[AnyStr]
-         stopwords_config=None,         # type: Optional[AnyStr]
+         exceptions_config=None,        # type: Optional[str]
+         stopwords_config=None,         # type: Optional[str]
          # --- specific meta fields ---
-         artist=None,                   # type: Optional[AnyStr]
-         album=None,                    # type: Optional[AnyStr]
-         album_artist=None,             # type: Optional[AnyStr]
-         title=None,                    # type: Optional[AnyStr]
+         artist=None,                   # type: Optional[str]
+         album=None,                    # type: Optional[str]
+         album_artist=None,             # type: Optional[str]
+         title=None,                    # type: Optional[str]
          track=None,                    # type: Optional[int]
-         genre=None,                    # type: Optional[AnyStr]
-         duration=None,                 # type: Optional[Union[Duration, AnyStr]]
+         genre=None,                    # type: Optional[str]
+         duration=None,                 # type: Optional[Union[Duration, str]]
          year=None,                     # type: Optional[int]
          match_artist=True,             # type: bool
          # --- other operation flags ---
-         rename_format=None,            # type: Optional[AnyStr]
+         rename_format=None,            # type: Optional[str]
          rename_title=False,            # type: bool
          prefix_track=False,            # type: bool
          dry=False,                     # type: bool
          backup=False,                  # type: bool
+         no_fetch=False,                # type: bool
+         no_cover=False,                # type: bool
+         no_info=False,                 # type: bool
+         no_all=False,                  # type: bool
          no_rename=False,               # type: bool
          no_update=False,               # type: bool
          no_output=False,               # type: bool
          no_result=False,               # type: bool
          ):                             # type: (...) -> AudioConfig
+    """
+    Main process of AIU CLI.
+    """
     search_path = "." if search_path == "'.'" else search_path  # default provided as literal string with quotes
     search_path = os.path.abspath(search_path or os.path.curdir)
     search_dir = search_path if os.path.isdir(search_path) else os.path.split(search_path)[0]
     LOGGER.info("Search path is: [%s]", search_path)
-    cfg_info_file = info_file
-    if not cfg_info_file:
-        cfg_info_file = look_for_default_file(search_dir, ["info", "config", "meta"], ALL_PARSER_EXTENSIONS)
-    LOGGER.info("Matched config 'info' file: [%s]", cfg_info_file)
-    if not all_info_file:
-        all_info_file = look_for_default_file(search_dir, ["all", "any", "every"], ALL_PARSER_EXTENSIONS)
-    LOGGER.info("Matched config 'all' file: [%s]", all_info_file)
-    if not cover_file:
-        cover_file = look_for_default_file(search_dir, ["cover", "artwork", "art", "image"], ALL_IMAGE_EXTENSIONS)
-    LOGGER.info("Matched cover image file: [%s]", cover_file)
+
     output_file = validate_output_file(output_file, search_dir, default_name="output.cfg")
     LOGGER.info("Output config file %s be: [%s]", "would" if dry else "will", output_file)
-    audio_files = get_audio_files(search_path)
-    LOGGER.info("Found audio files to process:\n  %s", "\n  ".join(audio_files))
+    output_dir = os.path.dirname(output_file)
+
+    # process link to pre-generate configuration files
+    youtube_config = None
+    if link:
+        if dry and not no_fetch:
+            LOGGER.warning("Will not fetch files from URL in 'dry' mode. Enforcing '--no-fetch'.")
+            no_fetch = True
+        LOGGER.info("Retrieving config 'youtube'%s from link: [%s]", "" if no_fetch else " and album files", link)
+        meta_file, meta_json = get_metadata(link) if no_fetch else fetch_files(link, output_dir)
+        youtube_config = AudioConfig(meta_json)
+
+    # find configurations files
+    cfg_info_file = info_file
+    if not cfg_info_file and not no_info:
+        cfg_info_file = look_for_default_file(search_dir, ["info", "config", "meta"], ALL_PARSER_EXTENSIONS)
+    if cfg_info_file and os.path.isfile(cfg_info_file):
+        LOGGER.info("Matched config 'info' file: [%s]", cfg_info_file)
+    else:
+        cfg_info_file = None
+        LOGGER.debug("No config 'info' file found.")
+
+    if not all_info_file and not no_all:
+        all_info_file = look_for_default_file(search_dir, ["all", "any", "every"], ALL_PARSER_EXTENSIONS)
+    if all_info_file and os.path.isfile(all_info_file):
+        LOGGER.info("Matched config 'all' file: [%s]", all_info_file)
+    else:
+        all_info_file = None
+        LOGGER.debug("No config 'all' file found.")
+
+    if not cover_file and not no_cover:
+        cover_file = look_for_default_file(search_dir, ["cover", "artwork", "art", "image"], ALL_IMAGE_EXTENSIONS)
+    if cover_file and os.path.isfile(cover_file):
+        LOGGER.info("Matched cover image file: [%s]", cover_file)
+    else:
+        cover_file = None
+        LOGGER.debug("No cover image file found.")
+
     LOGGER.debug("Using %s exceptions configuration: [%s]",
                  "custom" if exceptions_config else "default",
                  exceptions_config if exceptions_config else DEFAULT_EXCEPTIONS_CONFIG)
@@ -295,7 +356,15 @@ def main(
                  stopwords_config if stopwords_config else DEFAULT_STOPWORDS_CONFIG)
     stopword_file = stopwords_config or DEFAULT_STOPWORDS_CONFIG
     aiu.Config.STOPWORDS = load_config(aiu.Config.STOPWORDS, stopword_file, is_map=False)
-    config_combo = []
+
+    # obtain target audio files to process
+    audio_files = get_audio_files(search_path)
+    LOGGER.info("Found audio files to process:\n  %s", "\n  ".join(audio_files))
+
+    # parse configurations
+    config_combo = []  # type: List[Tuple[bool, Union[AudioConfig, JSON]]]
+    if youtube_config:
+        config_combo.append((False, youtube_config))
     if cfg_info_file:
         LOGGER.info("Running audio config parsing...")
         cfg_audio_config = parse_audio_config(cfg_info_file, mode=parser_mode)
@@ -317,6 +386,8 @@ def main(
     if not config_combo:
         LOGGER.error("Couldn't find any config to process.")
         sys.exit(-1)
+
+    # apply parsed configurations against target audio files
     LOGGER.info("Resolving metadata config fields...")
     LOGGER.debug("Match artist parameter: %s", match_artist)
     audio_config = merge_audio_configs(config_combo, match_artist)
@@ -328,6 +399,8 @@ def main(
             backup_files(audio_files, backup_dir)
     output_config = apply_audio_config(audio_files, audio_config, dry=dry or no_update)
     output_config = update_file_names(output_config, rename_format, rename_title, prefix_track, dry=dry or no_rename)
+
+    # report results
     if not no_output and not save_audio_config(output_config, output_file, mode=output_mode, dry=dry):
         if not dry:  # when dry mode, it is normal that the file was not written
             LOGGER.error("Failed saving file, but no unhandled exception occurred.")
