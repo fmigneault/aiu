@@ -19,8 +19,8 @@ lookup and pattern matching methods to be flexible against various naming conven
     * - releases
       - | |version| |commits-since|
 
-.. |py_ver| image:: https://img.shields.io/badge/python-2.7%2C%203.5%2B-blue.svg
-    :alt: Requires Python 3.5+
+.. |py_ver| image:: https://img.shields.io/badge/python-3.6%2B-blue.svg
+    :alt: Requires Python 3.6+
     :target: https://www.python.org/getit
 
 .. |commits-since| image:: https://img.shields.io/github/commits-since/fmigneault/aiu/0.5.1.svg
@@ -127,3 +127,16 @@ List of plain text fields
     Second Song Title
     2:45
 
+
+Using YouTube Music album link
+======================================
+
+It is possible to provide a YouTube Music URL formatted with the album ID in query parameter.
+
+```
+https://music.youtube.com/playlist?list=<ALBUM_ID>
+```
+
+When providing such a link to `AIU`, it can simultaneously retrieve the corresponding album audio files and apply
+all appropriate audio tag metadata to them. The resulting files can then be further updated using the other options
+and parsing formats from metadata configurations.
