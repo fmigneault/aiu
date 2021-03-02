@@ -4,7 +4,10 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add basic implementation allowing fetch of metadata and downloading of YouTube Music album files.
+* Add options ``--no-cover``, ``--no-info``, and ``--no-all`` to disable default auto-detection of configuration files.
+* Add *featuring* abbreviations handling in ``exceptions.cfg`` file.
+* Drop support of Python 2.7 and 3.5
 
 `0.5.1 <https://github.com/fmigneault/aiu/tree/0.5.1>`_ (2020-12-05)
 ------------------------------------------------------------------------------------

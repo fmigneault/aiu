@@ -1,4 +1,3 @@
-from typing import AnyStr
 import aiu
 import re
 import string
@@ -9,7 +8,7 @@ WHITESPACES_NO_SPACE = string.whitespace.replace(' ', '')
 
 
 def beautify_string(s):
-    # type: (AnyStr) -> AnyStr
+    # type: (str) -> str
     """
     Applies `beatification` operations for a `field` string.
         - removes invalid whitespaces

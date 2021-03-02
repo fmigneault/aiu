@@ -1,9 +1,11 @@
+eyed3
+libmagic
+Pillow
 python-magic
 python-magic-bin
-libmagic
+PyYAML
+requests
+six
 slugify
 typing
-PyYAML
-Pillow
-eyed3
-six
+git+https://github.com/tombulled/python-youtube-music#egg=ytm[dl]
