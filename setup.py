@@ -75,7 +75,7 @@ setup(
     license="MIT",
     keywords="audio,music,editor,tag,id3,mp3,metadata,parser,youtube",
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "Intended Audience :: End Users/Desktop",
@@ -84,9 +84,7 @@ setup(
         "Operating System :: Microsoft",
         "Operating System :: POSIX",
         "Operating System :: Unix",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
