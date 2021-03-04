@@ -1,6 +1,7 @@
 from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
 from aiu.utils import get_audio_file, get_cover_file
 from aiu import LOGGER
+from copy import deepcopy
 from typing import Iterable, Optional, Tuple
 from unicodedata import normalize
 import eyed3
@@ -10,8 +11,8 @@ import os
 ALL_IMAGE_EXTENSIONS = frozenset([".tif", ".png", ".jpg", ".jpeg"])
 
 
-def merge_audio_configs(configs, match_artist=False):
-    # type: (Iterable[Tuple[bool, AudioConfig]], Optional[bool]) -> AudioConfig
+def merge_audio_configs(configs, match_artist, total_files, config_shared):
+    # type: (Iterable[Tuple[bool, AudioConfig]], bool, int, bool) -> AudioConfig
     """
     Merge matching audio info fields into a single one, for each :class:`AudioInfo` in resulting :class:`AudioConfig`.
 
@@ -21,22 +22,33 @@ def merge_audio_configs(configs, match_artist=False):
     For this reason
 
     :param configs:
-        list of metadata files to merge together with a `bool` associated to each one indicating if their
+        List of metadata configuration to merge together with a `bool` associated to each one indicating if their
         corresponding fields apply to `all` audio files (`True`) or specifically to each index (`False`).
     :param match_artist:
-        indicates if ``TAG_ALBUM_ARTIST`` should be set equal as ``TAG_ARTIST`` if missing.
+        Indicates if ``TAG_ALBUM_ARTIST`` should be set equal as ``TAG_ARTIST`` if missing.
+    :param total_files:
+        Indication of number of audio files to eventually process.
+        Employed to expand the configurations if all combinations apply only to ``all`` audio files.
+    :param config_shared:
+        Indication whether the audio file configurations only correspond to ``all`` definitions.
+        In this case, a special flag is set in the resulting merged configuration for later reference.
     :return: merged config.
     """
-    merged_config = AudioConfig()
     max_audio_count = max(len(cfg[1]) for cfg in configs)
-    for i, cfg in enumerate(configs):
-        cfg_size = len(cfg[1])
+    if config_shared or all(cfg[0] for cfg in configs):
+        max_audio_count = total_files
+        config_shared = True
+    else:
+        max_audio_count = max(max_audio_count, total_files)
+    merged_config = AudioConfig(shared=config_shared)
+    for i, (cfg_all, cfg) in enumerate(configs):
+        cfg_size = len(cfg)
         if not i:
             # first config is written as is, or duplicated if unique
             if cfg_size == max_audio_count:
-                merged_config.extend(cfg[1])
+                merged_config.extend(cfg)
             elif cfg_size == 1:
-                merged_config.extend([cfg[1] for _ in range(max_audio_count)])
+                merged_config.extend([deepcopy(cfg[0]) for _ in range(max_audio_count)])
             else:
                 raise ValueError("Cannot initialize audio config with [total = {}] and first config [size = {}]. "
                                  "First config must be [total = size] or [size = 1]".format(max_audio_count, cfg_size))
@@ -83,11 +95,14 @@ def apply_audio_config(audio_files, audio_config, dry=False):
     Applies the metadata fields to the corresponding audio files.
     Matching is attempted first with file names, and other heuristics as required afterward.
     """
-    for file_path in audio_files:
+    for i, file_path in enumerate(audio_files):
         file_dir, file_name = os.path.split(file_path)
         matched_info = None
-        for audio_info in audio_config:     # type: AudioInfo
-            if audio_info.title.lower() in file_name.lower():
+        for audio_info in audio_config:
+            if audio_config.shared:
+                matched_info = audio_config[i]
+                break
+            elif audio_info.title.lower() in file_name.lower():
                 matched_info = audio_info
                 break
 

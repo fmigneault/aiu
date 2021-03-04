@@ -27,7 +27,7 @@ from aiu.parser import (
 )
 from aiu.updater import ALL_IMAGE_EXTENSIONS, merge_audio_configs, apply_audio_config, update_file_names
 from aiu.utils import backup_files, look_for_default_file, validate_output_file, log_exception
-from aiu.typedefs import AudioConfig, Duration
+from aiu.typedefs import AudioConfig, AudioInfo, Duration
 from aiu.youtube import fetch_files, get_metadata
 
 if TYPE_CHECKING:
@@ -362,13 +362,16 @@ def main(
     LOGGER.info("Found audio files to process:\n  %s", "\n  ".join(audio_files))
 
     # parse configurations
-    config_combo = []  # type: List[Tuple[bool, Union[AudioConfig, JSON]]]
+    config_combo = []  # type: List[Tuple[bool, AudioConfig]]
+    config_shared = True
     if youtube_config:
         config_combo.append((False, youtube_config))
+        config_shared = False
     if cfg_info_file:
         LOGGER.info("Running audio config parsing...")
         cfg_audio_config = parse_audio_config(cfg_info_file, mode=parser_mode)
         config_combo.append((False, cfg_audio_config))
+        config_shared = False
     if all_info_file:
         LOGGER.info("Running audio 'all' config parsing...")
         all_audio_config = parse_audio_config(all_info_file, mode=parser_mode)
@@ -377,9 +380,9 @@ def main(
         t.TAG_ALBUM: album, t.TAG_ALBUM_ARTIST: album_artist, t.TAG_ARTIST: artist, t.TAG_TITLE: title,
         t.TAG_TRACK: track, t.TAG_DURATION: duration, t.TAG_GENRE: genre, t.TAG_YEAR: year,
     }
-    literal_fields = dict((k, v) for k, v in literal_fields.items() if v is not None)
+    literal_fields = AudioConfig([dict((k, v) for k, v in literal_fields.items() if v is not None)])
     if cover_file:
-        config_combo.append((True, {"cover": cover_file}))
+        config_combo.append((True, AudioConfig([{"cover": cover_file}])))
     if literal_fields:
         LOGGER.info("Literal fields %s: [%s]", "that would be applied" if dry else "to apply", literal_fields)
         config_combo.append((True, literal_fields))
@@ -390,7 +393,7 @@ def main(
     # apply parsed configurations against target audio files
     LOGGER.info("Resolving metadata config fields...")
     LOGGER.debug("Match artist parameter: %s", match_artist)
-    audio_config = merge_audio_configs(config_combo, match_artist)
+    audio_config = merge_audio_configs(config_combo, match_artist, len(audio_files), config_shared)
     if not dry:
         LOGGER.info("Applying config...")
         if backup:

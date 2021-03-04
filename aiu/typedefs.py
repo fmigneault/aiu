@@ -294,7 +294,7 @@ class CoverFile(BaseField):
 AudioTagDict = Dict[str, Union[str, int]]
 AudioFile = eyed3.core.AudioFile
 AudioFileAny = Union[str, AudioFile]
-AudioField = Union[None, int, StrField, Date, Duration, CoverFile]
+AudioField = Union[None, int, str, StrField, Date, Duration, CoverFile]
 
 
 class AudioInfo(dict):
@@ -304,10 +304,15 @@ class AudioInfo(dict):
     """
     __slots__ = ["_beautify"]
 
-    def __init__(self, title=None, beautify=None, **kwargs):
+    def __init__(self, *args, title=None, beautify=None, **kwargs):
         super(AudioInfo, self).__init__()
         self._beautify = beautify if beautify is not None else kwargs.pop("beautify", True)
-        self.title = title or kwargs.pop("title", None)
+        title = title or kwargs.pop("title", None)
+        if title:  # none not allowed
+            self.title = title
+        if args:
+            for k, v in args:
+                self.__setattr__(k, v)
         for kw in kwargs:
             self.__setattr__(kw, kwargs[kw])
 
@@ -327,7 +332,8 @@ class AudioInfo(dict):
         return {k: v.value for k, v in self.items()}
 
     def _get_title(self):
-        return self["title"]
+        # type: () -> Optional[StrField]
+        return self.get("title")
 
     def _set_title(self, title):
         # type: (str) -> None
@@ -345,7 +351,8 @@ class AudioInfo(dict):
     artist = property(_get_artist, _set_artist)
 
     def _get_track(self):
-        return self["track"]
+        # type: () -> Optional[IntField]
+        return self.get("track")
 
     def _set_track(self, track):
         self["track"] = IntField(track, field=Tag.track_num)
@@ -365,8 +372,8 @@ class AudioInfo(dict):
     cover = property(_get_cover, _set_cover)
 
     def _get_duration(self):
-        # type: (...) -> Union[Duration, None]
-        return self["duration"]
+        # type: (...) -> Optional[Duration]
+        return self.get("duration")
 
     def _set_duration(self, duration):
         # type: (Union[str, Duration]) -> None
@@ -385,13 +392,17 @@ class AudioInfo(dict):
     file = property(_get_file, _set_file)
 
 
+AnyAudioSpec = Union[AudioInfo, List[AudioInfo], Dict[str, AudioField], List[Dict[str, AudioField]]]
+
+
 class AudioConfig(list):
     """
     Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing
     and audio file definition and fields.
     """
-    def __init__(self, raw_config=None):
-        # type: (Union[AudioInfo, List[AudioInfo], Dict[str, AudioField], List[Dict[str, AudioField]]]) -> None
+    def __init__(self, raw_config=None, shared=False):
+        # type: (AnyAudioSpec, bool) -> None
+        self._shared = shared
         if not raw_config:
             config = {}
         else:
@@ -404,5 +415,14 @@ class AudioConfig(list):
 
     @property
     def value(self):
-        """Literal Python value representation for all audio info entries."""
+        """
+        Literal Python value representation for all audio info entries.
+        """
         return [ai.value for ai in self]
+
+    @property
+    def shared(self):
+        """
+        Indicates if the contained audio configuration corresponds to a shared definition across audio information list.
+        """
+        return self._shared
