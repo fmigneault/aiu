@@ -273,7 +273,7 @@ def write_config(audio_config, file_path, fmt_mode):
     # type: (AudioConfig, str, FormatInfo) -> None
     """Raw writing operation to dump audio config to file with specified format."""
     all_have_track = all(isinstance(_.track, int) for _ in audio_config)
-    audio_config = AudioConfig(sorted(audio_config, key=lambda _: _.track if all_have_track else _.title))
+    audio_config = AudioConfig(sorted(audio_config, key=lambda _: _.track if all_have_track else _.title or _.file))
     if fmt_mode is FORMAT_MODE_RAW:
         # yaml with classes with output yaml representation of their references
         fmt_mode = FORMAT_MODE_YAML
