@@ -8,6 +8,9 @@ CHANGES
   For example, only giving ``--artist <ARTIST>`` without any other audio configuration file to match audio files
   against caused many ``AttributeError`` and incorrect application of specified tags to *all* files
   (fixes `#1 <https://github.com/fmigneault/aiu/issues/1>`_).
+* Fix YouTube Music attempting to set ID3 metadata tags unsupported by ``AudioConfig`` and ``AudioInfo`` objects.
+* Fix failing YouTube Music album download operation due to missing ``track`` field in some rare cases
+  (relates to `PR python-youtube-music#11 <https://github.com/tombulled/python-youtube-music/pull/11>`_).
 
 `1.0.0 <https://github.com/fmigneault/aiu/tree/1.0.0>`_ (2021-03-02)
 ------------------------------------------------------------------------------------

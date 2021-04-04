@@ -312,9 +312,11 @@ class AudioInfo(dict):
             self.title = title
         if args:
             for k, v in args:
-                self.__setattr__(k, v)
+                if k in self.__dict__ and not k.startswith("__"):
+                    self.__setattr__(k, v)
         for kw in kwargs:
-            self.__setattr__(kw, kwargs[kw])
+            if kw in self.__dict__ and not kw.startswith("__"):
+                self.__setattr__(kw, kwargs[kw])
 
     def __str__(self):
         cls_str = type(self).__name__
