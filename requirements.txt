@@ -5,7 +5,5 @@ python-magic
 python-magic-bin
 PyYAML
 requests
-six
-slugify
 typing
 git+https://github.com/fmigneault/python-youtube-music@fix-missing-track#egg=ytm[dl]

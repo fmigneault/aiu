@@ -1,12 +1,13 @@
+import os
+import shutil
+from functools import wraps
+from typing import Callable, Iterable, List, Optional, Union
+
+import eyed3
+from PIL import Image
+
 from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
-from typing import Callable, Iterable, List, Optional, Union
-from PIL import Image
-from functools import wraps
-import eyed3
-import os
-import six
-import shutil
 
 
 def log_exception(logger=None):
@@ -34,7 +35,7 @@ def look_for_default_file(path, allowed_names, allowed_extensions=None):
     :returns: full path of first matching occurrence, or `None`.
     """
     names = allowed_names if isinstance(allowed_names, (list, set)) else [allowed_names]
-    if allowed_extensions and isinstance(allowed_extensions, six.string_types):
+    if allowed_extensions and isinstance(allowed_extensions, str):
         allowed_extensions = [allowed_extensions]
     contents = sorted(os.listdir(path))
     for c in contents:
@@ -57,7 +58,7 @@ def backup_files(file_paths, backup_dir):
 
 def get_audio_file(audio_file):
     # type: (AudioFileAny) -> AudioFile
-    if isinstance(audio_file, six.string_types):
+    if isinstance(audio_file, str):
         audio_file = eyed3.load(audio_file)
     if not isinstance(audio_file, AudioFile):
         raise TypeError("Audio file expected.")
@@ -66,7 +67,7 @@ def get_audio_file(audio_file):
 
 def get_cover_file(cover_file):
     # type: (CoverFileAny) -> CoverFile
-    if isinstance(cover_file, six.string_types):
+    if isinstance(cover_file, str):
         cover_file = Image.open(cover_file)
     if not isinstance(cover_file, CoverFile):
         raise TypeError("Cover file expected.")

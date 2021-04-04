@@ -9,29 +9,27 @@ Applied changes listed in ``--output`` file.
 import argparse
 import os
 import sys
-from typing import List, Optional, Union, Tuple, TYPE_CHECKING
+from typing import List, Optional, Union, Tuple
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
 
 import aiu
 from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG, LOGGER, TRACE, __meta__, tags as t
 from aiu.parser import (
+    ALL_IMAGE_EXTENSIONS,
     ALL_PARSER_EXTENSIONS,
     FORMAT_MODE_ANY,
     FORMAT_MODE_YAML,
+    FORMAT_MODES,
+    PARSER_MODES,
     get_audio_files,
     load_config,
-    save_audio_config,
     parse_audio_config,
-    PARSER_MODES,
-    FORMAT_MODES,
+    save_audio_config
 )
-from aiu.updater import ALL_IMAGE_EXTENSIONS, merge_audio_configs, apply_audio_config, update_file_names
+from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
 from aiu.utils import backup_files, look_for_default_file, validate_output_file, log_exception
-from aiu.typedefs import AudioConfig, AudioInfo, Duration
+from aiu.typedefs import AudioConfig, Duration
 from aiu.youtube import fetch_files, get_metadata
-
-if TYPE_CHECKING:
-    from aiu.typedefs import JSON
 
 
 def cli():
@@ -327,6 +325,8 @@ def main(
     if cfg_info_file and os.path.isfile(cfg_info_file):
         LOGGER.info("Matched config 'info' file: [%s]", cfg_info_file)
     else:
+        if cfg_info_file is not None:
+            LOGGER.warning("Could not resolve specified config 'info' file: [%s]", cfg_info_file)
         cfg_info_file = None
         LOGGER.debug("No config 'info' file found.")
 
@@ -335,6 +335,8 @@ def main(
     if all_info_file and os.path.isfile(all_info_file):
         LOGGER.info("Matched config 'all' file: [%s]", all_info_file)
     else:
+        if all_info_file is not None:
+            LOGGER.warning("Could not resolve specified config 'all' file: [%s]", all_info_file)
         all_info_file = None
         LOGGER.debug("No config 'all' file found.")
 
@@ -343,6 +345,8 @@ def main(
     if cover_file and os.path.isfile(cover_file):
         LOGGER.info("Matched cover image file: [%s]", cover_file)
     else:
+        if cover_file is not None:
+            LOGGER.warning("Could not resolve specified cover image file: [%s]", cover_file)
         cover_file = None
         LOGGER.debug("No cover image file found.")
 
@@ -393,7 +397,15 @@ def main(
     # apply parsed configurations against target audio files
     LOGGER.info("Resolving metadata config fields...")
     LOGGER.debug("Match artist parameter: %s", match_artist)
-    audio_config = merge_audio_configs(config_combo, match_artist, len(audio_files), config_shared)
+    try:
+        audio_config = merge_audio_configs(config_combo, match_artist, len(audio_files), config_shared)
+    except ValueError as exc:
+        LOGGER.error("Failed merge attempt of multiple configuration sources:\n%s\n"
+                     "Maybe retry with explicit '--format' and/or '--parser' parameters?", exc)
+        sys.exit(-1)
+    if not all(info for info in audio_config):
+        LOGGER.error("Cannot process combined configuration with missing details for some tracks: [%s]", audio_config)
+        sys.exit(-1)
     if not dry:
         LOGGER.info("Applying config...")
         if backup:

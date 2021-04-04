@@ -1,14 +1,13 @@
-from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
-from aiu.utils import get_audio_file, get_cover_file
-from aiu import LOGGER
+import os
 from copy import deepcopy
 from typing import Iterable, Optional, Tuple
 from unicodedata import normalize
-import eyed3
-import os
 
+from aiu.typedefs import AudioConfig, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
+from aiu.utils import get_audio_file, get_cover_file
+from aiu import LOGGER
 
-ALL_IMAGE_EXTENSIONS = frozenset([".tif", ".png", ".jpg", ".jpeg"])
+# import eyed3
 
 
 def merge_audio_configs(configs, match_artist, total_files, config_shared):
@@ -115,7 +114,7 @@ def apply_audio_config(audio_files, audio_config, dry=False):
             audio_file = get_audio_file(file_path)
             for tag_name, tag in matched_info.items():
                 if dry:
-                    LOGGER.debug("Would apply tag [%s] to file [%s]", tag_name, file_path)
+                    LOGGER.debug("Would apply tag [%s] with value [%s] to file [%s]", tag_name, tag.value, file_path)
                     continue
                 if tag.field is not None:
                     setattr(audio_file.tag, tag.field, tag.value)
