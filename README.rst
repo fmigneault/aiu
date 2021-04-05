@@ -23,13 +23,13 @@ lookup and pattern matching methods to be flexible against various naming conven
     :alt: Requires Python 3.6+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/fmigneault/aiu/1.0.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/fmigneault/aiu/1.1.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/fmigneault/aiu/compare/1.0.0...master
+    :target: https://github.com/fmigneault/aiu/compare/1.1.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-1.0.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-1.1.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/fmigneault/aiu/tree/1.0.0
+    :target: https://github.com/fmigneault/aiu/tree/1.1.0
 
 .. |dependencies| image:: https://pyup.io/repos/github/fmigneault/aiu/shield.svg
     :alt: Dependencies Status

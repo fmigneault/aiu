@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.1.0 <https://github.com/fmigneault/aiu/tree/1.1.0>`_ (2021-04-04)
+------------------------------------------------------------------------------------
+
 * Fix handling of *shared* ID3 metadata across audio files when *only* global options are provided.
   For example, only giving ``--artist <ARTIST>`` without any other audio configuration file to match audio files
   against caused many ``AttributeError`` and incorrect application of specified tags to *all* files
