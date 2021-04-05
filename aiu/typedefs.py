@@ -1,15 +1,13 @@
 import datetime
 import logging
-import typing
+import os
 from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
 import eyed3
 from eyed3.id3.tag import Tag
-from PIL import Image, ImageFile
-from slugify import slugify
+from PIL import Image
 
 from aiu.clean import beautify_string
-
 
 LoggerType = logging.Logger
 
@@ -272,20 +270,33 @@ CoverFileAny = Union[str, CoverFileRaw]
 
 
 class CoverFile(BaseField):
-    __slots__ = ["_cover", "_name"]
+    __slots__ = ["_name", "_path", "_link", "_image"]
 
     def __init__(self, image, *_, **__):
         # type: (CoverFileAny, Any, Any) -> None
+        from aiu.parser import fetch_image
+
         super(CoverFile, self).__init__(*_, **__)
         self._raw = image
+        self._link = None
+        self._path = None
         if isinstance(image, str):
-            self._cover = ImageFile.ImageFile(image)
-            self._name = slugify(image)
+            if image.startswith("http"):
+                self._link = image
+                image = fetch_image(image)
+            self._name = os.path.split(image)[-1]
+            self._path = image
         elif isinstance(image, Image.Image):
-            self._cover = image
-            self._name = "cover.jpg"
+            self._image = image
+            self._name = "cover.png"
         else:
             raise ValueError("invalid value [{!s}] for [{}]".format(image, type(self).__name__))
+
+    def image(self):
+        if self._image:
+            return self._image
+        self._image = Image.open(self._path)
+        return self._image
 
     def __str__(self):
         return self._name
@@ -312,10 +323,10 @@ class AudioInfo(dict):
             self.title = title
         if args:
             for k, v in args:
-                if k in self.__dict__ and not k.startswith("__"):
+                if hasattr(self, k):
                     self.__setattr__(k, v)
         for kw in kwargs:
-            if kw in self.__dict__ and not kw.startswith("__"):
+            if hasattr(self, kw):
                 self.__setattr__(kw, kwargs[kw])
 
     def __str__(self):
@@ -344,7 +355,7 @@ class AudioInfo(dict):
     title = property(_get_title, _set_title)
 
     def _get_artist(self):
-        return self["artist"]
+        return self.get("artist")
 
     def _set_artist(self, artist):
         # type: (str) -> None
@@ -363,13 +374,11 @@ class AudioInfo(dict):
 
     def _get_cover(self):
         # type: (...) -> Union[CoverFile, None]
-        return self["cover"]
+        return self.get("cover")
 
     def _set_cover(self, cover):
         # type: (CoverFileAny) -> None
         self["cover"] = CoverFile(cover)
-        # FIXME: which field and how to set it?
-        #   eyeD3.id3.Tag.images, eyeD3.id3.frames.ImageFrame (many types possible)
 
     cover = property(_get_cover, _set_cover)
 

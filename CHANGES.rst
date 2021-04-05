@@ -11,6 +11,10 @@ CHANGES
 * Fix YouTube Music attempting to set ID3 metadata tags unsupported by ``AudioConfig`` and ``AudioInfo`` objects.
 * Fix failing YouTube Music album download operation due to missing ``track`` field in some rare cases
   (relates to `PR python-youtube-music#11 <https://github.com/tombulled/python-youtube-music/pull/11>`_).
+* Fix and improve fetching with caching of cover art from Youtube Music album metadata.
+* Fix false positive of ``csv`` parser with all empty values against a ``list`` formatted configuration file.
+* Improve reporting of the cause of failure when parsing or merging multiple configuration files.
+* Remove multiple unnecessary package dependencies.
 
 `1.0.0 <https://github.com/fmigneault/aiu/tree/1.0.0>`_ (2021-03-02)
 ------------------------------------------------------------------------------------

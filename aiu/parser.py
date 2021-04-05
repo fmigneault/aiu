@@ -1,17 +1,23 @@
+import csv
+import itertools
+import logging
+import io
+import json
+import math
+import os
+import re
+import tempfile
+import yaml
+from typing import Iterable, List, Optional, Union
+
+import requests
+from eyed3.mp3 import isMp3File
+from PIL import Image
+
 from aiu.typedefs import AudioConfig, Duration, FormatInfo
 from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
 from aiu import LOGGER
-from eyed3.mp3 import isMp3File
-from typing import Iterable, List, Optional, Union
-import itertools
-import logging
-import json
-import math
-import yaml
-import csv
-import os
-import re
-import six
+
 
 numbered_list = re.compile(r"^[\s\-#.]*([0-9]+)[\s\-#.]*(.*)")
 duration_info = re.compile(r"""     # Match any 'duration' representation, need to filter if many (ex: one in title)
@@ -47,9 +53,11 @@ PARSER_MODES = frozenset([
 ALL_PARSER_EXTENSIONS = frozenset(
     itertools.chain(*(p.extensions for p in PARSER_MODES))) - {FORMAT_MODE_ANY.extensions[0]}
 
+ALL_IMAGE_EXTENSIONS = frozenset(["tif", "png", "jpg", "jpeg"])
+
 
 def load_config(maybe_config, wanted_config, is_map):
-    if maybe_config is None and isinstance(wanted_config, six.string_types) and os.path.isfile(wanted_config):
+    if maybe_config is None and isinstance(wanted_config, str) and os.path.isfile(wanted_config):
         try:
             with open(wanted_config, 'r') as f:
                 lines = [w.strip() for w in f.readlines() if not w.startswith('#')]
@@ -95,8 +103,12 @@ def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
         try:
             with open(config_file, 'r') as f:
                 config = AudioConfig(list(csv.DictReader(f)))
-            LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_CSV))
-            return config
+            # avoid false positive when single field without header is valid against 'list' mode
+            if not all(fields for fields in config):
+                LOGGER.debug("parsing with mode [%s] yielded no values, moving on...", FORMAT_MODE_CSV)
+            else:
+                LOGGER.debug("success using mode [{}]".format(FORMAT_MODE_CSV))
+                return config
         except Exception as exc:
             LOGGER.log(log_lvl, "failed parsing as [%s], moving on...", FORMAT_MODE_CSV)
             LOGGER.trace("exception during [%s] parsing attempt:", fmt_mode, exc_info=exc)
@@ -348,3 +360,40 @@ def get_audio_files(path):
             return False
 
     return list(filter(is_mp3, files))
+
+
+_FETCHED_CACHE = {}
+
+
+def fetch_image(link, output_dir=None):
+    global _FETCHED_CACHE
+
+    # avoid over requesting to reduce transfer + avoid rate-limiting
+    path = _FETCHED_CACHE.get(link)
+    if path is not None:
+        LOGGER.debug("Using cached image: [%s]", link)
+        return path
+
+    LOGGER.debug("Fetching image: [%s]", link)
+    resp = requests.get(link, verify=False, timeout=5)
+    if resp.status_code != 200:
+        raise ValueError("invalid link could not be reached [{!s}]".format(link))
+    mime = resp.headers.get("Content-Type", "")
+    name = resp.headers.get("Content-Disposition", "").split("filename=")[-1].split(";")[0].replace("\"", "")
+    if not (mime.startswith("image/") or name):
+        raise ValueError("invalid link does not correspond to image reference [{!s}] "
+                         "and does not not provide any filename".format(link))
+    # if name:
+    #     ext = os.path.splitext(name)[-1].replace(".", "")
+    # else:
+    #     ext = mime.replace("image/", "").split(";")[0]
+
+    if output_dir is None:
+        output_dir = tempfile.mkdtemp()
+    buffer = io.BytesIO(resp.content)
+    image = Image.open(buffer)  # type: Image.Image
+    path = os.path.join(output_dir, "cover.png")
+    image.save(path, format="PNG")  # convert to PNG regardless of source
+
+    _FETCHED_CACHE[link] = path
+    return path
