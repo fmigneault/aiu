@@ -7,6 +7,7 @@ corresponding information fields found in configurations files from options ``--
 Applied changes listed in ``--output`` file.
 """
 import argparse
+import logging
 import os
 import sys
 from typing import List, Optional, Union, Tuple
@@ -27,7 +28,7 @@ from aiu.parser import (
     save_audio_config
 )
 from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
-from aiu.utils import backup_files, look_for_default_file, validate_output_file, log_exception
+from aiu.utils import backup_files, look_for_default_file, save_cover_file, validate_output_file, log_exception
 from aiu.typedefs import AudioConfig, Duration
 from aiu.youtube import fetch_files, get_metadata
 
@@ -116,11 +117,14 @@ def cli():
                                  default="any", choices=[p.name for p in PARSER_MODES],
                                  help="Parsing mode to enforce. See also ``--help-format`` for details. "
                                       "(default: %(default)s)")
-        parser_args.add_argument("-o", "--output", dest="output_file",
+        parser_args.add_argument("-o", "--output", "--output-file", dest="output_file",
                                  help="Location where to save applied output configurations (file or directory). "
-                                      "(default: ``output.cfg`` located under ``--path``"
-                                      " or parent directory of ``--file``).")
-        parser_args.add_argument("-F", "--format", dest="output_mode",
+                                      "(default: ``output.yml`` located under ``--outdir``, ``--path`` directory "
+                                      " or parent directory of ``--file``, whichever comes first).")
+        parser_args.add_argument("-O", "--outdir", "--output-dir", dest="output_dir",
+                                 help="Output directory of applied configuration if not defined by ``--output`` "
+                                      "and download location of files referenced by ``--link``.")
+        parser_args.add_argument("-F", "--format, --output-format", dest="output_mode",
                                  default=FORMAT_MODE_YAML, choices=[f.name for f in FORMAT_MODES],
                                  help="Output format of applied metadata details. "
                                       "See also ``--help-format`` for details. (default: %(default)s)")
@@ -267,6 +271,7 @@ def main(
          all_info_file=None,            # type: Optional[str]
          cover_file=None,               # type: Optional[str]
          output_file=None,              # type: Optional[str]
+         output_dir=None,               # type: Optional[str]
          output_mode=FORMAT_MODE_YAML,  # type: Union[FORMAT_MODES]
          parser_mode=FORMAT_MODE_ANY,   # type: Union[PARSER_MODES]
          exceptions_config=None,        # type: Optional[str]
@@ -302,11 +307,20 @@ def main(
     search_path = "." if search_path == "'.'" else search_path  # default provided as literal string with quotes
     search_path = os.path.abspath(search_path or os.path.curdir)
     search_dir = search_path if os.path.isdir(search_path) else os.path.split(search_path)[0]
-    LOGGER.info("Search path is: [%s]", search_path)
-
-    output_file = validate_output_file(output_file, search_dir, default_name="output.cfg")
+    search_files_loc = search_path  # location of files, under search location or adjusted by output dir
+    out_dir_opt = output_dir        # detect search path update based on given output dir, but must resolve dir to use
+    output_file = validate_output_file(output_file or output_dir, search_dir, default_name="output.yml")
+    output_dir = os.path.abspath(output_dir or os.path.dirname(output_file))
+    # when only 'output_dir' without explicit 'output_file' provided, 'output_file' is resolved as directory, patch it
+    if output_dir == output_file:
+        output_file = os.path.join(output_dir, "output.yml")
+    # adjust search file location to expected output directory following fetch of files when requested by link
+    if out_dir_opt and link and not no_fetch:
+        search_files_loc = output_dir
+    LOGGER.info("Search config path is: [%s]", search_dir)
+    LOGGER.info("Search audio files path is: [%s]", search_files_loc)
     LOGGER.info("Output config file %s be: [%s]", "would" if dry else "will", output_file)
-    output_dir = os.path.dirname(output_file)
+    LOGGER.info("Output directory %s be: [%s]", "would" if dry else "will", output_dir)
 
     # process link to pre-generate configuration files
     youtube_config = None
@@ -314,8 +328,11 @@ def main(
         if dry and not no_fetch:
             LOGGER.warning("Will not fetch files from URL in 'dry' mode. Enforcing '--no-fetch'.")
             no_fetch = True
+        elif not dry:
+            os.makedirs(output_dir, exist_ok=True)
         LOGGER.info("Retrieving config 'youtube'%s from link: [%s]", "" if no_fetch else " and album files", link)
-        meta_file, meta_json = get_metadata(link) if no_fetch else fetch_files(link, output_dir)
+        show = LOGGER.isEnabledFor(logging.INFO)  # if verbose or debug output was requested
+        meta_file, meta_json = get_metadata(link) if no_fetch else fetch_files(link, output_dir, show_progress=show)
         youtube_config = AudioConfig(meta_json)
 
     # find configurations files
@@ -362,7 +379,7 @@ def main(
     aiu.Config.STOPWORDS = load_config(aiu.Config.STOPWORDS, stopword_file, is_map=False)
 
     # obtain target audio files to process
-    audio_files = get_audio_files(search_path)
+    audio_files = get_audio_files(search_files_loc, allow_none=dry)
     LOGGER.info("Found audio files to process:\n  %s", "\n  ".join(audio_files))
 
     # parse configurations
@@ -414,6 +431,10 @@ def main(
             backup_files(audio_files, backup_dir)
     output_config = apply_audio_config(audio_files, audio_config, dry=dry or no_update)
     output_config = update_file_names(output_config, rename_format, rename_title, prefix_track, dry=dry or no_rename)
+
+    # save the cover file when it was fetched from youtube music link and not provided explicitly as override
+    if not dry and not no_cover and not cover_file and link and not no_fetch:
+        save_cover_file(output_config, output_dir)
 
     # report results
     if not no_output and not save_audio_config(output_config, output_file, mode=output_mode, dry=dry):

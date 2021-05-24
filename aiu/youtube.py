@@ -2,7 +2,7 @@ import json
 import tempfile
 from typing import Tuple, TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
-
+from tqdm import tqdm
 from ytm import YouTubeMusic, YouTubeMusicDL  # noqa
 
 from aiu import LOGGER
@@ -11,6 +11,37 @@ from aiu.typedefs import Duration
 
 if TYPE_CHECKING:
     from aiu.typedefs import JSON
+
+
+class TqdmYouTubeMusicDL(YouTubeMusicDL):
+    """
+    Setup hooks around methods that process the `download album` operation to display progress per track downloaded.
+    """
+    def __init__(self, *_, **__):
+        super(TqdmYouTubeMusicDL, self).__init__(*_, **__)
+        self.api_album = self._api.album
+        self._api.album = self.tqdm_album
+        self.base_download = self._base._download
+        self._base._download = self.tqdm_download
+        self.pbar = None
+
+    def tqdm_album(self, album_id):
+        album = self.api_album(album_id)
+        total = album.get("total_tracks")
+        if total:
+            self.pbar = tqdm(total=total, unit="track", desc="Downloading Album: [{}]".format(album["name"]))
+        return album
+
+    def tqdm_download(self, *_, **__):
+        result = self.base_download(*_, **__)
+        self.pbar.update(1)
+        return result
+
+    def download_album(self, *_, **__):
+        result = super(TqdmYouTubeMusicDL, self).download_album(*_, **__)
+        if self.pbar:
+            self.pbar.close()
+        return result
 
 
 def get_album_id(link):
@@ -54,11 +85,11 @@ def get_metadata(link):
     return update_metadata(meta, fetch_cover=False)
 
 
-def fetch_files(link, output_dir, with_cover=True):
-    # type: (str, str, bool) -> Tuple[str, JSON]
+def fetch_files(link, output_dir, with_cover=True, show_progress=True):
+    # type: (str, str, bool, bool) -> Tuple[str, JSON]
     album = get_album_id(link)
     LOGGER.debug("Fetching files from link: [%s]", link)
-    api = YouTubeMusicDL()
+    api = TqdmYouTubeMusicDL() if show_progress else YouTubeMusicDL()
     meta = api.download_album(album, output_dir)  # pre-applied ID3 tags
     if with_cover:
         url = meta["thumbnail"]["url"]

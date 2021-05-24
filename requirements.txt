@@ -6,4 +6,5 @@ python-magic-bin
 PyYAML
 requests
 typing
+tqdm
 git+https://github.com/fmigneault/python-youtube-music@fix-missing-track#egg=ytm[dl]

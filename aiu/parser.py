@@ -342,12 +342,14 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False)
     return os.path.isfile(file_path)
 
 
-def get_audio_files(path):
-    # type: (str) -> List[str]
+def get_audio_files(path, allow_none=False):
+    # type: (str, bool) -> List[str]
     """Retrieves all supported audio files from the specified path (file or directory)."""
     if not os.path.isdir(path):
         if os.path.isfile(path):
             files = [path]
+        elif allow_none:
+            return []
         else:
             raise ValueError("invalid path: [{}]".format(path))
     else:

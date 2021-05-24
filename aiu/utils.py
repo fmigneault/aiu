@@ -6,7 +6,7 @@ from typing import Callable, Iterable, List, Optional, Union
 import eyed3
 from PIL import Image
 
-from aiu.typedefs import AudioFileAny, AudioFile, CoverFileAny, CoverFile, LoggerType
+from aiu.typedefs import AudioConfig, AudioFileAny, AudioFile, AudioInfo, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
 
 
@@ -72,6 +72,25 @@ def get_cover_file(cover_file):
     if not isinstance(cover_file, CoverFile):
         raise TypeError("Cover file expected.")
     return cover_file
+
+
+def save_cover_file(config, output_dir):
+    # type: (AudioConfig, str) -> None
+    """
+    Searches for any album image cover file within the audio configuration files and saves it.
+
+    Only saves the first match, assuming all audio files belong to the same album and share the same cover.
+    """
+    path = os.path.join(output_dir, "cover.png")
+    for cfg in config:  # type: AudioInfo
+        if cfg.cover is not None:
+            if os.path.isfile(path):
+                LOGGER.warning("Could not save cover image, file already exists: [%s]", path)
+                return
+            LOGGER.warning("Saved cover image: [%s]", path)
+            cfg.cover.save(path)
+            return
+    LOGGER.warning("Could not find any cover image to save. Operation skipped.")
 
 
 def validate_output_file(output_file_path, search_path, default_name="output.cfg"):

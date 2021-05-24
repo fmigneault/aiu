@@ -8,6 +8,9 @@ This tool helps normalize album metadata that can be easily retrievable from var
 it to audio files with partially matchable names. Matching between metadata and actual audio files employs various
 lookup and pattern matching methods to be flexible against various naming conventions.
 
+This tool also supports download of album songs from a
+`YouTube Music link <https://github.com/fmigneault/aiu/tree/master#using-youtube-music-album-link>`_
+before applying the desired ID3 tag metadata updates.
 
 .. start-badges
 
@@ -102,7 +105,7 @@ JSON
 
 CSV
 --------------------------------------
-::
+.. code-block:: text
 
     track, title, artist, time
     01, The first song!, Cool Guy, 3:10
@@ -110,7 +113,7 @@ CSV
 
 Tabular and numbered list
 --------------------------------------
-::
+.. code-block:: text
 
     1. The first song!      3:10
     2. Second Song Title    2:45
@@ -118,7 +121,7 @@ Tabular and numbered list
 
 List of plain text fields
 --------------------------------------
-::
+.. code-block:: text
 
     1
     The first song!
@@ -127,6 +130,8 @@ List of plain text fields
     Second Song Title
     2:45
 
+
+.. _ytm_link:
 
 Using YouTube Music album link
 ======================================
@@ -137,6 +142,6 @@ It is possible to provide a YouTube Music URL formatted with the album ID in que
 
     https://music.youtube.com/playlist?list=<ALBUM_ID>
 
-When providing such a link to `AIU`, it can simultaneously retrieve the corresponding album audio files and apply
-all appropriate audio tag metadata to them. The resulting files can then be further updated using the other options
-and parsing formats from metadata configurations.
+When providing such a link to `AIU` (with the ``--link`` option), it can simultaneously retrieve the corresponding
+album audio files and apply all appropriate audio tag metadata to them. The resulting files can then be further
+updated using the other options and parsing formats from metadata configurations.
