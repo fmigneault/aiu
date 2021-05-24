@@ -9,8 +9,10 @@ CHANGES
   files in combination with ``--link``.
 * Add alias ``--output-format`` to ``--format`` option.
 * Change default value of ``--output`` to ``output.yml`` to align it with the default value of ``--format``.
+* Save the album cover image file that is retrieved from the remote Youtube Music link when fetching tracks.
 * Fix some literal fields provided by input options (``--album``, ``album-artist``, ``--year``) that were
   incorrectly dropped.
+* Fix an issue where resolution between cover file sources already resolved would not be recognized and raise an error.
 
 `1.1.0 <https://github.com/fmigneault/aiu/tree/1.1.0>`_ (2021-04-04)
 ------------------------------------------------------------------------------------

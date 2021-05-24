@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import shutil
 from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
 import eyed3
@@ -267,7 +268,7 @@ class IntField(int, BaseField):
 
 
 CoverFileRaw = Union[Image.Image]
-CoverFileAny = Union[str, CoverFileRaw]
+CoverFileAny = Union[str, CoverFileRaw, "CoverFile"]
 
 
 class CoverFile(BaseField):
@@ -298,6 +299,12 @@ class CoverFile(BaseField):
             return self._image
         self._image = Image.open(self._path)
         return self._image
+
+    def save(self, path):
+        if self._path:
+            shutil.copyfile(self._path, path)
+        else:
+            self._image.save(path)
 
     def __str__(self):
         return self._name
@@ -388,7 +395,7 @@ class AudioInfo(dict):
 
     def _set_cover(self, cover):
         # type: (CoverFileAny) -> None
-        self["cover"] = CoverFile(cover)
+        self["cover"] = cover if isinstance(cover, CoverFile) else CoverFile(cover)
 
     cover = property(_get_cover, _set_cover)
 

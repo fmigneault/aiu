@@ -28,7 +28,7 @@ from aiu.parser import (
     save_audio_config
 )
 from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
-from aiu.utils import backup_files, look_for_default_file, validate_output_file, log_exception
+from aiu.utils import backup_files, look_for_default_file, save_cover_file, validate_output_file, log_exception
 from aiu.typedefs import AudioConfig, Duration
 from aiu.youtube import fetch_files, get_metadata
 
@@ -431,6 +431,10 @@ def main(
             backup_files(audio_files, backup_dir)
     output_config = apply_audio_config(audio_files, audio_config, dry=dry or no_update)
     output_config = update_file_names(output_config, rename_format, rename_title, prefix_track, dry=dry or no_rename)
+
+    # save the cover file when it was fetched from youtube music link and not provided explicitly as override
+    if not dry and not no_cover and not cover_file and link and not no_fetch:
+        save_cover_file(output_config, output_dir)
 
     # report results
     if not no_output and not save_audio_config(output_config, output_file, mode=output_mode, dry=dry):
