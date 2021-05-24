@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.2.0 <https://github.com/fmigneault/aiu/tree/1.2.0>`_ (2021-05-24)
+------------------------------------------------------------------------------------
+
 * Add download progression display in the outputs when ``--link`` and ``--debug``/``--verbose`` are requested.
 * Add option ``--output-dir`` (``-O``, ``--outdir``) to define an alternate output directory location when fetching
   files in combination with ``--link``.
