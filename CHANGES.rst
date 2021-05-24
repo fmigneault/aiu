@@ -4,7 +4,12 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add option ``--output-dir`` (``-O``, ``--outdir``) to define an alternate output directory location when fetching
+  files in combination with ``--link``.
+* Add alias ``--output-format`` to ``--format`` option.
+* Change default value of ``--output`` to ``output.yml`` to align it with the default value of ``--format``.
+* Fix some literal fields provided by input options (``--album``, ``album-artist``, ``--year``) that were
+  incorrectly dropped.
 
 `1.1.0 <https://github.com/fmigneault/aiu/tree/1.1.0>`_ (2021-04-04)
 ------------------------------------------------------------------------------------

@@ -8,6 +8,7 @@ from eyed3.id3.tag import Tag
 from PIL import Image
 
 from aiu.clean import beautify_string
+from aiu.tags import TAGS
 
 LoggerType = logging.Logger
 
@@ -222,7 +223,7 @@ class IntField(int, BaseField):
     _is_none = True
 
     def __new__(cls, value, allow_none=True, *_, **__):
-        # type: (IntField, Union[str, None], Optional[bool], Any, Any) -> IntField
+        # type: (IntField, Union[str, int, None], Optional[bool], Any, Any) -> IntField
         field = super(IntField, cls).__new__(cls, value or 0)
         field.__init__(*_, **__)
         field._allow_none = allow_none
@@ -314,6 +315,7 @@ class AudioInfo(dict):
     in a configuration file row.
     """
     __slots__ = ["_beautify"]
+    __fields__ = set(TAGS) | {"file", "cover"}
 
     def __init__(self, *args, title=None, beautify=None, **kwargs):
         super(AudioInfo, self).__init__()
@@ -323,11 +325,19 @@ class AudioInfo(dict):
             self.title = title
         if args:
             for k, v in args:
-                if hasattr(self, k):
-                    self.__setattr__(k, v)
+                self.set_field(k, v, validate=False)
         for kw in kwargs:
-            if hasattr(self, kw):
-                self.__setattr__(kw, kwargs[kw])
+            self.set_field(kw, kwargs[kw], validate=False)
+
+    def set_field(self, key, value, validate=True):
+        # if the field has an explicit property (custom handling/typing), apply it
+        if hasattr(self, key):
+            self.__setattr__(key, value)
+        # otherwise, use the default str format
+        elif key in type(self).__fields__:
+            self[key] = StrField(value, allow_none=True, beautify=self._beautify, field=getattr(Tag, key, None))
+        elif validate:
+            raise KeyError("Invalid tag field is unknown: [{}] ({})".format(key, value))
 
     def __str__(self):
         cls_str = type(self).__name__
@@ -373,7 +383,7 @@ class AudioInfo(dict):
     track = property(_get_track, _set_track)
 
     def _get_cover(self):
-        # type: (...) -> Union[CoverFile, None]
+        # type: () -> Union[CoverFile, None]
         return self.get("cover")
 
     def _set_cover(self, cover):
@@ -383,7 +393,7 @@ class AudioInfo(dict):
     cover = property(_get_cover, _set_cover)
 
     def _get_duration(self):
-        # type: (...) -> Optional[Duration]
+        # type: () -> Optional[Duration]
         return self.get("duration")
 
     def _set_duration(self, duration):
@@ -392,8 +402,18 @@ class AudioInfo(dict):
 
     duration = property(_get_duration, _set_duration)
 
+    def _get_year(self):
+        # type: () -> Optional[int]
+        return self.get("year")
+
+    def _set_year(self, year):
+        # type: (Optional[Union[str, int]]) -> None
+        self["year"] = IntField(year, allow_none=True)
+
+    year = property(_get_year, _set_year)
+
     def _get_file(self):
-        # type: (...) -> Optional[str]
+        # type: () -> Optional[str]
         return self.get("file", None)
 
     def _set_file(self, file):
