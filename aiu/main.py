@@ -7,6 +7,7 @@ corresponding information fields found in configurations files from options ``--
 Applied changes listed in ``--output`` file.
 """
 import argparse
+import logging
 import os
 import sys
 from typing import List, Optional, Union, Tuple
@@ -330,7 +331,8 @@ def main(
         elif not dry:
             os.makedirs(output_dir, exist_ok=True)
         LOGGER.info("Retrieving config 'youtube'%s from link: [%s]", "" if no_fetch else " and album files", link)
-        meta_file, meta_json = get_metadata(link) if no_fetch else fetch_files(link, output_dir)
+        show = LOGGER.isEnabledFor(logging.INFO)  # if verbose or debug output was requested
+        meta_file, meta_json = get_metadata(link) if no_fetch else fetch_files(link, output_dir, show_progress=show)
         youtube_config = AudioConfig(meta_json)
 
     # find configurations files
