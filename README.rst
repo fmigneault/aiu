@@ -8,8 +8,9 @@ This tool helps normalize album metadata that can be easily retrievable from var
 it to audio files with partially matchable names. Matching between metadata and actual audio files employs various
 lookup and pattern matching methods to be flexible against various naming conventions.
 
-This tool also supports retrieval of album songs from a `YouTube Music link <ytm_link>`_ before applying the desired
-ID3 tag metadata updates.
+This tool also supports download of album songs from a
+`YouTube Music link <https://github.com/fmigneault/aiu/tree/master#using-youtube-music-album-link>`_
+before applying the desired ID3 tag metadata updates.
 
 .. start-badges
 
