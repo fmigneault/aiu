@@ -7,4 +7,4 @@ PyYAML
 requests
 typing
 tqdm
-git+https://github.com/fmigneault/python-youtube-music@fix-missing-track#egg=ytm[dl]
+git+https://github.com/tombulled/python-youtube-music#egg=ytm[dl]
