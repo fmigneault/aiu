@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.3.0 <https://github.com/fmigneault/aiu/tree/1.3.0>`_ (2021-07-08)
+------------------------------------------------------------------------------------
+
 * Add support to ``--link`` referring to a single YouTube Video or Music URL instead of a full album.
 * Reapply master of original YouTube Music repository (instead of fork) with integrated fix of missing track
   (see PR `tombulled/python-youtube-music#11 <https://github.com/tombulled/python-youtube-music/pull/11>`_).
