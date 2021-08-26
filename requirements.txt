@@ -1,4 +1,4 @@
-eyed3
+eyed3==0.9.6
 libmagic
 Pillow
 python-magic
@@ -7,4 +7,5 @@ PyYAML
 requests
 typing
 tqdm
+youtube_dl
 git+https://github.com/tombulled/python-youtube-music#egg=ytm[dl]

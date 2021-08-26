@@ -4,7 +4,14 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Improve YouTube Music Download operation with check of already available song file to bypass unnecessary
+  re-download from `python-youtube-music (ytm) <https://github.com/tombulled/python-youtube-music>`_ package.
+  Cached file references that skip download are reported in logs (debug level) after progress bar processing completes.
+* Validate that all required ID3 tags information are available for track renaming operation against the different
+  CLI flag against predefined and custom format names. Missing explicit ID3 tags within the template name format will
+  be raised and identified in logs to help resolution from the user by providing missing fields.
+* Fix incorrect parsing of file paths with some UTF-8 encoded characters during evaluation of MP3-like files by
+  bumping requirement of `eyeD3 <https://github.com/nicfit/eyeD3>`_ to more recent ``0.9.6`` version.
 
 `1.3.0 <https://github.com/fmigneault/aiu/tree/1.3.0>`_ (2021-07-08)
 ------------------------------------------------------------------------------------

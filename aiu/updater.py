@@ -1,4 +1,5 @@
 import os
+import re
 from copy import deepcopy
 from typing import Iterable, Optional, Tuple
 from unicodedata import normalize
@@ -6,8 +7,6 @@ from unicodedata import normalize
 from aiu.typedefs import AudioConfig, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
 from aiu.utils import get_audio_file, get_cover_file
 from aiu import LOGGER
-
-# import eyed3
 
 
 def merge_audio_configs(configs, match_artist, total_files, config_shared):
@@ -153,11 +152,18 @@ def update_file_names(audio_config, rename_format, rename_title=False, prefix_tr
     if "%(" not in rename_format or ")" not in rename_format:
         LOGGER.error("No rename format or template variable specified! Will not rename anything.")
         return audio_config
+    format_tags = [tag.lower() for tag in re.findall("%\(([A-Za-z_]+)\)s", rename_format)]
     for audio_item in audio_config:  # type: AudioInfo
         if audio_item.file:
             if not os.path.isfile(audio_item.file):
                 LOGGER.error("Invalid file value cannot be found: [%s]", audio_item.file)
                 continue
+            tag_values = {tag: audio_item.get(tag, None) for tag in format_tags}
+            if any(tag_values[tag] is None for tag in format_tags):
+                LOGGER.error("Cannot proceed to renaming files with specified format [%s] against missing ID3 Tag "
+                             "from provided configurations for file: [%s]", rename_format, audio_item.file)
+                LOGGER.error("Resolved configuration ID3 tags: %s", tag_values)
+                raise ValueError("Missing required ID3 Tag.")
             rename_name = rename_format.lower() % audio_item
             rename_norm = normalize("NFKD", rename_name)
             LOGGER.debug("Before/after normalization: [%s] => [%s]", rename_name, rename_norm)
