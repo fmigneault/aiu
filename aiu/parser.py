@@ -11,7 +11,8 @@ import yaml
 from typing import Iterable, List, Optional, Union
 
 import requests
-from eyed3.mp3 import isMp3File
+from eyed3.mimetype import guessMimetype
+from eyed3.mp3 import MIME_TYPES as MP3_MIME_TYPES
 from PIL import Image
 
 from aiu.typedefs import AudioConfig, Duration, FormatInfo
@@ -357,7 +358,7 @@ def get_audio_files(path, allow_none=False):
 
     def is_mp3(f):
         try:
-            return isMp3File(f)
+            return guessMimetype(f) in MP3_MIME_TYPES
         except PermissionError:
             return False
 

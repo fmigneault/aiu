@@ -1,9 +1,12 @@
 import json
 import tempfile
+import os
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 from tqdm import tqdm
+from youtube_dl import YoutubeDL
 from ytm import YouTubeMusic, YouTubeMusicDL  # noqa
+from ytm import utils as ytm_utils
 
 from aiu import LOGGER
 from aiu.parser import fetch_image
@@ -14,7 +17,75 @@ if TYPE_CHECKING:
     from aiu.typedefs import JSON
 
 
-class TqdmYouTubeMusicDL(YouTubeMusicDL):
+class CachedYoutubeMusicDL(YouTubeMusicDL):
+    """
+    Downloader that will bypass the actual download of the file if the information and files are already available.
+    """
+    def __init__(self, *_, **__):
+        super(CachedYoutubeMusicDL, self).__init__(*_, **__)
+        self.base_download = self._base._download
+
+    def cached_download(self, song_id, metadata=None, directory=None, **__):
+        if metadata and directory:
+            sanitized_name = metadata["title"]
+            illegal_chars = ['\\', '/', ':', '*', '?', '<', '>', '|', '"']
+            for char in illegal_chars:
+                sanitized_name = sanitized_name.replace(char, '_')
+            candidate_names = [metadata["title"], sanitized_name]
+            if "track" in metadata:
+                candidate_names.append(metadata["track"])
+            track_num = metadata.get("tracknumber")
+            if track_num and str(track_num).isnumeric():
+                # add common formats in case if was already downloaded + corrected
+                track_num = int(track_num)
+                candidate_names.extend([
+                    "{:02d} {}".format(track_num, metadata["title"]),
+                    "{:02d}. {}".format(track_num, metadata["title"]),
+                    "{} {}".format(track_num, metadata["title"]),
+                    "{}. {}".format(track_num, metadata["title"]),
+                ])
+            for name in candidate_names:
+                path = os.path.join(directory, name + ".mp3")
+                if os.path.isfile(path):
+                    result = self.fetch_metadata(song_id, metadata=metadata)
+                    self.log("Found already downloaded file [%s] for [%s]. "
+                             "Download skipped and fetched only metadata.", path, metadata["title"])
+                    return result
+        return self.base_download(song_id, metadata=metadata, directory=directory, **__)
+
+    @staticmethod
+    def fetch_metadata(song_id, metadata):
+        """
+        Obtain the song metadata.
+
+        Essentially redo what :meth:`YouTubeMusicDL.BaseYouTubeMusicDL._download` does, but skipping
+        all operations related to the actual download and the creation of base ID3 tags from retrieved metadata
+        since the file already is available. Any out of date ID3 Tags will be updated by us anyway.
+        """
+        ytdl = YoutubeDL(params={"quiet": True, "outtmpl": "", "postprocessors": [], "format": "bestaudio"})
+        url = ytm_utils.url_yt("watch", params={"v": song_id})  # noqa
+        info = ytdl.extract_info(url=url, ie_key="Youtube", download=False)
+
+        any_title = info.get("track", info.get("title"))
+        metadata = ytm_utils.filter({  # noqa
+            "title":       any_title,
+            "artist":      info.get("artist"),
+            "album":       info.get("album"),
+            "albumartist": info.get("artist"),
+            "discnumber":  "1",
+            "tracknumber": "1",
+            "date":        str(info.get("release_year")),
+            **metadata,
+        })
+        return metadata
+
+    @staticmethod
+    def log(msg, *_):
+        LOGGER.debug(msg, *_)
+
+
+
+class TqdmYouTubeMusicDL(CachedYoutubeMusicDL):
     """
     Setup hooks around methods that process the `download album` operation to display progress per track downloaded.
     """
@@ -22,9 +93,9 @@ class TqdmYouTubeMusicDL(YouTubeMusicDL):
         super(TqdmYouTubeMusicDL, self).__init__(*_, **__)
         self.api_album = self._api.album
         self._api.album = self.tqdm_album
-        self.base_download = self._base._download
         self._base._download = self.tqdm_download
         self.progress_bar = None
+        self._log_after = []
 
     def tqdm_album(self, album_id):
         album = self.api_album(album_id)
@@ -34,7 +105,7 @@ class TqdmYouTubeMusicDL(YouTubeMusicDL):
         return album
 
     def tqdm_download(self, *_, **__):
-        result = self.base_download(*_, **__)
+        result = self.cached_download(*_, **__)
         if self.progress_bar:
             self.progress_bar.update(1)
         return result
@@ -42,6 +113,12 @@ class TqdmYouTubeMusicDL(YouTubeMusicDL):
     def __del__(self):
         if self.progress_bar:
             self.progress_bar.close()
+        for _log in self._log_after:
+            super(TqdmYouTubeMusicDL, self).log(_log[0], *_log[1])
+
+    # delay logs until end otherwise they
+    def log(self, msg, *_):
+        self._log_after.append((msg, _))
 
 
 def get_reference_id(link):

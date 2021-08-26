@@ -423,14 +423,22 @@ def main(
     if not all(info for info in audio_config):
         LOGGER.error("Cannot process combined configuration with missing details for some tracks: [%s]", audio_config)
         sys.exit(-1)
-    if not dry:
+    if dry:
+        LOGGER.info("Would apply config...")
+    else:
         LOGGER.info("Applying config...")
         if backup:
             backup_dir = os.path.join(search_dir, "backup")
             LOGGER.info("Backup of files in: [%s]", backup_dir)
             backup_files(audio_files, backup_dir)
-    output_config = apply_audio_config(audio_files, audio_config, dry=dry or no_update)
-    output_config = update_file_names(output_config, rename_format, rename_title, prefix_track, dry=dry or no_rename)
+    try:
+        output_config = apply_audio_config(audio_files, audio_config,
+                                           dry=dry or no_update)
+        output_config = update_file_names(output_config, rename_format, rename_title, prefix_track,
+                                          dry=dry or no_rename)
+    except ValueError as exc:
+        LOGGER.error("Failed operation to apply configuration and file renaming! [%s]", exc)
+        sys.exit(-1)
 
     # save the cover file when it was fetched from youtube music link and not provided explicitly as override
     if not dry and not no_cover and not cover_file and link and not no_fetch:
