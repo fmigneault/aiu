@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.4.0 <https://github.com/fmigneault/aiu/tree/1.4.0>`_ (2021-08-26)
+------------------------------------------------------------------------------------
+
 * Improve YouTube Music Download operation with check of already available song file to bypass unnecessary
   re-download from `python-youtube-music (ytm) <https://github.com/tombulled/python-youtube-music>`_ package.
   Cached file references that skip download are reported in logs (debug level) after progress bar processing completes.
