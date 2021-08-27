@@ -8,4 +8,5 @@ requests
 typing
 tqdm
 youtube_dl
-git+https://github.com/tombulled/python-youtube-music#egg=ytm[dl]
+#git+https://github.com/tombulled/python-youtube-music#egg=ytm[dl]
+git+https://github.com/fmigneault/python-youtube-music@fix-illegal-chars#egg=ytm[dl]

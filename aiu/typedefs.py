@@ -385,7 +385,9 @@ class AudioInfo(dict):
         return self.get("track")
 
     def _set_track(self, track):
-        self["track"] = IntField(track, field=Tag.track_num)
+        if isinstance(track, int) and track < 1 or track in ["", None]:
+            track = None  # unset track number
+        self["track"] = IntField(track, field=Tag.track_num, allow_none=True)
 
     track = property(_get_track, _set_track)
 

@@ -4,7 +4,8 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add option ``--remove-track`` to allow explicit removal of ID3 Tag track number and also support *invalid* values
+  provided to ``--track`` option (integer < 1, empty string ``""``) as equivalent to the new one.
 
 `1.4.0 <https://github.com/fmigneault/aiu/tree/1.4.0>`_ (2021-08-26)
 ------------------------------------------------------------------------------------

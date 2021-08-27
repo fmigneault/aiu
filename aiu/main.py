@@ -199,8 +199,13 @@ def cli():
                                    "of ``--file``, using the first match).")
         id3_args.add_argument("-T", "--title", dest=t.TAG_TITLE,
                               help="Name to apply as ``TAG_TITLE`` metadata attribute to file(s).")
-        id3_args.add_argument("-N", "--track", "--track-number", dest=t.TAG_TRACK,
-                              help="Name to apply as ``TAG_TRACK`` metadata attribute to file(s).")
+        id3_track = id3_args.add_mutually_exclusive_group()
+        id3_track.add_argument("-N", "--track", "--track-number", dest=t.TAG_TRACK,
+                               help="Number to apply as ``TAG_TRACK`` metadata attribute to file(s). "
+                                    "If value is lower than zero or an empty string, track number will be removed. "
+                                    "This is equivalent to option --remove-track.")
+        id3_track.add_argument("--nN", "--remove-track", action="store_true", dest="remove_track",
+                               help="Remove the track number from metadata attributes of files(s).")
         id3_args.add_argument("-Y", "--year", dest=t.TAG_YEAR,
                               help="Name to apply as ``TAG_YEAR`` metadata attribute to file(s).")
         id3_args.add_argument("-D", "--duration", dest=t.TAG_DURATION,
@@ -290,6 +295,7 @@ def main(
          rename_format=None,            # type: Optional[str]
          rename_title=False,            # type: bool
          prefix_track=False,            # type: bool
+         remove_track=False,            # type: bool
          dry=False,                     # type: bool
          backup=False,                  # type: bool
          no_fetch=False,                # type: bool
@@ -397,6 +403,8 @@ def main(
         LOGGER.info("Running audio 'all' config parsing...")
         all_audio_config = parse_audio_config(all_info_file, mode=parser_mode)
         config_combo.append((True, all_audio_config))
+    if remove_track:
+        track = ""  # empty string to avoid filter out if 'None' as undefined options (AudioInfo handles it)
     literal_fields = {
         t.TAG_ALBUM: album, t.TAG_ALBUM_ARTIST: album_artist, t.TAG_ARTIST: artist, t.TAG_TITLE: title,
         t.TAG_TRACK: track, t.TAG_DURATION: duration, t.TAG_GENRE: genre, t.TAG_YEAR: year,
