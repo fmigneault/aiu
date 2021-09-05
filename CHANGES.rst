@@ -4,7 +4,7 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Fix invalid attempts to retrieve `album` and `artist` name from metadata with possibly unavailable field.
 
 `1.5.0 <https://github.com/fmigneault/aiu/tree/1.5.0>`_ (2021-08-27)
 ------------------------------------------------------------------------------------

@@ -192,9 +192,9 @@ def update_metadata(meta, fetch_cover=False):
         else:
             song["date"] = meta["date"]
             song["year"] = meta["date"]["year"]
-        if "album" not in song:
+        if "album" not in song and "name" in meta:
             song["album"] = meta["name"]
-        if "artist" not in song and "artists" in meta:
+        if "artist" not in song and "artists" in meta and "name" in meta["artists"][0]:
             song["artist"] = meta["artists"][0]["name"]
         if fetch_cover or not album_cover.startswith("http"):
             song["cover"] = album_cover
