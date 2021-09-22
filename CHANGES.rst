@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.6.0 <https://github.com/fmigneault/aiu/tree/1.6.0>`_ (2021-09-22)
+------------------------------------------------------------------------------------
+
 * Fix invalid attempts to retrieve ``album`` and ``artist`` name from metadata with possibly unavailable field
   (use patch: `fmigneault/python-youtube-music@patch-new-youtube-music-version <
    https://github.com/fmigneault/python-youtube-music/tree/patch-new-youtube-music-version>`_,
