@@ -84,7 +84,6 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
         LOGGER.debug(msg, *_)
 
 
-
 class TqdmYouTubeMusicDL(CachedYoutubeMusicDL):
     """
     Setup hooks around methods that process the `download album` operation to display progress per track downloaded.
