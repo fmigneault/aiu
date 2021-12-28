@@ -145,3 +145,24 @@ It is possible to provide a YouTube Music URL formatted with the album ID in que
 When providing such a link to `AIU` (with the ``--link`` option), it can simultaneously retrieve the corresponding
 album audio files and apply all appropriate audio tag metadata to them. The resulting files can then be further
 updated using the other options and parsing formats from metadata configurations.
+
+.. _ytm_multi_link:
+
+Process multiple artist albums from YouTube Music link
+======================================================
+
+If the provided ``--link`` corresponds to a YouTube Music channel URL, all albums of this artist will be downloaded.
+
+::
+
+    https://music.youtube.com/channel/<ARTIST_ID>
+
+Album songs will be stored into corresponding sub-directories under the specified output location.
+
+Note that according to the amount of songs per albums and total albums, this operation can take some time, but it
+will at least save the user the manual work of running individual ``aiu`` call per album link.
+
+Other ``aiu`` parameters are also still applicable when using this type of link
+(e.g.: ``--artist``, ``--prefix-track``, etc.).
+Be mindful of provided flags though to make sure they remain relevant, since they will be applied to all albums
+to be processed for that artist.
