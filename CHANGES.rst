@@ -4,7 +4,9 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add support of input YouTube Music channel link to automatically download and process all available artist albums.
+  Individual albums are iteratively processed as separate ``aiu`` operations and downloaded songs are stored into
+  corresponding album sub-directories.
 
 `1.6.0 <https://github.com/fmigneault/aiu/tree/1.6.0>`_ (2021-09-22)
 ------------------------------------------------------------------------------------

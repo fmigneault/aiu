@@ -8,8 +8,9 @@ requests
 typing
 tqdm
 youtube_dl
-# FIXME: until merged (https://github.com/tombulled/python-youtube-music/pull/14)
+# FIXME:
 #   should try using 'innertube' instead
 #   (https://github.com/tombulled/python-youtube-music/issues/13#issuecomment-923262424)
+# FIXME: until merged (https://github.com/tombulled/python-youtube-music/pull/17)
 # git+https://github.com/tombulled/python-youtube-music#egg=ytm[dl]
-git+https://github.com/fmigneault/python-youtube-music@patch-new-youtube-music-version#egg=ytm[dl]
+git+https://github.com/fmigneault/python-youtube-music@fix-artist-playlist-id#egg=ytm[dl]

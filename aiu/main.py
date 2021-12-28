@@ -7,11 +7,14 @@ corresponding information fields found in configurations files from options ``--
 Applied changes listed in ``--output`` file.
 """
 import argparse
+import json
 import logging
 import os
 import sys
-from typing import List, Optional, Union, Tuple
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
+from typing import Any, Dict, List, Optional, Union, Tuple
+
+from tqdm import tqdm
 
 import aiu
 from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG, LOGGER, TRACE, __meta__, tags as t
@@ -30,7 +33,7 @@ from aiu.parser import (
 from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
 from aiu.utils import backup_files, look_for_default_file, save_cover_file, validate_output_file, log_exception
 from aiu.typedefs import AudioConfig, Duration
-from aiu.youtube import fetch_files, get_metadata
+from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
 
 def cli():
@@ -95,7 +98,7 @@ def cli():
                                             description="Arguments that control parsing methodologies and "
                                                         "configurations to update matched audio files metadata.")
         parser_args.add_argument("-l", "--link", "--youtube", dest="link",
-                                 help="YouTube music link from where to retrieve songs and album metadata. "
+                                 help="YouTube Music link from where to retrieve songs and album metadata. "
                                       "When provided, other options will override whichever tag information was "
                                       "automatically obtained from the URL reference.")
         parser_args.add_argument("-p", "--path", "-f", "--file", default=".", dest="search_path",
@@ -145,7 +148,7 @@ def cli():
         op_args.add_argument("--dry", action="store_true",
                              help="Do not execute any modification, just pretend. "
                                   "(note: works best when combined with outputs of ``--verbose`` or ``--debug``)")
-        op_args.add_argument("-b", "--backup", action="store_true",
+        op_args.add_argument("--backup", "-b", action="store_true",
                              help="Create a backup of files to be modified. Files are saved in directory named "
                                   "``backup`` under the ``--path`` or parent directory of ``--file``. " 
                                   "No backup is accomplished otherwise.")
@@ -267,6 +270,14 @@ def cli():
     return 1
 
 
+def multi_fetch_albums(albums, output_dir, **kwargs):
+    # type: (List[Dict[str, str]], str, Any) -> None
+    for album_info in tqdm(albums, unit="album", desc="Processing each artist album link iteratively..."):
+        LOGGER.info("Process [%s] with [%s]", album_info["name"], album_info["link"])
+        album_path = os.path.join(output_dir, album_info["name"])
+        main(link=album_info["link"], output_dir=album_path, **kwargs)
+
+
 @log_exception(LOGGER)
 def main(
          # --- file/parsing options ---
@@ -306,7 +317,7 @@ def main(
          no_update=False,               # type: bool
          no_output=False,               # type: bool
          no_result=False,               # type: bool
-         ):                             # type: (...) -> AudioConfig
+         ):                             # type: (...) -> Union[AudioConfig, bool]
     """
     Main process of AIU CLI.
     """
@@ -338,6 +349,32 @@ def main(
             os.makedirs(output_dir, exist_ok=True)
         LOGGER.info("Retrieving config 'youtube'%s from link: [%s]", "" if no_fetch else " and album files", link)
         show = LOGGER.isEnabledFor(logging.INFO)  # if verbose or debug output was requested
+        albums = get_artist_albums(link, throw=False)
+        if albums:
+            if dry:
+                LOGGER.info("Would attempt processing each album link iteratively:\n%s",
+                            json.dumps([album_info["link"] for album_info in albums], indent=2))
+            else:
+                # pass down all parameters except links defined by each album
+                LOGGER.info("Found albums to process:\n%s",
+                            json.dumps([album_info["name"] for album_info in albums], indent=2))
+                multi_fetch_albums(albums,
+                                   # file/parsing options
+                                   info_file=info_file, all_info_file=all_info_file, cover_file=cover_file,
+                                   output_file=output_file, output_dir=output_dir, output_mode=output_mode,
+                                   parser_mode=parser_mode,
+                                   exceptions_config=exceptions_config, stopwords_config=stopwords_config,
+                                   # specific meta fields
+                                   artist=artist, album=album, album_artist=album_artist, title=title, track=track,
+                                   genre=genre, duration=duration, year=year, match_artist=match_artist,
+                                   # other operation flags
+                                   rename_format=rename_format, rename_title=rename_title, prefix_track=prefix_track,
+                                   remove_track=remove_track, backup=backup, dry=False,  # forced because of if/else
+                                   no_fetch=no_fetch, no_cover=no_cover, no_info=no_info, no_all=no_all,
+                                   no_rename=no_rename, no_update=no_update, no_output=no_output, no_result=no_result
+                                   )
+            return True  # avoid error on empty config
+
         meta_file, meta_json = get_metadata(link) if no_fetch else fetch_files(link, output_dir, show_progress=show)
         youtube_config = AudioConfig(meta_json)
 
