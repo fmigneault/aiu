@@ -13,6 +13,7 @@ from ytm.types.ids.ArtistId import ArtistId
 from ytm import utils as ytm_utils
 
 from aiu import LOGGER
+from aiu.utils import make_dirs_cleaned
 from aiu.parser import fetch_image
 from aiu.typedefs import Duration
 
@@ -289,6 +290,7 @@ def fetch_files(link, output_dir, with_cover=True, progress_display=True):
     LOGGER.debug("Fetching files from link: [%s]", link)
     api = TqdmYouTubeMusicDL() if progress_display else CachedYoutubeMusicDL()
     is_album, is_music, ref_id = get_reference_id(link)
+    make_dirs_cleaned(output_dir)
     if is_album and is_music:
         meta = api.download_album(ref_id, output_dir)  # pre-applied ID3 tags
     else:  # any single music/video

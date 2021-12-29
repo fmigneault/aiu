@@ -31,7 +31,14 @@ from aiu.parser import (
     save_audio_config
 )
 from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
-from aiu.utils import backup_files, look_for_default_file, save_cover_file, validate_output_file, log_exception
+from aiu.utils import (
+    backup_files,
+    log_exception,
+    look_for_default_file,
+    make_dirs_cleaned,
+    save_cover_file,
+    validate_output_file
+)
 from aiu.typedefs import AudioConfig, Duration
 from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
@@ -371,7 +378,7 @@ def main(
             LOGGER.warning("Will not fetch files from URL in 'dry' mode. Enforcing '--no-fetch'.")
             no_fetch = True
         elif not dry:
-            os.makedirs(output_dir, exist_ok=True)
+            make_dirs_cleaned(output_dir, exist_ok=True)
         LOGGER.info("Retrieving config 'youtube'%s from link: [%s]", "" if no_fetch else " and album files", link)
         progress_display = force_progress or (LOGGER.isEnabledFor(logging.INFO) and not no_progress)
         albums = get_artist_albums(link, throw=False)

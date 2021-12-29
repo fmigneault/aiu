@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from functools import wraps
 from typing import Callable, Iterable, List, Optional, Union
@@ -49,7 +50,7 @@ def look_for_default_file(path, allowed_names, allowed_extensions=None):
 
 def backup_files(file_paths, backup_dir):
     # type: (Iterable[str], str) -> None
-    os.makedirs(backup_dir, exist_ok=True)
+    make_dirs_cleaned(backup_dir, exist_ok=True)
     for file_path in file_paths:
         copy_path = os.path.join(backup_dir, os.path.split(file_path)[-1])
         LOGGER.debug("Backup [%s]", copy_path)
@@ -105,5 +106,27 @@ def validate_output_file(output_file_path, search_path, default_name="output.cfg
         output_dir = os.path.dirname(output_file_path)
     if not os.path.isdir(output_dir):
         LOGGER.debug("Missing output save location, creating it: [%s]", output_file_path)
-        os.makedirs(output_dir)
+        make_dirs_cleaned(output_dir)
     return output_file_path
+
+
+def make_dirs_cleaned(path, replace="-", exist_ok=True, mode=0o755):
+    """
+    Performs directory creation after cleanup of invalid characters in the path.
+    """
+    assert len(replace) == 1
+    new_path = path = os.path.normpath(os.path.abspath(path))
+    if not os.path.exists(path):
+        dir_path = path
+        parts = []
+        while True:
+            top_path, dir_path = os.path.split(dir_path)
+            if not top_path or not dir_path:
+                break
+            parts.append(re.sub(r"[^\w\-_\. ]", replace, dir_path))
+            dir_path = top_path
+            if os.path.isdir(top_path):
+                break
+        new_path = os.path.join(top_path, os.path.sep.join(reversed(parts)))
+        LOGGER.debug("Replaced directory path [%s] => [%s]", parts, new_path)
+    os.makedirs(new_path, mode=mode, exist_ok=exist_ok)
