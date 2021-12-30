@@ -17,11 +17,22 @@ def test_make_dirs_cleaned():
     valid_tests = [
         "/tmp/random/valid",
         "/tmp/random/also valid",
+        "/tmp/random/is allowed!",
+        "/tmp/random/~~all-good~~",
+        "/tmp/random/[also] good",
+        "/tmp/random/(also) good",
     ]
     invalid_tests = [
-        ("/tmp/random/not!valid", _fix_path("/tmp/random/not-valid")),
+        ("/tmp/random/not\"valid", _fix_path("/tmp/random/not-valid")),
+        # ("/tmp/random/not\\valid", _fix_path("/tmp/random/not-valid")),  # cannot test on Windows since it gets split
+        ("/tmp/random/not:valid", _fix_path("/tmp/random/not-valid")),
+        ("/tmp/random/not?valid", _fix_path("/tmp/random/not-valid")),
+        ("/tmp/random/not*valid", _fix_path("/tmp/random/not-valid")),
+        ("/tmp/random/not<valid", _fix_path("/tmp/random/not-valid")),
+        ("/tmp/random/not>valid", _fix_path("/tmp/random/not-valid")),
+        ("/tmp/random/not|valid", _fix_path("/tmp/random/not-valid")),
         ("/tmp/random/not ok?", _fix_path("/tmp/random/not ok-")),
-        ("./ok/yes|no/good/not:good", _fix_path(cur_dir + "/ok/yes-no/good/not-good"))
+        ("./ok/yes|no/good/not:good", _fix_path(cur_dir + "/ok/yes-no/good/not-good")),
     ]
 
     with mock.patch("os.makedirs") as mkdir_mock:

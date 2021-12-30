@@ -10,6 +10,8 @@ from PIL import Image
 from aiu.typedefs import AudioConfig, AudioFileAny, AudioFile, AudioInfo, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
 
+REGEX_FILENAME_ILLEGAL_CHARS = re.compile(r"[\"\\:?*<>|]")
+
 
 def log_exception(logger=None):
     # type: (LoggerType) -> Callable
@@ -123,7 +125,7 @@ def make_dirs_cleaned(path, replace="-", exist_ok=True, mode=0o755):
             top_path, dir_path = os.path.split(dir_path)
             if not top_path or not dir_path:
                 break
-            parts.append(re.sub(r"[^\w\-_\. ]", replace, dir_path))
+            parts.append(re.sub(REGEX_FILENAME_ILLEGAL_CHARS, replace, dir_path))
             dir_path = top_path
             if os.path.isdir(top_path):
                 break
