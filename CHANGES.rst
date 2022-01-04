@@ -16,6 +16,8 @@ CHANGES
 * Add ``--nP`` and ``--no-progress`` argument to allow disabling only progress bars while keeping more verbose logging.
 * Add ``--no-summary`` to better represent ``--no-result`` argument behaviour.
 * Replace ``--nP`` by ``--nS`` for argument ``--no-result``.
+* Fix failing resolution of single ``AudioInfo`` element (single audio file) due to ``Duration`` field not allowing
+  additional positional arguments during deepcopy.
 
 `1.6.0 <https://github.com/fmigneault/aiu/tree/1.6.0>`_ (2021-09-22)
 ------------------------------------------------------------------------------------
