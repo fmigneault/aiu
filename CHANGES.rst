@@ -4,7 +4,20 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add support of input YouTube Music channel link to automatically download and process all available artist albums.
+  Individual albums are iteratively processed as separate ``aiu`` operations and downloaded songs are stored into
+  corresponding album sub-directories.
+* Fix incorrect direct reference to ``YoutubeMusicDL`` instead of ``CachedYoutubeMusicDL`` implementation when
+  no ``tqdm`` progression is requested.
+* Fix base YouTube downloader to employ ``yt_dlp`` instead of ``youtube_dl``, providing download speed
+  improvements and other YouTube related issue handling.
+* Fix displayed SSL warnings caused by underlying YouTube downloader requests that cannot be addressed
+  directly by this tool.
+* Add ``--nP`` and ``--no-progress`` argument to allow disabling only progress bars while keeping more verbose logging.
+* Add ``--no-summary`` to better represent ``--no-result`` argument behaviour.
+* Replace ``--nP`` by ``--nS`` for argument ``--no-result``.
+* Fix failing resolution of single ``AudioInfo`` element (single audio file) due to ``Duration`` field not allowing
+  additional positional arguments during deepcopy.
 
 `1.6.0 <https://github.com/fmigneault/aiu/tree/1.6.0>`_ (2021-09-22)
 ------------------------------------------------------------------------------------

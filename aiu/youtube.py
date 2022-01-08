@@ -3,26 +3,44 @@ import tempfile
 import os
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
+
+import urllib3  # noqa
+import yt_dlp
 from tqdm import tqdm
-from youtube_dl import YoutubeDL
-from ytm import YouTubeMusic, YouTubeMusicDL  # noqa
+from ytm.apis.YouTubeMusic import YouTubeMusic
+from ytm.apis.YouTubeMusicDL.YouTubeMusicDL import BaseYouTubeMusicDL, YouTubeMusicDL
+from ytm.types.ids.ArtistId import ArtistId
 from ytm import utils as ytm_utils
 
 from aiu import LOGGER
+from aiu.utils import make_dirs_cleaned
 from aiu.parser import fetch_image
 from aiu.typedefs import Duration
 
 if TYPE_CHECKING:
-    from typing import Optional, Tuple
+    from typing import Dict, List, Optional, Tuple, Union
     from aiu.typedefs import JSON
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+class BaseYoutubeDLP(BaseYouTubeMusicDL):
+    """
+    Base class of the YouTube Music downloader with drop-in replacement of :mod:`youtube_dl` by improved :mod:`yt_dlp`.
+    """
+    def __init__(self):
+        super(BaseYoutubeDLP, self).__init__(youtube_downloader=yt_dlp.YoutubeDL)
 
 
 class CachedYoutubeMusicDL(YouTubeMusicDL):
     """
     Downloader that will bypass the actual download of the file if the information and files are already available.
     """
+    _api = None  # type: YouTubeMusic  # only for annotation, replaced during YouTubeMusicDL.__init__ call
+
     def __init__(self, *_, **__):
-        super(CachedYoutubeMusicDL, self).__init__(*_, **__)
+        super(CachedYoutubeMusicDL, self).__init__()
+        self._base = BaseYoutubeDLP()  # drop-in replacement of youtube downloader
         self.base_download = self._base._download
 
     def cached_download(self, song_id, metadata=None, directory=None, **__):
@@ -62,7 +80,7 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
         all operations related to the actual download and the creation of base ID3 tags from retrieved metadata
         since the file already is available. Any out of date ID3 Tags will be updated by us anyway.
         """
-        ytdl = YoutubeDL(params={"quiet": True, "outtmpl": "", "postprocessors": [], "format": "bestaudio"})
+        ytdl = yt_dlp.YoutubeDL(params={"quiet": True, "outtmpl": "", "postprocessors": [], "format": "bestaudio"})
         url = ytm_utils.url_yt("watch", params={"v": song_id})  # noqa
         info = ytdl.extract_info(url=url, ie_key="Youtube", download=False)
 
@@ -93,20 +111,28 @@ class TqdmYouTubeMusicDL(CachedYoutubeMusicDL):
         self.api_album = self._api.album
         self._api.album = self.tqdm_album
         self._base._download = self.tqdm_download
-        self.progress_bar = None
+        self.progress_bar = None  # type: Optional[tqdm]
         self._log_after = []
 
     def tqdm_album(self, album_id):
         album = self.api_album(album_id)
         total = album.get("total_tracks")
         if total:
-            self.progress_bar = tqdm(total=total, unit="track", desc="Downloading Album: [{}]".format(album["name"]))
+            self.progress_bar = tqdm(
+                # second line to leave space for download progress of each songs by 'yt_dlp.YoutubeDL'
+                position=1, total=total, unit="track",
+                desc="Downloading Album: [{}]".format(album["name"])
+            )
+            self.progress_bar.display()
         return album
 
     def tqdm_download(self, *_, **__):
         result = self.cached_download(*_, **__)
         if self.progress_bar:
             self.progress_bar.update(1)
+            # don't wait until class __del__ is called to avoid intermediate log entries before final output
+            if self.progress_bar.last_print_n == self.progress_bar.total:
+                self.progress_bar.close()
         return result
 
     def __del__(self):
@@ -115,13 +141,13 @@ class TqdmYouTubeMusicDL(CachedYoutubeMusicDL):
         for _log in self._log_after:
             super(TqdmYouTubeMusicDL, self).log(_log[0], *_log[1])
 
-    # delay logs until end otherwise they
+    # delay logs until end otherwise they break (duplicate) the progress bar display
     def log(self, msg, *_):
         self._log_after.append((msg, _))
 
 
 def get_reference_id(link):
-    # type: (str) -> Tuple[bool, bool, str]
+    # type: (str) -> Tuple[bool, bool, Union[str, List[str]]]
     """
     Finds the appropriate reference ID from a YouTube Music/Video link.
 
@@ -137,10 +163,13 @@ def get_reference_id(link):
         raise ValueError("Invalid YouTube Music/Video link located at invalid host: [{!s}]".format(link))
     query = urlparse(link).query
     params = parse_qs(query)
+    # format: <youtube-link>/watch?v=<ID>
     if music_link and not any(ref in params for ref in ["v", "list"]):
         raise ValueError("Invalid YouTube Music link does not provide a song or album reference: [{!s}]".format(link))
     elif video_link and "v" not in params:  # ignore list (video playlist)
         raise ValueError("Invalid YouTube Video link does not provide a video reference: [{!s}]".format(link))
+    # format: <youtube-link>/playlist?list=<ID>
+    # note: "list=<ID>" can also be in "watch?v=<ID>" format
     if music_link and "list" in params:  # process list first in case somehow both watch/list are present
         album = params["list"][0]
         LOGGER.debug("Found YouTube Music album ID: [%s]", album)
@@ -152,6 +181,44 @@ def get_reference_id(link):
     video = params["v"][0]
     LOGGER.debug("Found YouTube Video song ID: [%s]", video)
     return False, False, video
+
+
+def get_artist_albums(link, throw=True):
+    # type: (str, bool) -> List[Dict[str, str]]
+    """
+    Obtains all album IDs produced by a given artist ID extracted from appropriate YouTube Music link.
+    """
+    try:
+        parts = link.split("/channel/")
+        if len(parts) != 2:
+            raise ValueError(f"Not a valid channel link: [{link}]")
+        artist = ArtistId(parts[1])  # raise TypeError if invalid
+    except (TypeError, ValueError):
+        if throw:
+            raise
+        return []
+    api = YouTubeMusic()
+    meta = api.artist(artist)
+    albums = meta.get("albums", {}).get("items", [])
+    # get the playlist ID instead of Album ID to form the corresponding download/listing YouTube Music links
+    album_meta = [
+        {
+            "name": info["name"],
+            "link": parts[0] + "/playlist?list={}".format(info["shuffle"]["playlist_id"]),
+            "id": info["shuffle"]["playlist_id"],
+        }
+        for info in albums
+    ]
+    # duplicate album names is allowed (usually duplicate uploads, contents equivalent)
+    # remove them since only unique output directories can be created
+    album_found = []
+    album_names = set()
+    for album_info in album_meta:
+        if album_info["name"] in album_names:
+            continue
+        album_names.add(album_info["name"])
+        album_found.append(album_info)
+    return album_found
 
 
 def update_metadata(meta, fetch_cover=False):
@@ -218,11 +285,12 @@ def get_metadata(link):
     return None, {}
 
 
-def fetch_files(link, output_dir, with_cover=True, show_progress=True):
+def fetch_files(link, output_dir, with_cover=True, progress_display=True):
     # type: (str, str, bool, bool) -> Tuple[Optional[str], JSON]
     LOGGER.debug("Fetching files from link: [%s]", link)
-    api = TqdmYouTubeMusicDL() if show_progress else YouTubeMusicDL()
+    api = TqdmYouTubeMusicDL() if progress_display else CachedYoutubeMusicDL()
     is_album, is_music, ref_id = get_reference_id(link)
+    make_dirs_cleaned(output_dir)
     if is_album and is_music:
         meta = api.download_album(ref_id, output_dir)  # pre-applied ID3 tags
     else:  # any single music/video
@@ -237,9 +305,9 @@ def fetch_files(link, output_dir, with_cover=True, show_progress=True):
             covers = meta["thumbnails"]
             for img in covers:
                 img["ratio"] = abs((float(img["width"]) / float(img["height"])) - 1)
-            covers = list(sorted(covers, key=lambda img: img["ratio"]))
-            covers = list(filter(lambda img: img["ratio"] == covers[0]["ratio"], covers))
-            covers = list(sorted(covers, key=lambda img: img["height"]))
+            covers = list(sorted(covers, key=lambda _img: _img["ratio"]))
+            covers = list(filter(lambda _img: _img["ratio"] == covers[0]["ratio"], covers))
+            covers = list(sorted(covers, key=lambda _img: _img["height"]))
             thumbnail = covers[0]
         if isinstance(thumbnail, dict):
             url = thumbnail["url"]

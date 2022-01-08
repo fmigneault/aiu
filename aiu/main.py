@@ -7,11 +7,14 @@ corresponding information fields found in configurations files from options ``--
 Applied changes listed in ``--output`` file.
 """
 import argparse
+import json
 import logging
 import os
 import sys
-from typing import List, Optional, Union, Tuple
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
+from typing import Any, Dict, List, Optional, Union, Tuple
+
+from tqdm import tqdm
 
 import aiu
 from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG, LOGGER, TRACE, __meta__, tags as t
@@ -28,9 +31,16 @@ from aiu.parser import (
     save_audio_config
 )
 from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
-from aiu.utils import backup_files, look_for_default_file, save_cover_file, validate_output_file, log_exception
+from aiu.utils import (
+    backup_files,
+    log_exception,
+    look_for_default_file,
+    make_dirs_cleaned,
+    save_cover_file,
+    validate_output_file
+)
 from aiu.typedefs import AudioConfig, Duration
-from aiu.youtube import fetch_files, get_metadata
+from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
 
 def cli():
@@ -95,7 +105,7 @@ def cli():
                                             description="Arguments that control parsing methodologies and "
                                                         "configurations to update matched audio files metadata.")
         parser_args.add_argument("-l", "--link", "--youtube", dest="link",
-                                 help="YouTube music link from where to retrieve songs and album metadata. "
+                                 help="YouTube Music link from where to retrieve songs and album metadata. "
                                       "When provided, other options will override whichever tag information was "
                                       "automatically obtained from the URL reference.")
         parser_args.add_argument("-p", "--path", "-f", "--file", default=".", dest="search_path",
@@ -145,7 +155,7 @@ def cli():
         op_args.add_argument("--dry", action="store_true",
                              help="Do not execute any modification, just pretend. "
                                   "(note: works best when combined with outputs of ``--verbose`` or ``--debug``)")
-        op_args.add_argument("-b", "--backup", action="store_true",
+        op_args.add_argument("--backup", "-b", action="store_true",
                              help="Create a backup of files to be modified. Files are saved in directory named "
                                   "``backup`` under the ``--path`` or parent directory of ``--file``. " 
                                   "No backup is accomplished otherwise.")
@@ -184,10 +194,17 @@ def cli():
                              help="Do not apply any ID3-Tags updates. (note: implied when ``--dry`` is provided)")
         op_args.add_argument("--no-output", "--nO", action="store_true",
                              help="Do not save results to output configurations file. (see: ``--output``)")
-        op_args.add_argument("--no-result", "--nP", action="store_true",
-                             help="Do not print results to console output. "
+        op_args.add_argument("--no-result", "--no-summary", "--nS", action="store_true",
+                             help="Do not print summary of results applied to audio files in console output. "
                                   "Be aware that result will be reported only if logging level is ``--verbose`` "
                                   "or ``--debug``. This flag is redundant for more restrictive logging levels.")
+        op_args_p = op_args.add_mutually_exclusive_group()
+        op_args_p.add_argument("--no-progress", "--nP", action="store_true",
+                               help="Do not display progress bars where applicable. "
+                                    "This argument is redundant if ``--warn`` or ``--quiet`` are specified.")
+        op_args_p.add_argument("--progress", "--force-progress", "--fP", action="store_true", dest="force_progress",
+                               help="Force display of progress bars where applicable, ignoring logging levels. "
+                                    "This argument is redundant if ``--info`` or ``--debug`` are specified.")
         id3_args = ap.add_argument_group(title="ID3 Tags Arguments",
                                          description="Options to directly provide specific ID3 tag values to one or "
                                                      "many audio files matched instead of through ``--info`` "
@@ -267,6 +284,30 @@ def cli():
     return 1
 
 
+def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
+    # type: (List[Dict[str, str]], str, bool, Any) -> List[AudioConfig]
+    results = []
+    original_log_level = LOGGER.getEffectiveLevel()
+    if progress_display:
+        # temporarily disable intermediate logs for multi-progress bar display
+        # reset after operation for output generation
+        LOGGER.setLevel(logging.ERROR)
+    try:
+        for album_info in tqdm(albums, position=2,  # (2) for album, (1) for songs, (0) for ETA download of each song
+                               disable=not progress_display, unit="album",
+                               desc="Processing each artist album link iteratively..."):
+            LOGGER.info("Process [%s] with [%s]", album_info["name"], album_info["link"])
+            album_path = os.path.join(output_dir, album_info["name"])
+            album_results = main(link=album_info["link"],
+                                 output_dir=album_path,
+                                 force_progress=progress_display,
+                                 **kwargs)
+            results.append(album_results)
+    finally:
+        LOGGER.setLevel(original_log_level)
+    return results
+
+
 @log_exception(LOGGER)
 def main(
          # --- file/parsing options ---
@@ -306,7 +347,9 @@ def main(
          no_update=False,               # type: bool
          no_output=False,               # type: bool
          no_result=False,               # type: bool
-         ):                             # type: (...) -> AudioConfig
+         no_progress=False,             # type: bool
+         force_progress=False,          # type: bool
+         ):                             # type: (...) -> Union[AudioConfig, bool]
     """
     Main process of AIU CLI.
     """
@@ -335,10 +378,47 @@ def main(
             LOGGER.warning("Will not fetch files from URL in 'dry' mode. Enforcing '--no-fetch'.")
             no_fetch = True
         elif not dry:
-            os.makedirs(output_dir, exist_ok=True)
+            make_dirs_cleaned(output_dir, exist_ok=True)
         LOGGER.info("Retrieving config 'youtube'%s from link: [%s]", "" if no_fetch else " and album files", link)
-        show = LOGGER.isEnabledFor(logging.INFO)  # if verbose or debug output was requested
-        meta_file, meta_json = get_metadata(link) if no_fetch else fetch_files(link, output_dir, show_progress=show)
+        progress_display = force_progress or (LOGGER.isEnabledFor(logging.INFO) and not no_progress)
+        albums = get_artist_albums(link, throw=False)
+        if albums:
+            if dry:
+                LOGGER.info("Would attempt processing each album link iteratively:\n%s",
+                            json.dumps([album_info["link"] for album_info in albums], indent=2))
+            else:
+                # pass down all parameters except links defined by each album
+                LOGGER.info("Found albums to process:\n%s",
+                            json.dumps([album_info["name"] for album_info in albums], indent=2))
+                album_results = multi_fetch_albums(
+                    albums,
+                    # file/parsing options
+                    info_file=info_file, all_info_file=all_info_file, cover_file=cover_file,
+                    output_file=output_file, output_dir=output_dir, output_mode=output_mode, parser_mode=parser_mode,
+                    exceptions_config=exceptions_config, stopwords_config=stopwords_config,
+                    # specific meta fields
+                    artist=artist, album=album, album_artist=album_artist, title=title, track=track,
+                    genre=genre, duration=duration, year=year, match_artist=match_artist,
+                    # other operation flags
+                    rename_format=rename_format, rename_title=rename_title, prefix_track=prefix_track,
+                    remove_track=remove_track, backup=backup, dry=False,  # forced because of if/else
+                    no_fetch=no_fetch, no_cover=no_cover, no_info=no_info, no_all=no_all,
+                    no_rename=no_rename, no_update=no_update, no_output=no_output,
+                    no_result=True,  # forced to allow prettier progress bars of overall operation
+                    progress_display=progress_display,
+                )
+                if not no_result and LOGGER.isEnabledFor(INFO):
+                    for album_info, album_config in zip(albums, album_results):
+                        if not album_config:
+                            continue
+                        LOGGER.info("Output configuration for [%s]", album_info["name"])
+                        LOGGER.to_yaml(album_config.value)
+            return True  # avoid error on empty config
+
+        if no_fetch:
+            meta_file, meta_json = get_metadata(link)
+        else:
+            meta_file, meta_json = fetch_files(link, output_dir, progress_display=progress_display)
         youtube_config = AudioConfig(meta_json)
 
     # find configurations files
@@ -459,7 +539,7 @@ def main(
     elif no_output:
         LOGGER.debug("Saving output configuration was disabled.")
     if not no_result and output_config and LOGGER.isEnabledFor(INFO):
-        LOGGER.to_yaml(output_config .value)
+        LOGGER.to_yaml(output_config.value)
     elif no_result:
         LOGGER.debug("Logging result configuration was disabled.")
     LOGGER.info("Operation complete.")
