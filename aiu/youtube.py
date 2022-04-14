@@ -267,7 +267,7 @@ def update_metadata(meta, fetch_cover=False):
         if track is not None:
             track += 1
 
-    with tempfile.NamedTemporaryFile("w") as file:
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8") as file:
         json.dump(meta, file, indent=4, ensure_ascii=False)
     return file.name, meta["tracks"]
 

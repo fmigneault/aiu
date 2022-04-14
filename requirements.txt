@@ -7,7 +7,7 @@ PyYAML
 requests
 typing
 tqdm
-yt-dlp
+yt-dlp>=2022.4.8
 #youtube_dl @ git+https://github.com/yt-dlp/yt-dlp
 # FIXME:
 #   should try using 'innertube' instead
