@@ -26,13 +26,13 @@ before applying the desired ID3 tag metadata updates.
     :alt: Requires Python 3.6+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/fmigneault/aiu/1.7.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/fmigneault/aiu/1.7.1.svg
     :alt: Commits since latest release
-    :target: https://github.com/fmigneault/aiu/compare/1.7.0...master
+    :target: https://github.com/fmigneault/aiu/compare/1.7.1...master
 
-.. |version| image:: https://img.shields.io/badge/tag-1.7.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-1.7.1-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/fmigneault/aiu/tree/1.7.0
+    :target: https://github.com/fmigneault/aiu/tree/1.7.1
 
 .. |dependencies| image:: https://pyup.io/repos/github/fmigneault/aiu/shield.svg
     :alt: Dependencies Status

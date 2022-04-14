@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.7.1 <https://github.com/fmigneault/aiu/tree/1.7.1>`_ (2022-04-14)
+------------------------------------------------------------------------------------
+
 * Fix missing encoding when writing JSON temp file metadata that contains characters needing UTF-8.
 * Fix ``LP_OVERLAPPED`` error by upgrading requirement of ``yt-dlp`` with more recent version.
 
