@@ -4,7 +4,9 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Fix invalid double quote character (``"``) incorrectly escaped into single quote character (``'``) instead of
+  expected underscore character (``_``) by internal ``python-youtube-music`` (``ytm``) code under Windows, causing
+  invalid path resolution of the downloaded file in combination with dispatched call to ``youtube_dl``.
 
 `1.7.1 <https://github.com/fmigneault/aiu/tree/1.7.1>`_ (2022-04-14)
 ------------------------------------------------------------------------------------

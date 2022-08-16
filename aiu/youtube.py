@@ -1,6 +1,7 @@
 import json
 import tempfile
 import os
+import sys
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
@@ -30,6 +31,34 @@ class BaseYoutubeDLP(BaseYouTubeMusicDL):
     """
     def __init__(self):
         super(BaseYoutubeDLP, self).__init__(youtube_downloader=yt_dlp.YoutubeDL)
+
+    def _get_file_path(self, info, *args, **kwargs):
+        """
+        Patch operations incorrectly handled when resolving downloaded music file path.
+
+        When :meth:`BaseYouTubeMusicDL._download` is eventually called through :meth:`YouTubeMusicDL.base_download`,
+        and specifically under Windows, a track with double quotes (") characters is downloaded with auto-replaced
+        single quotes (') instead of the coded `illegal characters` replacement by underscores (_) as expected in
+        :meth:`BaseYouTubeMusicDL._get_file_path` (same characters as in :meth:`CachedYoutubeMusicDL.cached_download`).
+        Because of this, the file is not found and the download process fails the whole operation.
+        Patch it transparently when this case is detected.
+        """
+        path = super(BaseYoutubeDLP, self)._get_file_path(info, *args, **kwargs)
+        if sys.platform == "win32":
+            title = info.get("title", "")
+            if title and "\"" in title:
+                dir_name, file_name = os.path.split(path)
+                ext = os.path.splitext(file_name)[-1]
+                quoted_name = title.replace("\"", "'") + ext
+                # still need to sanitize all other chars
+                for char in ['\\', '/', ':', '*', '?', '<', '>', '|']:  # excluding '"'
+                    quoted_name = quoted_name.replace(char, "_")
+                patched_patch = os.path.join(dir_name, quoted_name)
+                if "'" in quoted_name and not os.path.isfile(path) and os.path.isfile(patched_patch):
+                    # to avoid problems in parent code that could still be referencing the old "invalid" path
+                    # move the patched file name to the expected sanitized location (don't return the patched path)
+                    os.rename(patched_patch, path)
+        return path
 
 
 class CachedYoutubeMusicDL(YouTubeMusicDL):
