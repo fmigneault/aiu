@@ -1,4 +1,4 @@
-__version__ = "1.7.2"
+__version__ = "1.8.0"
 __package__ = "aiu"
 __author__ = "Francis Charette Migneault"
 __maintainer__ = "Francis Charette Migneault"
