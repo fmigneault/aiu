@@ -4,7 +4,8 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Update `TODO <TODO.md>`_ items that have been implemented in previous versions.
+
 
 `1.7.2 <https://github.com/fmigneault/aiu/tree/1.7.2>`_ (2022-08-16)
 ------------------------------------------------------------------------------------
