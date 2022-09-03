@@ -5,20 +5,12 @@ Various things that remain to be done but planned.
 Reference: https://readthedocs.org/projects/eyed3/downloads/pdf/latest/
 
 
-1. apply album cover, working command as follows: 
-	```
-	eyeD3 --force-update --remove-all-images --add-image "cover.jpg:FRONT_COVER" <directory>
-	```
-	
-	maybe use `<CONDA_ENV>/Lib/site-packages/eyed3/plugins/art.py` 
-	or basic CLI `<CONDA_ENV>/Lib/site-packages/eyed3/plugins/classic.py`
-	
-2. remove random comments using following command: 
+1. remove random comments using following command: 
 	```
     eyeD3 --user-text-frame "comment:" <directory>
 	```
 
-3. override Album types based on detected from album-name (`[Singles]`, `[EP]`, etc.) or via explicit arg:
+2. override Album types based on detected from album-name (`[Singles]`, `[EP]`, etc.) or via explicit arg:
     (as per `<CONDA_ENV>/Lib/site-packages/eyed3/plugins/fixup.py`)
 
     - ``lp``: A traditional "album" of songs from a single artist.
@@ -39,19 +31,14 @@ Reference: https://readthedocs.org/projects/eyed3/downloads/pdf/latest/
       it has album metadata). The string 'single' is written to the tag's
       ``%(TXXX_ALBUM_TYPE)s`` field.
 
-4. apply total tracks number from number of songs listed in info file. 
+3. apply total tracks number from number of songs listed in info file. 
 	if album type is singles, ignore (reset) this value to be "none" (in case previously written)
 	ie: 
 	```
 	eyeD3 -D <TOTAL> <directory>
 	```
 	
-5. apply artist, contrib-artist, album name, genre and year to ID3 Tags + (any other fields?)
-	```
-	eyeD3 --album <ALBUM> --album-artist <ALBUM ARTIST> --artist <ARTIST> --year <YEAR> --genre <GENRE>
-	```
-
-6. add `--detail` arg that retrieves ID3 tag listing information by calling (default is to list tags info)
+4. add `--detail` arg that retrieves ID3 tag listing information by calling (default is to list tags info)
     ```
     eyeD3 <directory>
     ```

@@ -78,7 +78,7 @@ def get_cover_file(cover_file):
 
 
 def save_cover_file(config, output_dir):
-    # type: (AudioConfig, str) -> None
+    # type: (AudioConfig, str) -> Optional[str]
     """
     Searches for any album image cover file within the audio configuration files and saves it.
 
@@ -89,11 +89,26 @@ def save_cover_file(config, output_dir):
         if cfg.cover is not None:
             if os.path.isfile(path):
                 LOGGER.warning("Could not save cover image, file already exists: [%s]", path)
-                return
+                return path
             LOGGER.warning("Saved cover image: [%s]", path)
             cfg.cover.save(path)
-            return
+            return path
     LOGGER.warning("Could not find any cover image to save. Operation skipped.")
+
+
+def update_cover_file(config, cover_file):
+    # type: (AudioConfig, Union[str, CoverFile]) -> None
+    """
+    Apply the new cover file to audio files if they mismatch.
+    """
+    if isinstance(cover_file, CoverFile):
+        cover_file = cover_file.path
+    for file_cfg in config:
+        prev_cover = file_cfg.get("cover")
+        if cover_file and (not prev_cover or cover_file != prev_cover.path):
+            LOGGER.debug("Updating temporary cover image [%s] -> [%s] for [%s].",
+                         prev_cover.path, cover_file, file_cfg.file)
+            file_cfg.cover = cover_file
 
 
 def validate_output_file(output_file_path, search_path, default_name="output.cfg"):

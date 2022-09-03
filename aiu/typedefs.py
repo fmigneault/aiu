@@ -14,6 +14,8 @@ from aiu.tags import TAGS
 LoggerType = logging.Logger
 
 if TYPE_CHECKING:
+    from io import FileIO
+
     Number = Union[int, float]
     ValueType = Union[str, Number, bool]
     AnyValue = Optional[ValueType]
@@ -282,6 +284,7 @@ class CoverFile(BaseField):
         self._raw = image
         self._link = None
         self._path = None
+        self._image = None
         if isinstance(image, str):
             if image.startswith("http"):
                 self._link = image
@@ -290,15 +293,29 @@ class CoverFile(BaseField):
             self._path = image
         elif isinstance(image, Image.Image):
             self._image = image
-            self._name = "cover.png"
+            image_path_ptr = getattr(image, "fp", None)  # type: Optional[FileIO]
+            if image_path_ptr:
+                self._path = image_path_ptr.name
+                self._name = os.path.split(self._path)[-1]
+            else:
+                self._name = "cover.png"
         else:
             raise ValueError("invalid value [{!s}] for [{}]".format(image, type(self).__name__))
 
+    @property
     def image(self):
         if self._image:
             return self._image
         self._image = Image.open(self._path)
         return self._image
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def name(self):
+        return self._name
 
     def save(self, path):
         if self._path:

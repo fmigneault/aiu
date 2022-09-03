@@ -369,6 +369,12 @@ _FETCHED_CACHE = {}
 
 
 def fetch_image(link, output_dir=None):
+    # type: (str, Optional[str]) -> str
+    """
+    Retrieve the image from a reference URL and save it locally, or return the local path if already available.
+
+    Images retrieved from URL will be cached for direct access on following calls.
+    """
     global _FETCHED_CACHE
 
     # avoid over requesting to reduce transfer + avoid rate-limiting
