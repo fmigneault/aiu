@@ -5,7 +5,10 @@ CHANGES
 ------------------------------------------------------------------------------------
 
 * Update `TODO <TODO.md>`_ items that have been implemented in previous versions.
-
+* Set default logging level to `INFO` (i.e.: `-v` option) to provide basic steps and progress bar details.
+* Fix reported ``cover`` field in generated output configuration to use the saved image within the output
+  location instead of the temporary location employed for downloading the YouTube album/song cover.
+* Fix missing properties to better handle ``CoverFile`` class attributes.
 
 `1.7.2 <https://github.com/fmigneault/aiu/tree/1.7.2>`_ (2022-08-16)
 ------------------------------------------------------------------------------------

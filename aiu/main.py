@@ -37,6 +37,7 @@ from aiu.utils import (
     look_for_default_file,
     make_dirs_cleaned,
     save_cover_file,
+    update_cover_file,
     validate_output_file
 )
 from aiu.typedefs import AudioConfig, Duration
@@ -267,7 +268,7 @@ def cli():
             if args.pop(arg, False) and logger_level == NOTSET:
                 logger_level = lvl
         if logger_level == NOTSET:
-            logger_level = ERROR
+            logger_level = INFO
         LOGGER.setLevel(logger_level)
     except Exception as exc:
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
@@ -530,7 +531,8 @@ def main(
 
     # save the cover file when it was fetched from youtube music link and not provided explicitly as override
     if not dry and not no_cover and not cover_file and link and not no_fetch:
-        save_cover_file(output_config, output_dir)
+        cover_file = save_cover_file(output_config, output_dir)
+        update_cover_file(output_config, cover_file)
 
     # report results
     if not no_output and not save_audio_config(output_config, output_file, mode=output_mode, dry=dry):
