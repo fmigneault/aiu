@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import sys
-from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL, NOTSET
+from logging import DEBUG, INFO, WARNING, CRITICAL, NOTSET
 from typing import Any, Dict, List, Optional, Union, Tuple
 
 from tqdm import tqdm
@@ -206,6 +206,21 @@ def cli():
         op_args_p.add_argument("--progress", "--force-progress", "--fP", action="store_true", dest="force_progress",
                                help="Force display of progress bars where applicable, ignoring logging levels. "
                                     "This argument is redundant if ``--info`` or ``--debug`` are specified.")
+        hf_args = ap.add_argument_group(title="Heuristic Feature Options")
+        hf_args.add_argument("--no-heuristic-delete-duplicates", "--nHDD", action="store_false", default=True,
+                             dest="heuristic_delete_duplicates",
+                             help="In case duplicate audio files can be identified in the directory, and represent "
+                                  "supplementary items compared to provided configuration items, they will be deleted "
+                                  "to obtain matching quantities. This flag disables this behaviour, but mismatching "
+                                  "audio files/config amounts will result in a error to be resolved manually since "
+                                  "matches cannot be guaranteed in a unique manner.")
+        hf_args.add_argument("--no-heuristic-word-match", "--nHWM", action="store_false", default=True,
+                             dest="heuristic_word_match",
+                             help="When file names are strongly different that provided audio information to attempt "
+                                  "matching the audio title between them, heuristics are applied to improve chances of "
+                                  "finding matches, at the cost of potential errors or conflicting results. This flag "
+                                  "disable this behaviour, but will require from the user to resolve problem cases "
+                                  "manually when no match could be performed to automatically apply requested changes.")
         id3_args = ap.add_argument_group(title="ID3 Tags Arguments",
                                          description="Options to directly provide specific ID3 tag values to one or "
                                                      "many audio files matched instead of through ``--info`` "
@@ -333,6 +348,9 @@ def main(
          duration=None,                 # type: Optional[Union[Duration, str]]
          year=None,                     # type: Optional[int]
          match_artist=True,             # type: bool
+         # --- heuristic feature flags ---
+         heuristic_delete_duplicates=True,  # type: bool
+         heuristic_word_match=True,         # type: bool
          # --- other operation flags ---
          rename_format=None,            # type: Optional[str]
          rename_title=False,            # type: bool
@@ -504,7 +522,10 @@ def main(
     LOGGER.info("Resolving metadata config fields...")
     LOGGER.debug("Match artist parameter: %s", match_artist)
     try:
-        audio_config = merge_audio_configs(config_combo, match_artist, len(audio_files), config_shared)
+        audio_config = merge_audio_configs(config_combo, match_artist, audio_files, config_shared,
+                                           heuristic_delete_duplicates)
+        # duplicate could have been removed from merge operation, update available files accordingly
+        audio_files = get_audio_files(search_files_loc, allow_none=dry)
     except ValueError as exc:
         LOGGER.error("Failed merge attempt of multiple configuration sources:\n%s\n"
                      "Maybe retry with explicit '--format' and/or '--parser' parameters?", exc)
@@ -521,7 +542,7 @@ def main(
             LOGGER.info("Backup of files in: [%s]", backup_dir)
             backup_files(audio_files, backup_dir)
     try:
-        output_config = apply_audio_config(audio_files, audio_config,
+        output_config = apply_audio_config(audio_files, audio_config, heuristic_word_match,
                                            dry=dry or no_update)
         output_config = update_file_names(output_config, rename_format, rename_title, prefix_track,
                                           dry=dry or no_rename)

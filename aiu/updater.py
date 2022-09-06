@@ -1,16 +1,23 @@
 import os
 import re
 from copy import deepcopy
-from typing import Iterable, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 from unicodedata import normalize
+from difflib import SequenceMatcher
 
 from aiu.typedefs import AudioConfig, AudioFileAny, AudioInfo, AudioTagDict, CoverFileAny
-from aiu.utils import get_audio_file, get_cover_file
-from aiu import LOGGER
+from aiu.utils import (
+    COMMON_WORD_REPLACE_CHARS,
+    COMMON_WORD_SPLIT_CHARS,
+    FILENAME_ILLEGAL_CHARS,
+    get_audio_file,
+    get_cover_file
+)
+from aiu import LOGGER, Config
 
 
-def merge_audio_configs(configs, match_artist, total_files, config_shared):
-    # type: (Iterable[Tuple[bool, AudioConfig]], bool, int, bool) -> AudioConfig
+def merge_audio_configs(configs, match_artist, audio_files, config_shared, delete_duplicate):
+    # type: (Iterable[Tuple[bool, AudioConfig]], bool, Iterable[str], bool, bool) -> AudioConfig
     """
     Merge matching audio info fields into a single one, for each :class:`AudioInfo` in resulting :class:`AudioConfig`.
 
@@ -24,14 +31,19 @@ def merge_audio_configs(configs, match_artist, total_files, config_shared):
         corresponding fields apply to `all` audio files (`True`) or specifically to each index (`False`).
     :param match_artist:
         Indicates if ``TAG_ALBUM_ARTIST`` should be set equal as ``TAG_ARTIST`` if missing.
-    :param total_files:
-        Indication of number of audio files to eventually process.
-        Employed to expand the configurations if all combinations apply only to ``all`` audio files.
+    :param audio_files:
+        List of available audio files to eventually process using provided configurations.
+        Use to expand the configurations dimension to match size if all combinations apply only to ``all`` audio files.
+        Also employed to validate dimensions of per-audio-file information that should (loosely) match.
     :param config_shared:
         Indication whether the audio file configurations only correspond to ``all`` definitions.
         In this case, a special flag is set in the resulting merged configuration for later reference.
+    :param delete_duplicate:
+        In case of mismatching audio file and :class:`AudioInfo` counts, delete any file that would resolve the
+        inconsistency if they can be validated as duplicates to other files.
     :return: merged config.
     """
+    total_files = len(list(audio_files))
     max_audio_count = max(len(cfg[1]) for cfg in configs)
     if config_shared or all(cfg[0] for cfg in configs):
         max_audio_count = total_files
@@ -48,8 +60,23 @@ def merge_audio_configs(configs, match_artist, total_files, config_shared):
             elif cfg_size == 1:
                 merged_config.extend([deepcopy(cfg[0]) for _ in range(max_audio_count)])
             else:
-                raise ValueError("Cannot initialize audio config with [total = {}] and first config [size = {}]. "
-                                 "First config must be [total = size] or [size = 1]".format(max_audio_count, cfg_size))
+                if delete_duplicate and max_audio_count > cfg_size:
+                    resolved_files = filter_duplicates(audio_files)
+                    if len(resolved_files) == cfg_size:
+                        LOGGER.debug("Successfully resolved duplicates audio files to align with audio config.")
+                        duplicate_files = set(audio_files) - set(resolved_files)
+                        for dup_file in duplicate_files:
+                            LOGGER.warning("Removing detected audio file as duplicate: [%s]", dup_file)
+                            os.remove(dup_file)
+                        merged_config.extend(cfg)
+                        continue
+                raise ValueError(
+                    (
+                        "Cannot initialize audio config with [total = {}] and first config [size = {}]. "
+                        "First config must be [total = size] or [size = 1]. "
+                        "Please resolve missing items manually."
+                    ).format(max_audio_count, cfg_size)
+                )
         else:
             # following configs updates the first as required
             if cfg_size != max_audio_count:
@@ -59,6 +86,66 @@ def merge_audio_configs(configs, match_artist, total_files, config_shared):
 
                 #for c in cfg[1]:
     return merged_config
+
+
+def filter_duplicates(file_paths):
+    # type: (List[str]) -> List[str]
+    """
+    Attempts to filter out partial duplicate files with multiple heuristics.
+    """
+    # name threshold should be sufficiently high to disallow partial name similarities
+    # (e.g.: 'This Song!' and 'This Song (Extended)' should NOT match - actually 2 different songs)
+    # but should also be sufficiently low to allow minor formatting or styling differences
+    # (e.g.: 'This Song!' and 'This Song_' [corrected rename] should match)
+    match_name_threshold = 0.95
+    # to ensure consistency, any potential duplicate should also have very close content size
+    # size threshold can be much more strict - files should almost perfectly match
+    # allow some leeway to consider distinct ID3 values which will slightly affect the file size,
+    # but not as much as the actual audio data
+    match_size_threshold = 0.95
+    # use names to avoid high match values due to the rest of the paths that should correspond as base directory
+    file_names = [os.path.split(file)[-1] for file in file_paths]
+    # use size map simply to avoid re-compute each time the value are used
+    file_sizes = {name: float(os.stat(file).st_size) for name, file in zip(file_names, file_paths)}
+    match_results = [
+        (
+            # for each name, compare against all other files, and obtain best fuzzy match
+            compute_best_match(name, file_names[:i] + file_names[i + 1:]),  # (index, name, ratio)
+            (name, path)
+        )
+        for i, (name, path) in enumerate(zip(file_names, file_paths))
+    ]
+    filter_results = list(filter(lambda res: res[0][-1] > match_name_threshold, match_results))
+    filter_results = [
+        (
+            1 - abs(file_sizes[match[1]] - file_sizes[name]) / file_sizes[name],  # size diff ratio against best match
+            (
+                match[1],   # name of the best match by file name (other than the current one)
+                file_paths[match[0]]    # path of the best match
+            ),
+            (name, path)
+        )
+        for match, (name, path) in filter_results
+    ]
+    filter_results = list(filter(lambda res: res[0] > match_size_threshold, filter_results))
+    # size duplicate matches imply necessarily that (at least) 2 files represent the same content
+    # (i.e.: matching duplicates will reference each other since they were similar both ways),
+    # we must only remove the other(s) that were not already detected as duplicate to keep only one
+    filtered_paths = []
+    duplicate_paths = [res[-1][-1] for res in filter_results]
+    for path in file_paths:
+        if path not in duplicate_paths:
+            filtered_paths.append(path)
+            continue
+        for result in list(filter_results):
+            dup_path = result[-1][-1]
+            if dup_path == path:
+                if dup_path not in filtered_paths:
+                    filtered_paths.append(path)
+                    # remove any already processed duplicate from above insertion
+                    filter_results = [res for res in filter_results if res[1][-1] != dup_path]
+                break
+    return filtered_paths
 
 
 def update_audio_tags(audio_file, audio_tags, overwrite=True):
@@ -87,22 +174,133 @@ def update_cover_image(audio_file, cover_file, overwrite=True):
     raise NotImplementedError  # TODO
 
 
-def apply_audio_config(audio_files, audio_config, dry=False):
-    # type: (Iterable[str], AudioConfig, bool) -> AudioConfig
+def compute_best_match(text, choices):
+    # type: (str, Iterable[str]) -> Tuple[int, str, float]
+    """
+    Selects the best matching string amongst multiple choices with fuzzy matching.
+
+    .. seealso::
+        https://stackoverflow.com/a/10383524
+    """
+    results = []
+    for i, test in enumerate(choices):
+        ratio = SequenceMatcher(None, text, test).ratio()
+        results.append((i, test, ratio))
+    results = sorted(results, key=lambda r: r[-1], reverse=True)
+    return results[0]
+
+
+def clean_words(text):
+    # type: (str) -> List[str]
+    """
+    Clean up common characters exceptions and splits the resulting words from the cleaned text.
+    """
+    for char in FILENAME_ILLEGAL_CHARS + COMMON_WORD_SPLIT_CHARS:
+        text = text.replace(char, " ")
+    for from_char, to_char in COMMON_WORD_REPLACE_CHARS.items():
+        text = text.replace(from_char, to_char)
+    words = text.lower().split(" ")
+    words = [word for word in words if word not in Config.STOPWORDS]
+    return words
+
+
+def compute_word_match(search_files, search_info):
+    # type: (List[str], List[AudioInfo]) -> Dict[str, Optional[AudioInfo]]
+    """
+    Attempts to associate files by name with corresponding audio information with heuristic word matching.
+    """
+    matches = {}
+
+    search_file_words = {file: clean_words(os.path.split(file)[-1]) for file in search_files}
+    search_title_words = {str(info.title): clean_words(info.title) for info in search_info}
+    search_title_audio = {str(info.title): info for info in search_info}
+
+    # very loose match to allow many extra words
+    # take into account that only leftover/unmatched items should remain
+    threshold_match_words = 0.6
+
+    for file, sf_words in search_file_words.items():
+        matches[file] = None
+        for ai_title, ai_words in search_title_words.items():
+            audio_info = search_title_audio[ai_title]
+            ratio = SequenceMatcher(None, sf_words, ai_words).ratio()
+            if ratio > threshold_match_words:
+                if not matches[file]:
+                    LOGGER.debug("Found potential word match for [%s] with [%s] (%0.2f%% match)",
+                                 file, audio_info.title, ratio)
+                    matches[file] = (ratio, audio_info)
+                elif matches[file] and matches[file][0] < ratio:
+                    LOGGER.debug("Found better word match for [%s] with [%s] (%0.2f%% match, %0.2f%% previous)",
+                                 file, audio_info.title, ratio, matches[file][0])
+                    matches[file] = (ratio, audio_info)
+
+    # ensure no conflicting matches
+    for file in search_files:
+        other_files = set(search_files) - {file}
+        if not matches[file]:
+            continue
+        if not all(not matches[other] or matches[other][1] is not matches[file][1] for other in other_files):
+            # remove shared match (conflict)
+            # ensure removal everywhere, not just the current 'file' checked to avoid leaving one as unique match
+            cur_info = matches[file][1]
+            for dup_file in search_files:
+                if matches[dup_file] and matches[dup_file][1] is cur_info:
+                    LOGGER.debug("Potential word match for [%s] with [%s] caused duplicate, dropping it.",
+                                 dup_file, cur_info.title)
+                    matches[dup_file] = None
+    for file in list(matches):
+        if matches[file]:
+            LOGGER.debug("Found unique word match for [%s] with [%s].", file, matches[file][1].title)
+            matches[file] = matches[file][1]  # return expected format, dropping the temporary ratio
+    return matches
+
+
+def apply_audio_config(audio_files, audio_config, use_word_match=True, dry=False):
+    # type: (Iterable[str], AudioConfig, bool, bool) -> AudioConfig
     """
     Applies the metadata fields to the corresponding audio files.
+
     Matching is attempted first with file names, and other heuristics as required afterward.
     """
+    matches = {}
     for i, file_path in enumerate(audio_files):
         file_dir, file_name = os.path.split(file_path)
-        matched_info = None
-        for audio_info in audio_config:
+        matched_info = None  # type: Optional[AudioInfo]
+        possible_matches = []
+        for audio_info in audio_config:  # type: AudioInfo
             if audio_config.shared:
-                matched_info = audio_config[i]
+                possible_matches.append(audio_config[i])
                 break
-            elif audio_info.title.lower() in file_name.lower():
-                matched_info = audio_info
-                break
+            else:
+                clean_info_title = " ".join(clean_words(audio_info.title.lower()))
+                clean_file_name = " ".join(clean_words(file_name.lower()))
+                if clean_info_title in clean_file_name:
+                    possible_matches.append(audio_info)
+
+        if len(possible_matches) == 1:
+            matched_info = possible_matches[0]
+        elif len(possible_matches):
+            # in case multiple audio files share partial/similar names, try guessing the most matching one
+            search_titles = [info.title for info in possible_matches]
+            matched_index, matched_text, matched_ratio = compute_best_match(file_name, search_titles)
+            matched_info = possible_matches[matched_index]
+            LOGGER.debug("Used fuzzy title search for [%s], best result: [%s] (%0.2f%% match)",
+                         file_path, matched_text, matched_ratio * 100)
+
+        matches[file_path] = matched_info
+
+    if use_word_match and any(not match for match in matches.values()):
+        # in the event of very long names, this is often the result of too much metadata written in the name
+        # for example: '[ARTIST] - Some Title (feat. Other) (some version) [album]'
+        # attempt finding a match with the most corresponding words
+        # use only remaining audio files that were not already matched to reduce chances of error
+        leftover_files = list(set(audio_files) - set(match for match in matches if matches[match]))
+        leftover_audio = [audio_info for audio_info in audio_config if audio_info not in matches.values()]
+        word_matches = compute_word_match(leftover_files, leftover_audio)
+        matches.update(word_matches)
+
+    for file_path in audio_files:
+        matched_info = matches[file_path]
 
         if matched_info:
             LOGGER.debug("Matched file [%s] with [%s]", file_path, matched_info)

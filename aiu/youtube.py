@@ -14,7 +14,7 @@ from ytm.types.ids.ArtistId import ArtistId
 from ytm import utils as ytm_utils
 
 from aiu import LOGGER
-from aiu.utils import make_dirs_cleaned
+from aiu.utils import FILENAME_ILLEGAL_CHARS, make_dirs_cleaned
 from aiu.parser import fetch_image
 from aiu.typedefs import Duration
 
@@ -32,7 +32,8 @@ class BaseYoutubeDLP(BaseYouTubeMusicDL):
     def __init__(self):
         super(BaseYoutubeDLP, self).__init__(youtube_downloader=yt_dlp.YoutubeDL)
 
-    def _get_file_path(self, info, *args, **kwargs):
+    def _get_file_path(self, info, template, directory):
+        # type: (JSON, str, str) -> str
         """
         Patch operations incorrectly handled when resolving downloaded music file path.
 
@@ -43,21 +44,32 @@ class BaseYoutubeDLP(BaseYouTubeMusicDL):
         Because of this, the file is not found and the download process fails the whole operation.
         Patch it transparently when this case is detected.
         """
-        path = super(BaseYoutubeDLP, self)._get_file_path(info, *args, **kwargs)
-        if sys.platform == "win32":
-            title = info.get("title", "")
-            if title and "\"" in title:
-                dir_name, file_name = os.path.split(path)
-                ext = os.path.splitext(file_name)[-1]
-                quoted_name = title.replace("\"", "'") + ext
-                # still need to sanitize all other chars
-                for char in ['\\', '/', ':', '*', '?', '<', '>', '|']:  # excluding '"'
-                    quoted_name = quoted_name.replace(char, "_")
-                patched_patch = os.path.join(dir_name, quoted_name)
-                if "'" in quoted_name and not os.path.isfile(path) and os.path.isfile(patched_patch):
+        path = super(BaseYoutubeDLP, self)._get_file_path(info, template, directory)
+        title = info.get("title", "")
+        if sys.platform == "win32" and title:
+            win_invalid_chars = {'"'}
+            all_invalid_chars = set(FILENAME_ILLEGAL_CHARS) | win_invalid_chars
+            if any(char in title for char in all_invalid_chars):
+                ext = os.path.splitext(path)[-1]
+                for char in all_invalid_chars:
+                    title = title.replace(char, "_")
+                patched_patch = os.path.join(directory, title + ext)
+                if "'" in patched_patch and not os.path.isfile(path) and os.path.isfile(patched_patch):
                     # to avoid problems in parent code that could still be referencing the old "invalid" path
                     # move the patched file name to the expected sanitized location (don't return the patched path)
                     os.rename(patched_patch, path)
+                # alternate renaming case where illegal characters are removed instead of replaced by '_'
+                if '_' in patched_patch and not os.path.isfile(patched_patch):
+                    for trimmed_path in [
+                        patched_patch.replace('_', ''),
+                        os.path.join(directory, os.path.split(patched_patch)[-1].replace('_', ''))
+                    ]:
+                        if os.path.isfile(trimmed_path) and trimmed_path != patched_patch:
+                            # rename or delete if duplicated (e.g.: from following calls to AIU)
+                            if os.path.isfile(patched_patch):
+                                os.remove(trimmed_path)
+                            else:
+                                os.rename(trimmed_path, patched_patch)
         return path
 
 
@@ -75,8 +87,7 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
     def cached_download(self, song_id, metadata=None, directory=None, **__):
         if metadata and directory:
             sanitized_name = metadata["title"]
-            illegal_chars = ['\\', '/', ':', '*', '?', '<', '>', '|', '"']
-            for char in illegal_chars:
+            for char in FILENAME_ILLEGAL_CHARS:
                 sanitized_name = sanitized_name.replace(char, '_')
             candidate_names = [metadata["title"], sanitized_name]
             if "track" in metadata:
@@ -85,12 +96,15 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
             if track_num and str(track_num).isnumeric():
                 # add common formats in case if was already downloaded + corrected
                 track_num = int(track_num)
-                candidate_names.extend([
-                    "{:02d} {}".format(track_num, metadata["title"]),
-                    "{:02d}. {}".format(track_num, metadata["title"]),
-                    "{} {}".format(track_num, metadata["title"]),
-                    "{}. {}".format(track_num, metadata["title"]),
-                ])
+                base_names = list(candidate_names)
+                for name in base_names:
+                    candidate_names.extend([
+                        "{:02d} {}".format(track_num, name),
+                        "{:02d}. {}".format(track_num, name),
+                        "{} {}".format(track_num, name),
+                        "{}. {}".format(track_num, name),
+                    ])
+            candidate_names.extend([name.replace('_', '') for name in list(candidate_names) if '_' in name])
             for name in candidate_names:
                 path = os.path.join(directory, name + ".mp3")
                 if os.path.isfile(path):
