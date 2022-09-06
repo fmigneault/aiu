@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.9.0 <https://github.com/fmigneault/aiu/tree/1.9.0>`_ (2022-09-05)
+------------------------------------------------------------------------------------
+
 * Add multiple heuristic rules to attempt matching ambiguous file names against provided audio information.
 * Add heuristics and patched characters conditions to better detect ambiguous file names renamed following download
   to better detect them once again on subsequent download operation, taking advantage of cached file contents.
