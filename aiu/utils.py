@@ -10,7 +10,14 @@ from PIL import Image
 from aiu.typedefs import AudioConfig, AudioFileAny, AudioFile, AudioInfo, CoverFileAny, CoverFile, LoggerType
 from aiu import LOGGER
 
-REGEX_FILENAME_ILLEGAL_CHARS = re.compile(r"[\"\\:?*<>|]")
+FILENAME_ILLEGAL_CHARS = ['\\', '/', ':', '*', '?', '<', '>', '|', '"']
+REGEX_FILENAME_ILLEGAL_CHARS = re.compile(rf"[{''.join(c for c in FILENAME_ILLEGAL_CHARS)}]")
+
+COMMON_WORD_SPLIT_CHARS = ["[", "]", "(", ")", "｢", "｣", "「", "」"]
+COMMON_WORD_REPLACE_CHARS = {
+    "’": "'",
+    "～": "~",
+}
 
 
 def log_exception(logger=None):
