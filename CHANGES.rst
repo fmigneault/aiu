@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.9.1 <https://github.com/fmigneault/aiu/tree/1.9.1>`_ (2022-10-30)
+------------------------------------------------------------------------------------
+
 * Fix the generated output audio file name that could sometime contain illegal characters after substitution of the
   requested metadata according to the rename format. Illegal characters will be replaced by ``_`` prior to rename.
 
