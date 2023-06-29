@@ -9,7 +9,12 @@ CHANGES
 `1.10.0 <https://github.com/fmigneault/aiu/tree/1.10.0>`_ (2023-06-28)
 ------------------------------------------------------------------------------------
 
-* Add ``--force-fetch`` option complementary to ``--no-fetch`` to enforce redownload of files if matches are found in
+* Nothing yet.
+
+`1.10.0 <https://github.com/fmigneault/aiu/tree/1.10.0>`_ (2023-06-28)
+------------------------------------------------------------------------------------
+
+* Add ``--force-fetch`` option complementary to ``--no-fetch`` to enforce re-download of files if matches are found in
   the output directory, instead of reusing previously cached results.
 * Add more result file matching combinations to attempt better detection of cached pre-downloaded audio files. Notably,
   when the ``--prefix-track`` and/or ``--rename-title`` options are omitted, most predefined match patterns where never
@@ -18,8 +23,8 @@ CHANGES
 * Fix and improve common mismatches between desired file name patterns and downloaded ones caused by ``youtube_dl``
   over-sanitizing valid file-system characters that contained unicode or accents. These characters will now be preserved
   to better retain the original song title, album and artist names using those characters, and as a side effect, more
-  efficiently match the expected downlaod file name against target ID3 metadata.
-* Add DevOps ``Makefile`` along with multiple inspection, linting and valiation utilities.
+  efficiently match the expected download file name against target ID3 metadata.
+* Add DevOps ``Makefile`` along with multiple inspection, linting and validation utilities.
 
 `1.9.1 <https://github.com/fmigneault/aiu/tree/1.9.1>`_ (2022-10-30)
 ------------------------------------------------------------------------------------
