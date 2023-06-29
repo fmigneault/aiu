@@ -9,11 +9,6 @@ CHANGES
 `1.10.0 <https://github.com/fmigneault/aiu/tree/1.10.0>`_ (2023-06-28)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
-
-`1.10.0 <https://github.com/fmigneault/aiu/tree/1.10.0>`_ (2023-06-28)
-------------------------------------------------------------------------------------
-
 * Add ``--force-fetch`` option complementary to ``--no-fetch`` to enforce re-download of files if matches are found in
   the output directory, instead of reusing previously cached results.
 * Add more result file matching combinations to attempt better detection of cached pre-downloaded audio files. Notably,
