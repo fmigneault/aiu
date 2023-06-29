@@ -6,7 +6,7 @@ import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-import __meta__  # noqa
+import __meta__  # noqa  # isort: skip  # pylint: disable
 
 AIU_PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
 AIU_ROOT_DIR = os.path.dirname(AIU_PACKAGE_DIR)

@@ -171,12 +171,26 @@ def cli():
                              help="Specify the specific ``FORMAT`` to employ for renaming files. "
                                   "Formatting template follows the ``%%(<TAG>)`` syntax. "
                                   "Supported ``<TAG>`` fields are listed in ID3 TAG names except image-related items.")
-        op_args.add_argument("--no-fetch", "--nF", action="store_true",
-                             help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
-                                  "When provided, instead of downloading music files, only metadata information will "
-                                  "be retrieved from the link in order to obtain ID3 audio tag metadata and apply them "
-                                  "to referenced pre-existing audio files in the search path. The metadata retrieved "
-                                  "this way replaces corresponding ID3 tag details otherwise provided by ``--info``.")
+        op_args_fetch = op_args.add_mutually_exclusive_group(required=False)
+        op_args_fetch.add_argument(
+            "--no-fetch", "--nF", action="store_true",
+             help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
+                  "When provided, instead of downloading music files, only metadata information will "
+                  "be retrieved from the link in order to obtain ID3 audio tag metadata and apply them "
+                  "to referenced pre-existing audio files in the search path. The metadata retrieved "
+                  "this way replaces corresponding ID3 tag details otherwise provided by ``--info``."
+        )
+        op_args_fetch.add_argument(
+            "--force-fetch", "--fF", action="store_true",
+             help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
+                  "When provided, enforces (re)downloading music files. "
+                  "Matching files found in the output directory will be removed before downloading them again. "
+                  "Any previously applied ID3 audio tag metadata will be lost. Only new metadata will be applied. "
+                  "When neither '--force-fetch' nor '--no-fetch' is specified, files will be downloaded as necessary, "
+                  "depending on whether a match can be accomplished with existing files or not. Note that matches must "
+                  "consider any previously applied file-rename operations. Therefore, matches are not guaranteed and "
+                  "files could still be redownloaded even if they exist, in the event that no match could be resolved."
+        )
         op_args.add_argument("--no-info", "--nI", action="store_true",
                              help="Disable auto-detection of 'info' common audio metadata information file names. "
                                   "Useful when detection of an existing file on search path should be avoided. "
@@ -358,6 +372,7 @@ def main(
          remove_track=False,            # type: bool
          dry=False,                     # type: bool
          backup=False,                  # type: bool
+         force_fetch=False,             # type: bool
          no_fetch=False,                # type: bool
          no_cover=False,                # type: bool
          no_info=False,                 # type: bool
@@ -393,8 +408,11 @@ def main(
     # process link to pre-generate configuration files
     youtube_config = None
     if link:
+        if dry and force_fetch:
+            LOGGER.error("Aborting potentially destructive operation. Cannot combine '--force-fetch' and '--dry' mode.")
+            return False
         if dry and not no_fetch:
-            LOGGER.warning("Will not fetch files from URL in 'dry' mode. Enforcing '--no-fetch'.")
+            LOGGER.warning("Will not fetch files from URL in '--dry' mode. Enforcing '--no-fetch'.")
             no_fetch = True
         elif not dry:
             make_dirs_cleaned(output_dir, exist_ok=True)
@@ -421,7 +439,7 @@ def main(
                     # other operation flags
                     rename_format=rename_format, rename_title=rename_title, prefix_track=prefix_track,
                     remove_track=remove_track, backup=backup, dry=False,  # forced because of if/else
-                    no_fetch=no_fetch, no_cover=no_cover, no_info=no_info, no_all=no_all,
+                    force_fetch=force_fetch, no_fetch=no_fetch, no_cover=no_cover, no_info=no_info, no_all=no_all,
                     no_rename=no_rename, no_update=no_update, no_output=no_output,
                     no_result=True,  # forced to allow prettier progress bars of overall operation
                     progress_display=progress_display,
@@ -437,7 +455,10 @@ def main(
         if no_fetch:
             meta_file, meta_json = get_metadata(link)
         else:
-            meta_file, meta_json = fetch_files(link, output_dir, progress_display=progress_display)
+            meta_file, meta_json = fetch_files(
+                link, output_dir,
+                progress_display=progress_display, force_download=force_fetch
+            )
         youtube_config = AudioConfig(meta_json)
 
     # find configurations files

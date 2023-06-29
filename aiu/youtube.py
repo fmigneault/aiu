@@ -1,6 +1,7 @@
 import json
 import tempfile
 import os
+import re
 import sys
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
@@ -14,7 +15,7 @@ from ytm.types.ids.ArtistId import ArtistId
 from ytm import utils as ytm_utils
 
 from aiu import LOGGER
-from aiu.utils import FILENAME_ILLEGAL_CHARS, make_dirs_cleaned
+from aiu.utils import FILENAME_ILLEGAL_CHARS, FILENAME_ILLEGAL_CHARS_REGEX, make_dirs_cleaned
 from aiu.parser import fetch_image
 from aiu.typedefs import Duration
 
@@ -25,12 +26,30 @@ if TYPE_CHECKING:
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+class YoutubeDLNoSanitizeFileName(yt_dlp.YoutubeDL):
+    """
+    Override the sanitize option to disable it.
+
+    The default Youtube Downloader operation sanitizes additional characters of the target file name such as characters
+    with accents, disallowed characters, or general ponctuation replacement (e.g.: ? -> ？). Because of this, there are
+    often mismatches between its overly-sanitized name and the expected file-system-sanitized file name. Instead,
+    perform the sanitization process ourselves such that only invalid characters for file-system path resolution are
+    adjusted, which will match exactly with later operations retrieving the downloaded file using the same metadata.
+    """
+    def prepare_outtmpl(self, outtmpl, info_dict, sanitize=False):
+        # type: (str, Dict[str, str], bool) -> str
+        output, tmpl_info = super().prepare_outtmpl(outtmpl, info_dict, sanitize=False)  # force no sanitize
+        for key in tmpl_info:
+            tmpl_info[key] = re.sub(FILENAME_ILLEGAL_CHARS_REGEX, "_", tmpl_info[key])
+        return output, tmpl_info
+
+
 class BaseYoutubeDLP(BaseYouTubeMusicDL):
     """
     Base class of the YouTube Music downloader with drop-in replacement of :mod:`youtube_dl` by improved :mod:`yt_dlp`.
     """
     def __init__(self):
-        super(BaseYoutubeDLP, self).__init__(youtube_downloader=yt_dlp.YoutubeDL)
+        super(BaseYoutubeDLP, self).__init__(youtube_downloader=YoutubeDLNoSanitizeFileName)
 
     def _get_file_path(self, info, template, directory):
         # type: (JSON, str, str) -> str
@@ -43,33 +62,39 @@ class BaseYoutubeDLP(BaseYouTubeMusicDL):
         :meth:`BaseYouTubeMusicDL._get_file_path` (same characters as in :meth:`CachedYoutubeMusicDL.cached_download`).
         Because of this, the file is not found and the download process fails the whole operation.
         Patch it transparently when this case is detected.
+
+        Furthermore, the `template` argument that is passed contains directly the "sanitized" result instead of the
+        template. Therefore, rebuild the "unsanitized" templated name with the expected format defined in the original
+         :meth:`BaseYouTubeMusicDL._get_file_path` call to validate if any "technically allowed" characters under
+         Windows got sanitized, causing a filename mismatch.
         """
         path = super(BaseYoutubeDLP, self)._get_file_path(info, template, directory)
         title = info.get("title", "")
+        ext = os.path.splitext(path)[-1]
+        templated_path = os.path.join(directory, f"{title}{ext}")
         if sys.platform == "win32" and title:
-            win_invalid_chars = {'"'}
-            all_invalid_chars = set(FILENAME_ILLEGAL_CHARS) | win_invalid_chars
-            if any(char in title for char in all_invalid_chars):
-                ext = os.path.splitext(path)[-1]
-                for char in all_invalid_chars:
+            if any(char in title for char in FILENAME_ILLEGAL_CHARS):
+                for char in FILENAME_ILLEGAL_CHARS:
                     title = title.replace(char, "_")
-                patched_patch = os.path.join(directory, title + ext)
-                if "'" in patched_patch and not os.path.isfile(path) and os.path.isfile(patched_patch):
+                patched_path = os.path.join(directory, title + ext)
+                if "'" in patched_path and not os.path.isfile(path) and os.path.isfile(patched_path):
                     # to avoid problems in parent code that could still be referencing the old "invalid" path
                     # move the patched file name to the expected sanitized location (don't return the patched path)
-                    os.rename(patched_patch, path)
+                    os.rename(patched_path, path)
+                if templated_path != patched_path and os.path.isfile(templated_path):
+                    os.rename(templated_path, patched_path)
                 # alternate renaming case where illegal characters are removed instead of replaced by '_'
-                if '_' in patched_patch and not os.path.isfile(patched_patch):
+                if "_" in patched_path and not os.path.isfile(patched_path):
                     for trimmed_path in [
-                        patched_patch.replace('_', ''),
-                        os.path.join(directory, os.path.split(patched_patch)[-1].replace('_', ''))
+                        patched_path.replace("_", ""),
+                        os.path.join(directory, os.path.split(patched_path)[-1].replace("_", ""))
                     ]:
-                        if os.path.isfile(trimmed_path) and trimmed_path != patched_patch:
+                        if os.path.isfile(trimmed_path) and trimmed_path != patched_path:
                             # rename or delete if duplicated (e.g.: from following calls to AIU)
-                            if os.path.isfile(patched_patch):
+                            if os.path.isfile(patched_path):
                                 os.remove(trimmed_path)
                             else:
-                                os.rename(trimmed_path, patched_patch)
+                                os.rename(trimmed_path, patched_path)
         return path
 
 
@@ -79,19 +104,43 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
     """
     _api = None  # type: YouTubeMusic  # only for annotation, replaced during YouTubeMusicDL.__init__ call
 
-    def __init__(self, *_, **__):
+    def __init__(self, force_download=False, *_, **__):
         super(CachedYoutubeMusicDL, self).__init__()
-        self._base = BaseYoutubeDLP()  # drop-in replacement of youtube downloader
+        self._base = BaseYoutubeDLP()  # drop-in replacement of YouTube downloader
         self.base_download = self._base._download
+        self.force_download = force_download
 
     def cached_download(self, song_id, metadata=None, directory=None, **__):
-        if metadata and directory:
+        if metadata and directory and not self.force_download:
+            # basic name match against various metadata fields that can have similar information
+            # some fields will sometime have minimalistic name that differ slightly from the others
             sanitized_name = metadata["title"]
             for char in FILENAME_ILLEGAL_CHARS:
                 sanitized_name = sanitized_name.replace(char, '_')
             candidate_names = [metadata["title"], sanitized_name]
             if "track" in metadata:
                 candidate_names.append(metadata["track"])
+
+            # common suffixes
+            for suffix in [
+                "(Music Video)",
+                "(Official Music Video)",
+            ]:
+                candidate_names.extend([f"{track_name} {suffix}" for track_name in candidate_names])
+
+            # common artist prefixes
+            extra_artist_names = []
+            artist_name = metadata.get("artist", "")
+            if artist_name:
+                for name in candidate_names:
+                    extra_artist_names.append(f"{artist_name} - {name}")
+            album_artist_name = metadata.get("albumartist", "")
+            if album_artist_name and album_artist_name != artist_name:
+                for name in candidate_names:
+                    extra_artist_names.append(f"{album_artist_name} - {name}")
+            candidate_names.extend(extra_artist_names)
+
+            # common track number prefixes
             track_num = metadata.get("tracknumber")
             if track_num and str(track_num).isnumeric():
                 # add common formats in case if was already downloaded + corrected
@@ -99,12 +148,14 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
                 base_names = list(candidate_names)
                 for name in base_names:
                     candidate_names.extend([
-                        "{:02d} {}".format(track_num, name),
-                        "{:02d}. {}".format(track_num, name),
-                        "{} {}".format(track_num, name),
-                        "{}. {}".format(track_num, name),
+                        f"{track_num:02d} {name}",
+                        f"{track_num:02d}. {name}",
+                        f"{track_num} {name}",
+                        f"{track_num}. {name}",
                     ])
-            candidate_names.extend([name.replace('_', '') for name in list(candidate_names) if '_' in name])
+            candidate_names.extend([name.replace("_", "") for name in list(candidate_names) if "_" in name])
+
+            # attempt match
             for name in candidate_names:
                 path = os.path.join(directory, name + ".mp3")
                 if os.path.isfile(path):
@@ -328,10 +379,13 @@ def get_metadata(link):
     return None, {}
 
 
-def fetch_files(link, output_dir, with_cover=True, progress_display=True):
-    # type: (str, str, bool, bool) -> Tuple[Optional[str], JSON]
+def fetch_files(link, output_dir, with_cover=True, progress_display=True, force_download=False):
+    # type: (str, str, bool, bool, bool) -> Tuple[Optional[str], JSON]
     LOGGER.debug("Fetching files from link: [%s]", link)
-    api = TqdmYouTubeMusicDL() if progress_display else CachedYoutubeMusicDL()
+    if progress_display:
+        api = TqdmYouTubeMusicDL(force_download=force_download)
+    else:
+        api = CachedYoutubeMusicDL(force_download=force_download)
     is_album, is_music, ref_id = get_reference_id(link)
     make_dirs_cleaned(output_dir)
     if is_album and is_music:
