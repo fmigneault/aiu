@@ -11,7 +11,7 @@ from aiu.typedefs import AudioConfig, AudioFileAny, AudioFile, AudioInfo, CoverF
 from aiu import LOGGER
 
 FILENAME_ILLEGAL_CHARS = ['\\', '/', ':', '*', '?', '<', '>', '|', '"']
-REGEX_FILENAME_ILLEGAL_CHARS = re.compile(rf"[{''.join(c for c in FILENAME_ILLEGAL_CHARS)}]")
+FILENAME_ILLEGAL_CHARS_REGEX = re.compile(rf"[{''.join(c for c in FILENAME_ILLEGAL_CHARS)}]")
 
 COMMON_WORD_SPLIT_CHARS = ["[", "]", "(", ")", "｢", "｣", "「", "」"]
 COMMON_WORD_REPLACE_CHARS = {
@@ -138,7 +138,8 @@ def make_dirs_cleaned(path, replace="-", exist_ok=True, mode=0o755):
     """
     Performs directory creation after cleanup of invalid characters in the path.
     """
-    assert len(replace) == 1
+    if not isinstance(replace, str) or len(replace) != 1:
+        raise ValueError("Replace can only be a single character string.")
     new_path = path = os.path.normpath(os.path.abspath(path))
     if not os.path.exists(path):
         dir_path = path
@@ -147,7 +148,7 @@ def make_dirs_cleaned(path, replace="-", exist_ok=True, mode=0o755):
             top_path, dir_path = os.path.split(dir_path)
             if not top_path or not dir_path:
                 break
-            parts.append(re.sub(REGEX_FILENAME_ILLEGAL_CHARS, replace, dir_path))
+            parts.append(re.sub(FILENAME_ILLEGAL_CHARS_REGEX, replace, dir_path))
             dir_path = top_path
             if os.path.isdir(top_path):
                 break

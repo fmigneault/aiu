@@ -1,18 +1,22 @@
+# pylint: disable=missing-module-docstring
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
+import os
+
+import pytest  # noqa
+
+import aiu
+import aiu.tags as t
 from aiu import DEFAULT_STOPWORDS_CONFIG
 from aiu.parser import (
-    FORMAT_MODE_CSV,  
-    FORMAT_MODE_TAB,  
+    FORMAT_MODE_CSV,
+    FORMAT_MODE_TAB,
     FORMAT_MODE_LIST,
-    FORMAT_MODE_JSON, 
-    FORMAT_MODE_YAML,
     load_config,
     parse_audio_config,
 )
 from aiu.typedefs import Duration, IntField, StrField, AudioConfig, AudioInfo
-import aiu
-import aiu.tags as t
-import pytest  # noqa
-import os
 
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), "configs")
 

@@ -10,7 +10,7 @@ from aiu.utils import (
     COMMON_WORD_REPLACE_CHARS,
     COMMON_WORD_SPLIT_CHARS,
     FILENAME_ILLEGAL_CHARS,
-    REGEX_FILENAME_ILLEGAL_CHARS,
+    FILENAME_ILLEGAL_CHARS_REGEX,
     get_audio_file,
     get_cover_file
 )
@@ -364,7 +364,7 @@ def update_file_names(audio_config, rename_format, rename_title=False, prefix_tr
                 LOGGER.error("Resolved configuration ID3 tags: %s", tag_values)
                 raise ValueError("Missing required ID3 Tag.")
             rename_name = rename_format.lower() % audio_item
-            rename_name = re.sub(REGEX_FILENAME_ILLEGAL_CHARS, "_", rename_name)
+            rename_name = re.sub(FILENAME_ILLEGAL_CHARS_REGEX, "_", rename_name)
             rename_norm = normalize("NFKD", rename_name)
             LOGGER.debug("Before/after normalization: [%s] => [%s]", rename_name, rename_norm)
             rename_path, origin_name = os.path.split(audio_item.file)

@@ -1,2 +1,11 @@
+bandit
+docformatter
+doc8
+flake8
+isort
 mock
 pytest
+pylint
+pylint_quotes
+pyup
+safety

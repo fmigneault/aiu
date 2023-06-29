@@ -2,7 +2,7 @@ import datetime
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TypeAlias, Union, TYPE_CHECKING
 
 import eyed3
 from eyed3.id3.tag import Tag
@@ -19,10 +19,11 @@ if TYPE_CHECKING:
     Number = Union[int, float]
     ValueType = Union[str, Number, bool]
     AnyValue = Optional[ValueType]
-    _JsonObjectItem = Dict[str, Union["JSON", "_JsonListItem"]]
-    _JsonListItem = List[Union[AnyValue, _JsonObjectItem, "_JsonListItem", "JSON"]]
-    _JsonItem = Union[AnyValue, _JsonObjectItem, _JsonListItem]
-    JSON = Union[Dict[str, _JsonItem], List[_JsonItem]]
+    _JSON: TypeAlias = "JSON"
+    JsonObjectItem = Dict[str, _JSON]
+    JsonListItem = List[_JSON]
+    JsonItem = Union[AnyValue, _JSON]
+    JSON = Union[Dict[str, JsonItem], List[JsonItem]]
 
 
 class FormatInfo(object):
@@ -75,7 +76,7 @@ class BaseField(object):
 
     def __eq__(self, other):
         if isinstance(other, BaseField):
-            return self._value == other._value
+            return self._value == other._value  # pylint: disable=protected-member
         if isinstance(other, type(self._value)):
             return self._value == other
         return False
