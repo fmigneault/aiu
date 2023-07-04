@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.10.1 <https://github.com/fmigneault/aiu/tree/1.10.1>`_ (2023-07-04)
+------------------------------------------------------------------------------------
+
 * Add ``Makefile`` target ``version`` to quickly retreive the information to facilitate use with ``bump`` targets.
 * Fixes to ``Makefile`` and ``setup.py`` encountering issues on reinstall.
 
