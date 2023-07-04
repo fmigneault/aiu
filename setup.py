@@ -71,7 +71,7 @@ setup(
     contact_email=__meta__.__email__,
     url=__meta__.__url__,
     platforms=["linux_x86_64", "win32"],
-    python_requires=">=3.6.*, <4",
+    python_requires=">=3.6, <4",
     license="MIT",
     keywords="audio,music,editor,tag,id3,mp3,metadata,parser,youtube",
     classifiers=[
