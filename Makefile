@@ -36,7 +36,7 @@ install-dep:
 
 .PHONY: install-pkg
 install-pkg:
-	pip install "$(APP_ROOT)/aiu/"
+	pip install --no-depds -e "$(APP_ROOT)"
 
 .PHONY: install
 install: install-dep install-pkg
