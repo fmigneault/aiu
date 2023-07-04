@@ -8,6 +8,10 @@ REPORTS_DIR ?=  $(APP_ROOT)/reports
 
 ## --- Versioning targets --- ##
 
+.PHONY: version
+version:	## display the current version
+	@sed -n -e 's/current_version = \(.*\)/\1/p' "$(APP_ROOT)/setup.cfg"
+
 # Bumpversion 'dry' config
 # if 'dry' is specified as target, any bumpversion call using 'BUMP_XARGS' will not apply changes
 BUMP_XARGS ?= --verbose --allow-dirty
