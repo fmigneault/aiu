@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.11.0 <https://github.com/fmigneault/aiu/tree/1.11.0>`_ (2023-11-05)
+------------------------------------------------------------------------------------
+
 * Add search path override to output directory location when the current directory path is detected as the script path.
 * Add ``--no-heuristic-tag-match`` and corresponding ``heuristic_tag_match`` flag applied by default that will attempt
   matching existing ID3 tags from the source audio files against target configuration ID3 tags when file names were not
