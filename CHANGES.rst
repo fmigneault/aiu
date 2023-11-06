@@ -26,7 +26,10 @@ CHANGES
   provided explicitly to be ignored.
 * Remove duplicate and unimplemented function for applying ID3 tags.
 * Move ID3 tag and cover file utilities from ``aiu.utils`` to ``aiu.updater`` module.
-* Fix ID3 tags configuration passed by individual options (``-A``, ``-T``, etc.)
+* Fix ID3 tags properties passed by individual options (``-A``, ``-T``, etc.) to be incorrectly reported in the logging
+  definition, as well as passing them as individual ``AudioInfo`` objects instead of a single combined one under the
+  generated ``AudioConfig`` for these tags. If more than one literal ID3 tag field was provided simultaneously, this
+  would cause erroneous mismatches in length comparison between multiple ``AudioConfig`` from the various sources.
 * Fix logging calls not using the lazy string evaluation format in some cases.
 
 `1.10.1 <https://github.com/fmigneault/aiu/tree/1.10.1>`_ (2023-07-04)
