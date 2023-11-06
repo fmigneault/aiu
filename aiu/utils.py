@@ -4,20 +4,28 @@ import shutil
 from functools import wraps
 from typing import Callable, Iterable, List, Optional, Union
 
-import eyed3
-from PIL import Image
-
-from aiu.typedefs import AudioConfig, AudioFileAny, AudioFile, AudioInfo, CoverFileAny, CoverFile, LoggerType
+from aiu.typedefs import LoggerType
 from aiu import LOGGER
 
 FILENAME_ILLEGAL_CHARS = ['\\', '/', ':', '*', '?', '<', '>', '|', '"']
 FILENAME_ILLEGAL_CHARS_REGEX = re.compile(rf"[{''.join(c for c in FILENAME_ILLEGAL_CHARS)}]")
 
-COMMON_WORD_SPLIT_CHARS = ["[", "]", "(", ")", "｢", "｣", "「", "」"]
+COMMON_WORD_SPLIT_CHARS = (
+    {"[", "]", "(", ")", "｢", "｣", "「", "」", "+"} |
+    set(FILENAME_ILLEGAL_CHARS)
+)
 COMMON_WORD_REPLACE_CHARS = {
     "’": "'",
     "～": "~",
+    "–": "-",
 }
+COMMON_WORD_IGNORE_CHARS = (
+    {"-"} |
+    set(FILENAME_ILLEGAL_CHARS) |
+    COMMON_WORD_SPLIT_CHARS |
+    set(COMMON_WORD_REPLACE_CHARS) |
+    set(COMMON_WORD_REPLACE_CHARS.values())
+)
 
 
 def log_exception(logger=None):
@@ -64,58 +72,6 @@ def backup_files(file_paths, backup_dir):
         copy_path = os.path.join(backup_dir, os.path.split(file_path)[-1])
         LOGGER.debug("Backup [%s]", copy_path)
         shutil.copyfile(file_path, copy_path, follow_symlinks=True)
-
-
-def get_audio_file(audio_file):
-    # type: (AudioFileAny) -> AudioFile
-    if isinstance(audio_file, str):
-        audio_file = eyed3.load(audio_file)
-    if not isinstance(audio_file, AudioFile):
-        raise TypeError("Audio file expected.")
-    return audio_file
-
-
-def get_cover_file(cover_file):
-    # type: (CoverFileAny) -> CoverFile
-    if isinstance(cover_file, str):
-        cover_file = Image.open(cover_file)
-    if not isinstance(cover_file, CoverFile):
-        raise TypeError("Cover file expected.")
-    return cover_file
-
-
-def save_cover_file(config, output_dir):
-    # type: (AudioConfig, str) -> Optional[str]
-    """
-    Searches for any album image cover file within the audio configuration files and saves it.
-
-    Only saves the first match, assuming all audio files belong to the same album and share the same cover.
-    """
-    path = os.path.join(output_dir, "cover.png")
-    for cfg in config:  # type: AudioInfo
-        if cfg.cover is not None:
-            if os.path.isfile(path):
-                LOGGER.warning("Could not save cover image, file already exists: [%s]", path)
-                return path
-            LOGGER.warning("Saved cover image: [%s]", path)
-            cfg.cover.save(path)
-            return path
-    LOGGER.warning("Could not find any cover image to save. Operation skipped.")
-
-
-def update_cover_file(config, cover_file):
-    # type: (AudioConfig, Union[str, CoverFile]) -> None
-    """
-    Apply the new cover file to audio files if they mismatch.
-    """
-    if isinstance(cover_file, CoverFile):
-        cover_file = cover_file.path
-    for file_cfg in config:
-        prev_cover = file_cfg.get("cover")
-        if cover_file and (not prev_cover or cover_file != prev_cover.path):
-            LOGGER.debug("Updating temporary cover image [%s] -> [%s] for [%s].",
-                         prev_cover.path, cover_file, file_cfg.file)
-            file_cfg.cover = cover_file
 
 
 def validate_output_file(output_file_path, search_path, default_name="output.cfg"):

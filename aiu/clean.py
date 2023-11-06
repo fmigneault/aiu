@@ -23,9 +23,9 @@ def beautify_string(s):
             s = s.replace(c, ' ')
     while '  ' in s:
         s = s.replace('  ', ' ')
-    if aiu.Config.STOPWORDS:
+    if aiu.Config.STOPWORDS_RENAME:
         word_sep_list = re.split(r'(\W+)', s)
-        s = ''.join(w.capitalize() if w not in aiu.Config.STOPWORDS else w.lower() for w in word_sep_list)
+        s = ''.join(w.capitalize() if w not in aiu.Config.STOPWORDS_RENAME else w.lower() for w in word_sep_list)
     words = s.split(' ', maxsplit=1)
     words = words[0].capitalize() + (' ' + words[1] if len(words) > 1 else '')
     for punctuation in PUNCTUATIONS:
@@ -37,8 +37,8 @@ def beautify_string(s):
                 else:
                     parts[p] = parts[p][0].upper() + parts[p][1:]
         words = punctuation.join(parts)
-    if aiu.Config.EXCEPTIONS:
-        for k, w in aiu.Config.EXCEPTIONS.items():
+    if aiu.Config.EXCEPTIONS_RENAME:
+        for k, w in aiu.Config.EXCEPTIONS_RENAME.items():
             if k.lower() in words:
                 words = words.replace(k.lower(), w)
     return words

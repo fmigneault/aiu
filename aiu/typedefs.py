@@ -9,7 +9,7 @@ from eyed3.id3.tag import Tag
 from PIL import Image
 
 from aiu.clean import beautify_string
-from aiu.tags import TAGS
+from aiu import tags as t
 
 LoggerType = logging.Logger
 
@@ -66,14 +66,6 @@ class BaseField(object):
         else:
             self._field = field
 
-    #def __new__(cls, *_, field=None):
-    #    obj = super(BaseField, cls).__new__(*_)  # can only use args for base types, no kwargs
-    #    if isinstance(field, property):
-    #        obj._field = field.fget.__name__
-    #    else:
-    #        obj._field = field
-    #    return obj
-
     def __eq__(self, other):
         if isinstance(other, BaseField):
             return self._value == other._value  # pylint: disable=protected-member
@@ -118,10 +110,10 @@ class Duration(BaseField, datetime.timedelta):
     def __new__(cls, duration=None, *_, **kwargs):
         if isinstance(duration, str):
             time_parts = duration.replace("-", ":").replace("/", ":").split(":")
-            h, m, s = [None] + time_parts if len(time_parts) == 2 else time_parts
-            h = int(h) if h is not None else 0
-            m = int(m) if m is not None else 0
-            s = int(s) if s is not None else 0
+            h, m, s = [""] + time_parts if len(time_parts) == 2 else time_parts
+            h = int(h) if h else 0
+            m = int(m) if m else 0
+            s = int(s) if s else 0
             for kw in ["hours", "minutes", "seconds"]:
                 kwargs.pop(kw, None)
             d = super(Duration, cls).__new__(cls, hours=h, minutes=m, seconds=s, **kwargs)
@@ -157,7 +149,7 @@ class Duration(BaseField, datetime.timedelta):
     def __str__(self):
         """
         Display the time as `MM:SS` if less than 1H or `<H>:MM:SS` otherwise,
-        where `<H>` is a N digit number representing the total amount of hours.
+        where `<H>` is an N digit number representing the total amount of hours.
         """
         s = super(Duration, self).__str__()
         return s if self._sec >= 3600 else s[2:]
@@ -340,12 +332,12 @@ class AudioInfo(dict):
     in a configuration file row.
     """
     __slots__ = ["_beautify"]
-    __fields__ = set(TAGS) | {"file", "cover"}
+    __fields__ = set(t.TAGS) | {"file", "cover"}
 
     def __init__(self, *args, title=None, beautify=None, **kwargs):
         super(AudioInfo, self).__init__()
         self._beautify = beautify if beautify is not None else kwargs.pop("beautify", True)
-        title = title or kwargs.pop("title", None)
+        title = title or kwargs.pop(t.TAG_TITLE, None)
         if title:  # none not allowed
             self.title = title
         if args:
@@ -376,36 +368,51 @@ class AudioInfo(dict):
 
     @property
     def value(self):
-        """Literal Python value representation for all audio info fields."""
+        # type: () -> JSON
+        """
+        Literal Python value representation for all audio info fields.
+        """
         return {k: v.value for k, v in self.items()}
 
     def _get_title(self):
         # type: () -> Optional[StrField]
-        return self.get("title")
+        return self.get(t.TAG_TITLE)
 
     def _set_title(self, title):
         # type: (str) -> None
-        self["title"] = StrField(title, allow_none=False, beautify=self._beautify, field=Tag.title)
+        self[t.TAG_TITLE] = StrField(title, allow_none=False, beautify=self._beautify, field=Tag.title)
 
     title = property(_get_title, _set_title)
 
     def _get_artist(self):
-        return self.get("artist")
+        # type: () -> Optional[StrField]
+        return self.get(t.TAG_ARTIST)
 
     def _set_artist(self, artist):
         # type: (str) -> None
-        self["artist"] = StrField(artist, allow_none=False, beautify=self._beautify, field=Tag.artist)
+        self[t.TAG_ARTIST] = StrField(artist, allow_none=False, beautify=self._beautify, field=Tag.artist)
 
     artist = property(_get_artist, _set_artist)
 
+    def _get_album_artist(self):
+        # type: () -> Optional[StrField]
+        return self.get(t.TAG_ALBUM_ARTIST)
+
+    def _set_album_artist(self, artist):
+        # type: (str) -> None
+        self[t.TAG_ALBUM_ARTIST] = StrField(artist, allow_none=False, beautify=self._beautify, field=Tag.album_artist)
+
+    album_artist = property(_get_album_artist, _set_album_artist)
+
     def _get_track(self):
         # type: () -> Optional[IntField]
-        return self.get("track")
+        return self.get(t.TAG_TRACK)
 
     def _set_track(self, track):
+        # type: (Optional[int]) -> None
         if isinstance(track, int) and track < 1 or track in ["", None]:
             track = None  # unset track number
-        self["track"] = IntField(track, field=Tag.track_num, allow_none=True)
+        self[t.TAG_TRACK] = IntField(track, field=Tag.track_num, allow_none=True)
 
     track = property(_get_track, _set_track)
 
@@ -421,21 +428,21 @@ class AudioInfo(dict):
 
     def _get_duration(self):
         # type: () -> Optional[Duration]
-        return self.get("duration")
+        return self.get(t.TAG_DURATION)
 
     def _set_duration(self, duration):
         # type: (Union[str, Duration]) -> None
-        self["duration"] = Duration(duration)
+        self[t.TAG_DURATION] = Duration(duration)
 
     duration = property(_get_duration, _set_duration)
 
     def _get_year(self):
         # type: () -> Optional[int]
-        return self.get("year")
+        return self.get(t.TAG_YEAR)
 
     def _set_year(self, year):
         # type: (Optional[Union[str, int]]) -> None
-        self["year"] = IntField(year, allow_none=True)
+        self[t.TAG_YEAR] = IntField(year, allow_none=True)
 
     year = property(_get_year, _set_year)
 
@@ -453,7 +460,7 @@ class AudioInfo(dict):
 AnyAudioSpec = Union[AudioInfo, List[AudioInfo], Dict[str, AudioField], List[Dict[str, AudioField]]]
 
 
-class AudioConfig(list):
+class AudioConfig(List[AudioInfo]):
     """
     Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing
     and audio file definition and fields.

@@ -4,12 +4,35 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add search path override to output directory location when the current directory path is detected as the script path.
+* Add ``--no-heuristic-tag-match`` and corresponding ``heuristic_tag_match`` flag applied by default that will attempt
+  matching existing ID3 tags from the source audio files against target configuration ID3 tags when file names were not
+  sufficient to find a match.
+* Add more file name matching heuristics to consider duplicated descriptors across multiple file names, in order to
+  reduce the set of false-positive candidates using only word portions of the title that are distinct and descriptive.
+* Add options ``--heuristic-stopword`` and ``--heuristic-config`` that allows providing a set of stopwords to be ignored
+  only during the heuristic file name matching strategy. These allow removing words often found in file names that cause
+  noise for the purpose of matching the audio file title. The default file employed if no parameters for these options
+  are unspecified is ``aiu/config/ignore.cfg``.
+* Rename ``aiu.Config.EXCEPTIONS`` and ``aiu.Config.STOPWORDS`` to ``aiu.Config.EXCEPTIONS_RENAME`` and
+  ``aiu.Config.STOPWORDS_RENAME`` respectively to distinguish them from new ``aiu.Config.STOPWORDS_MATCH``
+  employed by ``--heuristic-stopword`` and ``--heuristic-config``.
+* Add alternative option names ``--rename-exceptions-config`` and ``--rename-stopwords-config`` to corresponding
+  ``--exceptions`` and ``--stopwords`` options to provide more explicit representation of their purpose.
+* Fix ``heuristic_word_match`` and ``heuristic_delete_duplicates`` flags not passed down for iterative per-album call.
+* Apply the resolved ``album_artist`` ID3 tag or its default value set by ``artist`` ID3 tag according to options
+  ``--no-match-artist`` and ``--album-artist`` as detailed in their description.
+* Fix default value of ``match_artist``, set when omitting ``-no-match-artist`` that caused ``--album-artist`` value
+  provided explicitly to be ignored.
+* Remove duplicate and unimplemented function for applying ID3 tags.
+* Move ID3 tag and cover file utilities from ``aiu.utils`` to ``aiu.updater`` module.
+* Fix ID3 tags configuration passed by individual options (``-A``, ``-T``, etc.)
+* Fix logging calls not using the lazy string evaluation format in some cases.
 
 `1.10.1 <https://github.com/fmigneault/aiu/tree/1.10.1>`_ (2023-07-04)
 ------------------------------------------------------------------------------------
 
-* Add ``Makefile`` target ``version`` to quickly retreive the information to facilitate use with ``bump`` targets.
+* Add ``Makefile`` target ``version`` to quickly retrieve the information to facilitate use with ``bump`` targets.
 * Fixes to ``Makefile`` and ``setup.py`` encountering issues on reinstall.
 
 `1.10.0 <https://github.com/fmigneault/aiu/tree/1.10.0>`_ (2023-06-28)
