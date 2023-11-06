@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional
 import logging
 import os
 import sys
@@ -12,18 +12,19 @@ AIU_PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
 AIU_ROOT_DIR = os.path.dirname(AIU_PACKAGE_DIR)
 AIU_CONFIG_DIR = os.path.join(AIU_ROOT_DIR, "config")
 
-if TYPE_CHECKING:
-    StopwordsType = Optional[List[str]]
-    ExceptionsType = Optional[Dict[str, str]]
+StopwordsType = Optional[List[str]]
+ExceptionsType = Optional[Dict[str, str]]
 
 
 class Config:
-    STOPWORDS = None    # type: StopwordsType
-    EXCEPTIONS = None   # type: ExceptionsType
+    EXCEPTIONS_RENAME = None    # type: ExceptionsType
+    STOPWORDS_RENAME = None     # type: StopwordsType
+    STOPWORDS_MATCH = None      # type: StopwordsType
 
 
 DEFAULT_STOPWORDS_CONFIG = os.path.join(AIU_CONFIG_DIR, "stopwords.cfg")
 DEFAULT_EXCEPTIONS_CONFIG = os.path.join(AIU_CONFIG_DIR, "exceptions.cfg")
+DEFAULT_STOPWORDS_MATCH = os.path.join(AIU_CONFIG_DIR, "ignore.cfg")
 AIU_SETUP_CONFIG = os.path.join(AIU_ROOT_DIR, "setup.cfg")
 
 

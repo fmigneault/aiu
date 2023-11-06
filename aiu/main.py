@@ -17,7 +17,15 @@ from typing import Any, Dict, List, Optional, Union, Tuple
 from tqdm import tqdm
 
 import aiu
-from aiu import DEFAULT_EXCEPTIONS_CONFIG, DEFAULT_STOPWORDS_CONFIG, LOGGER, TRACE, __meta__, tags as t
+from aiu import (
+    DEFAULT_EXCEPTIONS_CONFIG,
+    DEFAULT_STOPWORDS_CONFIG,
+    DEFAULT_STOPWORDS_MATCH,
+    LOGGER,
+    TRACE,
+    __meta__,
+    tags as t
+)
 from aiu.parser import (
     ALL_IMAGE_EXTENSIONS,
     ALL_PARSER_EXTENSIONS,
@@ -30,14 +38,12 @@ from aiu.parser import (
     parse_audio_config,
     save_audio_config
 )
-from aiu.updater import merge_audio_configs, apply_audio_config, update_file_names
+from aiu.updater import merge_audio_configs, apply_audio_config, save_cover_file, update_cover_file, update_file_names
 from aiu.utils import (
     backup_files,
     log_exception,
     look_for_default_file,
     make_dirs_cleaned,
-    save_cover_file,
-    update_cover_file,
     validate_output_file
 )
 from aiu.typedefs import AudioConfig, Duration
@@ -139,16 +145,20 @@ def cli():
                                  default=FORMAT_MODE_YAML, choices=[f.name for f in FORMAT_MODES],
                                  help="Output format of applied metadata details. "
                                       "See also ``--help-format`` for details. (default: %(default)s)")
-        parser_args.add_argument("-E", "--exceptions", default=DEFAULT_EXCEPTIONS_CONFIG, dest="exceptions_config",
+        parser_args.add_argument("-E", "--exceptions", "--rename-exceptions-config",
+                                 default=DEFAULT_EXCEPTIONS_CONFIG,
+                                 dest="exceptions_rename_config",
                                  help="Path to custom exceptions configuration file "
                                       "(default: ``config/exceptions.cfg``). "
                                       "During formatting of fields, words matched against keys in the file will be "
                                       "replaced by the specified value instead of default word capitalization.")
-        parser_args.add_argument("-S", "--stopwords", default=DEFAULT_STOPWORDS_CONFIG, dest="stopwords_config",
+        parser_args.add_argument("-S", "--stopwords", "--rename-stopwords-config",
+                                 default=DEFAULT_STOPWORDS_CONFIG,
+                                 dest="stopwords_rename_config",
                                  help="Path to custom stopwords configuration file "
                                       "(default: ``config/stopwords.cfg``). "
                                       "When formatting fields of ID3 tags and file names, the resulting words "
-                                      "matched against listed words from that file will be converted to lowercase "
+                                      "matched against listed stopwords from that file will be converted to lowercase "
                                       "instead of the default word capitalization.")
         op_args = ap.add_argument_group(title="Operation Arguments",
                                         description="Arguments to control which subset of operations to apply on "
@@ -174,22 +184,22 @@ def cli():
         op_args_fetch = op_args.add_mutually_exclusive_group(required=False)
         op_args_fetch.add_argument(
             "--no-fetch", "--nF", action="store_true",
-             help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
-                  "When provided, instead of downloading music files, only metadata information will "
-                  "be retrieved from the link in order to obtain ID3 audio tag metadata and apply them "
-                  "to referenced pre-existing audio files in the search path. The metadata retrieved "
-                  "this way replaces corresponding ID3 tag details otherwise provided by ``--info``."
+            help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
+                 "When provided, instead of downloading music files, only metadata information will "
+                 "be retrieved from the link in order to obtain ID3 audio tag metadata and apply them "
+                 "to referenced pre-existing audio files in the search path. The metadata retrieved "
+                 "this way replaces corresponding ID3 tag details otherwise provided by ``--info``."
         )
         op_args_fetch.add_argument(
             "--force-fetch", "--fF", action="store_true",
-             help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
-                  "When provided, enforces (re)downloading music files. "
-                  "Matching files found in the output directory will be removed before downloading them again. "
-                  "Any previously applied ID3 audio tag metadata will be lost. Only new metadata will be applied. "
-                  "When neither '--force-fetch' nor '--no-fetch' is specified, files will be downloaded as necessary, "
-                  "depending on whether a match can be accomplished with existing files or not. Note that matches must "
-                  "consider any previously applied file-rename operations. Therefore, matches are not guaranteed and "
-                  "files could still be redownloaded even if they exist, in the event that no match could be resolved."
+            help="Must be combined with ``--link`` option. Enforces parser mode ``youtube``. "
+                 "When provided, enforces (re)downloading music files. "
+                 "Matching files found in the output directory will be removed before downloading them again. "
+                 "Any previously applied ID3 audio tag metadata will be lost. Only new metadata will be applied. "
+                 "When neither '--force-fetch' nor '--no-fetch' is specified, files will be downloaded as necessary, "
+                 "depending on whether a match can be accomplished with existing files or not. Note that matches must "
+                 "consider any previously applied file-rename operations. Therefore, matches are not guaranteed and "
+                 "files could still be re-downloaded even if they exist, in the event that no match could be resolved."
         )
         op_args.add_argument("--no-info", "--nI", action="store_true",
                              help="Disable auto-detection of 'info' common audio metadata information file names. "
@@ -228,13 +238,32 @@ def cli():
                                   "to obtain matching quantities. This flag disables this behaviour, but mismatching "
                                   "audio files/config amounts will result in a error to be resolved manually since "
                                   "matches cannot be guaranteed in a unique manner.")
+        hf_args.add_argument("--no-heuristic-tag-match", "--nHTM", action="store_false", default=True,
+                             dest="heuristic_tag_match",
+                             help="When file names are strongly different than provided audio information to attempt "
+                                  "matching the audio title between them, this heuristic inspects the ID3 tags that "
+                                  "could already be set in the source audio file to attempt matching it with target "
+                                  "ID3 tags configuration. This heuristic is combined with other word heuristics to "
+                                  "allow fuzzy matching of ID3 tags. If source ID3 tags provide erroneous information, "
+                                  "this could cause errors or conflicting matches. This flag disables this behaviour.")
         hf_args.add_argument("--no-heuristic-word-match", "--nHWM", action="store_false", default=True,
                              dest="heuristic_word_match",
-                             help="When file names are strongly different that provided audio information to attempt "
+                             help="When file names are strongly different than provided audio information to attempt "
                                   "matching the audio title between them, heuristics are applied to improve chances of "
                                   "finding matches, at the cost of potential errors or conflicting results. This flag "
                                   "disable this behaviour, but will require from the user to resolve problem cases "
                                   "manually when no match could be performed to automatically apply requested changes.")
+        hf_args.add_argument("--heuristic-stopword", "--HS", nargs=1, action="append",
+                             dest="heuristic_word_match_stopwords",
+                             help="Stopwords to ignore when attempting heuristic file name matching. "
+                                  "These usually represent common words inserted in file or source video names that"
+                                  "are not relevant directly or representative of the audio file title. "
+                                  "Can also be specified by ``--heuristic-config`` instead. "
+                                  "Uses the default configuration file if not specified.")
+        hf_args.add_argument("-H", "--heuristic-config",
+                             dest="heuristic_word_match_config", default=DEFAULT_STOPWORDS_MATCH,
+                             help="Configuration file to provide stopwords for heuristic file name matching. "
+                                  "This is equivalent to passing each word individually with ``--HS``.")
         id3_args = ap.add_argument_group(title="ID3 Tags Arguments",
                                          description="Options to directly provide specific ID3 tag values to one or "
                                                      "many audio files matched instead of through ``--info`` "
@@ -316,6 +345,9 @@ def cli():
 
 def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
     # type: (List[Dict[str, str]], str, bool, Any) -> List[AudioConfig]
+    """
+    Runs the main processing operations in a loop for all albums with an appropriate progression display.
+    """
     results = []
     original_log_level = LOGGER.getEffectiveLevel()
     if progress_display:
@@ -341,49 +373,52 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
 @log_exception(LOGGER)
 def main(
          # --- file/parsing options ---
-         link=None,                     # type: Optional[str]
-         search_path=None,              # type: Optional[str]
-         info_file=None,                # type: Optional[str]
-         all_info_file=None,            # type: Optional[str]
-         cover_file=None,               # type: Optional[str]
-         output_file=None,              # type: Optional[str]
-         output_dir=None,               # type: Optional[str]
-         output_mode=FORMAT_MODE_YAML,  # type: Union[FORMAT_MODES]
-         parser_mode=FORMAT_MODE_ANY,   # type: Union[PARSER_MODES]
-         exceptions_config=None,        # type: Optional[str]
-         stopwords_config=None,         # type: Optional[str]
+         link=None,                         # type: Optional[str]
+         search_path=None,                  # type: Optional[str]
+         info_file=None,                    # type: Optional[str]
+         all_info_file=None,                # type: Optional[str]
+         cover_file=None,                   # type: Optional[str]
+         output_file=None,                  # type: Optional[str]
+         output_dir=None,                   # type: Optional[str]
+         output_mode=FORMAT_MODE_YAML,      # type: Union[FORMAT_MODES]
+         parser_mode=FORMAT_MODE_ANY,       # type: Union[PARSER_MODES]
+         exceptions_rename_config=None,     # type: Optional[str]
+         stopwords_rename_config=None,      # type: Optional[str]
          # --- specific meta fields ---
-         artist=None,                   # type: Optional[str]
-         album=None,                    # type: Optional[str]
-         album_artist=None,             # type: Optional[str]
-         title=None,                    # type: Optional[str]
-         track=None,                    # type: Optional[int]
-         genre=None,                    # type: Optional[str]
-         duration=None,                 # type: Optional[Union[Duration, str]]
-         year=None,                     # type: Optional[int]
-         match_artist=True,             # type: bool
+         artist=None,                       # type: Optional[str]
+         album=None,                        # type: Optional[str]
+         album_artist=None,                 # type: Optional[str]
+         title=None,                        # type: Optional[str]
+         track=None,                        # type: Optional[int]
+         genre=None,                        # type: Optional[str]
+         duration=None,                     # type: Optional[Union[Duration, str]]
+         year=None,                         # type: Optional[int]
+         match_artist=True,                 # type: bool
          # --- heuristic feature flags ---
          heuristic_delete_duplicates=True,  # type: bool
+         heuristic_tag_match=True,          # type: bool
          heuristic_word_match=True,         # type: bool
+         heuristic_word_match_stopwords=None,   # type: Optional[List[str]]
+         heuristic_word_match_config=None,  # type: Optional[str]
          # --- other operation flags ---
-         rename_format=None,            # type: Optional[str]
-         rename_title=False,            # type: bool
-         prefix_track=False,            # type: bool
-         remove_track=False,            # type: bool
-         dry=False,                     # type: bool
-         backup=False,                  # type: bool
-         force_fetch=False,             # type: bool
-         no_fetch=False,                # type: bool
-         no_cover=False,                # type: bool
-         no_info=False,                 # type: bool
-         no_all=False,                  # type: bool
-         no_rename=False,               # type: bool
-         no_update=False,               # type: bool
-         no_output=False,               # type: bool
-         no_result=False,               # type: bool
-         no_progress=False,             # type: bool
-         force_progress=False,          # type: bool
-         ):                             # type: (...) -> Union[AudioConfig, bool]
+         rename_format=None,                # type: Optional[str]
+         rename_title=False,                # type: bool
+         prefix_track=False,                # type: bool
+         remove_track=False,                # type: bool
+         dry=False,                         # type: bool
+         backup=False,                      # type: bool
+         force_fetch=False,                 # type: bool
+         no_fetch=False,                    # type: bool
+         no_cover=False,                    # type: bool
+         no_info=False,                     # type: bool
+         no_all=False,                      # type: bool
+         no_rename=False,                   # type: bool
+         no_update=False,                   # type: bool
+         no_output=False,                   # type: bool
+         no_result=False,                   # type: bool
+         no_progress=False,                 # type: bool
+         force_progress=False,              # type: bool
+         ):                                 # type: (...) -> Union[AudioConfig, bool]
     """
     Main process of AIU CLI.
     """
@@ -400,10 +435,19 @@ def main(
     # adjust search file location to expected output directory following fetch of files when requested by link
     if out_dir_opt and link and not no_fetch:
         search_files_loc = output_dir
+    # revert search path to be the output dir if it was resolved as where the current script lies
+    # (called via python script rather than CLI can set CUR_DIR as the script path)
+    aiu_dir = os.path.dirname(os.path.abspath(__file__))
+    if search_dir in [aiu_dir, os.path.dirname(aiu_dir)]:
+        LOGGER.debug("Detected search path as local script location. Overriding to output directory location.")
+        search_dir = search_files_loc = output_dir
     LOGGER.info("Search config path is: [%s]", search_dir)
     LOGGER.info("Search audio files path is: [%s]", search_files_loc)
     LOGGER.info("Output config file %s be: [%s]", "would" if dry else "will", output_file)
     LOGGER.info("Output directory %s be: [%s]", "would" if dry else "will", output_dir)
+
+    if album_artist:
+        match_artist = False
 
     # process link to pre-generate configuration files
     youtube_config = None
@@ -432,10 +476,16 @@ def main(
                     # file/parsing options
                     info_file=info_file, all_info_file=all_info_file, cover_file=cover_file,
                     output_file=output_file, output_dir=output_dir, output_mode=output_mode, parser_mode=parser_mode,
-                    exceptions_config=exceptions_config, stopwords_config=stopwords_config,
+                    exceptions_rename_config=exceptions_rename_config, stopwords_rename_config=stopwords_rename_config,
                     # specific meta fields
                     artist=artist, album=album, album_artist=album_artist, title=title, track=track,
                     genre=genre, duration=duration, year=year, match_artist=match_artist,
+                    # heuristics flags
+                    heuristic_delete_duplicates=heuristic_delete_duplicates,
+                    heuristic_tag_match=heuristic_tag_match,
+                    heuristic_word_match=heuristic_word_match,
+                    heuristic_word_match_config=heuristic_word_match_config,
+                    heuristic_word_match_stopwords=heuristic_word_match_stopwords,
                     # other operation flags
                     rename_format=rename_format, rename_title=rename_title, prefix_track=prefix_track,
                     remove_track=remove_track, backup=backup, dry=False,  # forced because of if/else
@@ -493,16 +543,26 @@ def main(
         cover_file = None
         LOGGER.debug("No cover image file found.")
 
-    LOGGER.debug("Using %s exceptions configuration: [%s]",
-                 "custom" if exceptions_config else "default",
-                 exceptions_config if exceptions_config else DEFAULT_EXCEPTIONS_CONFIG)
-    except_file = exceptions_config or DEFAULT_EXCEPTIONS_CONFIG
-    aiu.Config.EXCEPTIONS = load_config(aiu.Config.EXCEPTIONS, except_file, is_map=True)
-    LOGGER.debug("Using %s stopwords configuration: [%s]",
-                 "custom" if stopwords_config else "default",
-                 stopwords_config if stopwords_config else DEFAULT_STOPWORDS_CONFIG)
-    stopword_file = stopwords_config or DEFAULT_STOPWORDS_CONFIG
-    aiu.Config.STOPWORDS = load_config(aiu.Config.STOPWORDS, stopword_file, is_map=False)
+    except_rename_file = exceptions_rename_config or DEFAULT_EXCEPTIONS_CONFIG
+    LOGGER.info("Using %s rule renaming exceptions configuration: [%s]",
+                "default" if except_rename_file == DEFAULT_EXCEPTIONS_CONFIG else "custom", except_rename_file)
+    aiu.Config.EXCEPTIONS_RENAME = load_config(aiu.Config.EXCEPTIONS_RENAME, except_rename_file, is_map=True)
+    stopword_rename_file = stopwords_rename_config or DEFAULT_STOPWORDS_CONFIG
+    LOGGER.info("Using %s rule renaming stopwords configuration: [%s]",
+                "default" if stopword_rename_file == DEFAULT_STOPWORDS_CONFIG else "custom", stopword_rename_file)
+    aiu.Config.STOPWORDS_RENAME = load_config(aiu.Config.STOPWORDS_RENAME, stopword_rename_file, is_map=False)
+    stopword_match_file = (
+        None if heuristic_word_match_stopwords
+        else heuristic_word_match_config or DEFAULT_STOPWORDS_MATCH
+    )
+    LOGGER.info("Using %s heuristic word matching configuration: %s",
+                "default" if stopword_match_file == DEFAULT_STOPWORDS_MATCH else "custom",
+                heuristic_word_match_stopwords or [stopword_match_file])
+    aiu.Config.STOPWORDS_MATCH = load_config(
+        heuristic_word_match_stopwords or aiu.Config.STOPWORDS_MATCH,
+        stopword_match_file,
+        is_map=False,
+    )
 
     # obtain target audio files to process
     audio_files = get_audio_files(search_files_loc, allow_none=dry)
@@ -529,11 +589,11 @@ def main(
         t.TAG_ALBUM: album, t.TAG_ALBUM_ARTIST: album_artist, t.TAG_ARTIST: artist, t.TAG_TITLE: title,
         t.TAG_TRACK: track, t.TAG_DURATION: duration, t.TAG_GENRE: genre, t.TAG_YEAR: year,
     }
-    literal_fields = AudioConfig([dict((k, v) for k, v in literal_fields.items() if v is not None)])
+    literal_fields = AudioConfig([{k: v for k, v in literal_fields.items() if v is not None}])
     if cover_file:
         config_combo.append((True, AudioConfig([{"cover": cover_file}])))
-    if literal_fields:
-        LOGGER.info("Literal fields %s: [%s]", "that would be applied" if dry else "to apply", literal_fields)
+    if literal_fields and literal_fields[0]:
+        LOGGER.info("Literal fields %s: %s", "that would be applied" if dry else "to apply", literal_fields[0].value)
         config_combo.append((True, literal_fields))
     if not config_combo:
         LOGGER.error("Couldn't find any config to process.")
@@ -554,16 +614,16 @@ def main(
     if not all(info for info in audio_config):
         LOGGER.error("Cannot process combined configuration with missing details for some tracks: [%s]", audio_config)
         sys.exit(-1)
-    if dry:
-        LOGGER.info("Would apply config...")
-    else:
-        LOGGER.info("Applying config...")
-        if backup:
-            backup_dir = os.path.join(search_dir, "backup")
-            LOGGER.info("Backup of files in: [%s]", backup_dir)
+    if backup:
+        backup_dir = os.path.join(search_dir, "backup")
+        LOGGER.info("%s of files in: [%s]", "Would backup" if dry else "Backup", backup_dir)
+        if not dry:
             backup_files(audio_files, backup_dir)
+    LOGGER.info("%s config...", "Would apply" if dry else "Applying")
     try:
-        output_config = apply_audio_config(audio_files, audio_config, heuristic_word_match,
+        output_config = apply_audio_config(audio_files, audio_config,
+                                           use_tag_match=heuristic_tag_match,
+                                           use_word_match=heuristic_word_match,
                                            dry=dry or no_update)
         output_config = update_file_names(output_config, rename_format, rename_title, prefix_track,
                                           dry=dry or no_rename)
@@ -571,7 +631,7 @@ def main(
         LOGGER.error("Failed operation to apply configuration and file renaming! [%s]", exc)
         sys.exit(-1)
 
-    # save the cover file when it was fetched from youtube music link and not provided explicitly as override
+    # save the cover file when it was fetched from YouTube Music link and not provided explicitly as override
     if not dry and not no_cover and not cover_file and link and not no_fetch:
         cover_file = save_cover_file(output_config, output_dir)
         update_cover_file(output_config, cover_file)
