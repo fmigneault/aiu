@@ -7,9 +7,9 @@ PyYAML
 requests
 typing
 tqdm
-yt-dlp>=2022.4.8
+yt-dlp>=2022.4.8  # latest test: 2024.4.9
 #youtube_dl @ git+https://github.com/yt-dlp/yt-dlp
 # FIXME:
 #   should try using 'innertube' instead
 #   (https://github.com/tombulled/python-youtube-music/issues/13#issuecomment-923262424)
-git+https://github.com/tombulled/python-youtube-music@40e88ce251caf9a230ae06a44c4106e3dd1c9057#egg=ytm[dl]
+git+https://github.com/fmigneault/python-youtube-music@fe712a3557f64751e9b8c4c52e7069e367d2d4f1#egg=ytm[dl]
