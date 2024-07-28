@@ -4,7 +4,9 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Fix YouTube Music album scraping with adjustments for latest API responses
+  (relates to `tombulled/python-youtube-music#26 <https://github.com/tombulled/python-youtube-music/pull/26>`_
+  and `fmigneault/python-youtube-music#2 <https://github.com/fmigneault/python-youtube-music/pull/2>`_).
 
 `1.11.0 <https://github.com/fmigneault/aiu/tree/1.11.0>`_ (2023-11-05)
 ------------------------------------------------------------------------------------
