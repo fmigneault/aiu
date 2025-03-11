@@ -4,6 +4,12 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Update ``aiu.clean.beautify_string`` to employ string-formatter operators rather than hardcoded
+  string ``capitalize``/``lower`` methods.
+* Fix loading of ``stopwords`` and ``exceptions`` configuration files to discard empty definitions or lines.
+* Fix loading of ``stopwords`` to enforce lowercase for lookup.
+* Fix ``StrField`` not using the raw ``str`` representation (e.g.: merging configs forwarding ``StrField`` between
+  instances), causing invalid output and logs parsing from unknown object types.
 * Allow ``--parser`` names to be specified in a case-insensitive manner.
 * Adjust ``--prefix-track`` to imply ``--rename-title`` even when omitted to make the operation effective.
 * Fix parameter reference in ``--rename-format`` (from ``FORMAT`` to ``RENAME_FORMAT``) to match the displayed metavar.

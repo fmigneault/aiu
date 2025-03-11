@@ -509,7 +509,7 @@ def main(
                 link, output_dir,
                 progress_display=progress_display, force_download=force_fetch
             )
-        youtube_config = AudioConfig(meta_json)
+        youtube_config = AudioConfig(meta_json, beautify=True)  # FIXME: make CLI option for beautify
 
     # find configurations files
     cfg_info_file = info_file

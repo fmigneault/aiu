@@ -2,7 +2,7 @@ import datetime
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, TypeAlias, Union, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple, TypeAlias, Union, TYPE_CHECKING
 
 import eyed3
 from eyed3.id3.tag import Tag
@@ -187,7 +187,8 @@ Date = datetime.date
 # interfaces order important, inherit `BaseField` implementations before sub-type implementations
 class StrField(BaseField, str):
     def __new__(cls, value, allow_none=True, beautify=False, *_, **__):
-        # type: (StrField, Union[str, None], Optional[bool], Optional[bool], Any, Any) -> StrField
+        # type: (StrField, Optional[str], bool, bool, Any, Any) -> StrField
+        value = str(value)
         field = super(StrField, cls).__new__(cls, value)
         field.__init__(*_, **__)
         field._allow_none = allow_none
@@ -203,12 +204,11 @@ class StrField(BaseField, str):
         return str(self._value)
 
     def __set__(self, instance, value):
-        # type: (StrField, Union[None, str]) -> None
+        # type: (StrField, Optional[str]) -> None
         if not (isinstance(value, str) or (self._allow_none and value is None)):
             raise ValueError("invalid value [{!s}] for [{}]".format(value, type(self).__name__))
         self._raw = value
         if self._beautify and isinstance(value, str):
-            # noinspection PyTypeChecker
             value = beautify_string(value)
         self._value = value
 
@@ -219,7 +219,7 @@ class IntField(int, BaseField):
     _is_none = True
 
     def __new__(cls, value, allow_none=True, *_, **__):
-        # type: (IntField, Union[str, int, None], Optional[bool], Any, Any) -> IntField
+        # type: (IntField, Union[str, int, None], bool, Any, Any) -> IntField
         field = super(IntField, cls).__new__(cls, value or 0)
         field.__init__(*_, **__)
         field._allow_none = allow_none
@@ -242,7 +242,7 @@ class IntField(int, BaseField):
         return not self.__eq__(other)
 
     def __get__(self, instance, owner):
-        # type: (...) -> Union[str, None]
+        # type: (...) -> Optional[str]
         return None if self._is_none else self._value
 
     def __set__(self, instance, value):
@@ -334,9 +334,10 @@ class AudioInfo(dict):
     __slots__ = ["_beautify"]
     __fields__ = set(t.TAGS) | {"file", "cover"}
 
-    def __init__(self, *args, title=None, beautify=None, **kwargs):
+    def __init__(self, *args, title=None, beautify=False, **kwargs):
+        # type: (Tuple[str, AudioField], Optional[Union[str, StrField]], bool, BaseField) -> None
         super(AudioInfo, self).__init__()
-        self._beautify = beautify if beautify is not None else kwargs.pop("beautify", True)
+        self._beautify = beautify
         title = title or kwargs.pop(t.TAG_TITLE, None)
         if title:  # none not allowed
             self.title = title
@@ -465,8 +466,8 @@ class AudioConfig(List[AudioInfo]):
     Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing
     and audio file definition and fields.
     """
-    def __init__(self, raw_config=None, shared=False):
-        # type: (AnyAudioSpec, bool) -> None
+    def __init__(self, raw_config=None, shared=False, beautify=False):
+        # type: (AnyAudioSpec, bool, bool) -> None
         self._shared = shared
         if not raw_config:
             config = {}
@@ -475,18 +476,20 @@ class AudioConfig(List[AudioInfo]):
                 raw_config = [raw_config]
             if not all(isinstance(c, dict) for c in raw_config):
                 raise TypeError("Invalid audio information must be dict-like.")
-            config = [AudioInfo(**cfg) for cfg in raw_config]
+            config = [AudioInfo(**cfg, beautify=beautify) for cfg in raw_config]
         super(AudioConfig, self).__init__(config)
 
     @property
     def value(self):
+        # type: () -> List[JSON]
         """
         Literal Python value representation for all audio info entries.
         """
-        return [ai.value for ai in self]
+        return [info.value for info in self]
 
     @property
     def shared(self):
+        # type: () -> bool
         """
         Indicates if the contained audio configuration corresponds to a shared definition across audio information list.
         """
