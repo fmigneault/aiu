@@ -4,7 +4,9 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Allow ``--parser`` names to be specified in a case-insensitive manner.
+* Adjust ``--prefix-track`` to imply ``--rename-title`` even when omitted to make the operation effective.
+* Fix parameter reference in ``--rename-format`` (from ``FORMAT`` to ``RENAME_FORMAT``) to match the displayed metavar.
 
 `1.11.1 <https://github.com/fmigneault/aiu/tree/1.11.1>`_ (2024-07-27)
 ------------------------------------------------------------------------------------

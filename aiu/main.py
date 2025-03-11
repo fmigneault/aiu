@@ -131,7 +131,7 @@ def cli():
                                       "(default: looks for text file compatible format named `all`, `any` or "
                                       "`every` under `path`, uses the first match with ``any`` format).")
         parser_args.add_argument("-P", "--parser", dest="parser_mode",
-                                 default="any", choices=[p.name for p in PARSER_MODES],
+                                 default="any", choices=[p.name for p in PARSER_MODES], type=str.lower,
                                  help="Parsing mode to enforce. See also ``--help-format`` for details. "
                                       "(default: %(default)s)")
         parser_args.add_argument("-o", "--output", "--output-file", dest="output_file",
@@ -178,7 +178,7 @@ def cli():
                                   "``--rename-title`` option. "
                                   "This is equivalent to ``--rename-format '%%(TRACK)s %%(TITLE)s'``.")
         op_args.add_argument("--rename-format", "--RF",
-                             help="Specify the specific ``FORMAT`` to employ for renaming files. "
+                             help="Specify the specific ``RENAME_FORMAT`` to employ for renaming files. "
                                   "Formatting template follows the ``%%(<TAG>)`` syntax. "
                                   "Supported ``<TAG>`` fields are listed in ID3 TAG names except image-related items.")
         op_args_fetch = op_args.add_mutually_exclusive_group(required=False)

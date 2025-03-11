@@ -495,7 +495,7 @@ def update_file_names(audio_config, rename_format, rename_title=False, prefix_tr
     if not audio_config:
         LOGGER.error("No configuration to process!")
         return audio_config
-    if rename_title:
+    if rename_title or prefix_track:
         if prefix_track:
             LOGGER.debug("Updating rename format with title and prefix.")
             track_digits = len(str(len(audio_config)))
