@@ -8,6 +8,10 @@ __pycache__/
 
 # Jetbrains PyCharm
 .idea/
+.run/
+
+# VS Code
+.vscode/
 
 # Distribution / packaging
 .Python

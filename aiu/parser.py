@@ -79,9 +79,9 @@ def load_config(maybe_config, wanted_config, is_map):
                 lines = [w.strip() for w in f.readlines() if not w.startswith('#')]
                 if is_map:
                     lines = [line.split(':') for line in lines]
-                    maybe_config = {k.strip().lower(): w.strip() for k, w in lines}
+                    maybe_config = {k.strip().lower(): w.strip() for k, w in lines if k and w}
                 else:
-                    maybe_config = lines
+                    maybe_config = [line.lower() for line in lines if line]
         except Exception:
             raise ValueError("Invalid configuration file could not be parsed:\n  file: [{!s}]\n  map?: [{}]".format(
                 wanted_config, is_map

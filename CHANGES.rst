@@ -4,7 +4,20 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add ``--no-beautify`` option (beautification enabled by default) to control ID3 tag renaming and word/stopword
+  operations employed to adjust the audio fields based on resolved configuration files. When disabled, the field
+  values will be employed directly as provided or resolved by ``--info``, ``--all`` and ``--link`` references.
+* Modify the string beautification process to occur at a centralized step to more easily inspect its results,
+  rather than spread across local configuration parsing and YouTube resolution steps.
+* Update ``aiu.clean.beautify_string`` to employ string-formatter operators rather than hardcoded
+  string ``capitalize``/``lower`` methods.
+* Fix loading of ``stopwords`` and ``exceptions`` configuration files to discard empty definitions or lines.
+* Fix loading of ``stopwords`` to enforce lowercase for lookup.
+* Fix ``StrField`` not using the raw ``str`` representation (e.g.: merging configuration resulted in forwarding
+  of the ``StrField`` object between instances), causing invalid output and logs parsing from unknown object types.
+* Allow ``--parser`` names to be specified in a case-insensitive manner.
+* Adjust ``--prefix-track`` to imply ``--rename-title`` even when omitted to make the operation effective.
+* Fix parameter reference in ``--rename-format`` (from ``FORMAT`` to ``RENAME_FORMAT``) to match the displayed metavar.
 
 `1.11.1 <https://github.com/fmigneault/aiu/tree/1.11.1>`_ (2024-07-27)
 ------------------------------------------------------------------------------------

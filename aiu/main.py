@@ -12,7 +12,7 @@ import logging
 import os
 import sys
 from logging import DEBUG, INFO, WARNING, CRITICAL, NOTSET
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Union, Tuple
 
 from tqdm import tqdm
 
@@ -131,7 +131,7 @@ def cli():
                                       "(default: looks for text file compatible format named `all`, `any` or "
                                       "`every` under `path`, uses the first match with ``any`` format).")
         parser_args.add_argument("-P", "--parser", dest="parser_mode",
-                                 default="any", choices=[p.name for p in PARSER_MODES],
+                                 default="any", choices=[p.name for p in PARSER_MODES], type=str.lower,
                                  help="Parsing mode to enforce. See also ``--help-format`` for details. "
                                       "(default: %(default)s)")
         parser_args.add_argument("-o", "--output", "--output-file", dest="output_file",
@@ -178,7 +178,7 @@ def cli():
                                   "``--rename-title`` option. "
                                   "This is equivalent to ``--rename-format '%%(TRACK)s %%(TITLE)s'``.")
         op_args.add_argument("--rename-format", "--RF",
-                             help="Specify the specific ``FORMAT`` to employ for renaming files. "
+                             help="Specify the specific ``RENAME_FORMAT`` to employ for renaming files. "
                                   "Formatting template follows the ``%%(<TAG>)`` syntax. "
                                   "Supported ``<TAG>`` fields are listed in ID3 TAG names except image-related items.")
         op_args_fetch = op_args.add_mutually_exclusive_group(required=False)
@@ -213,6 +213,11 @@ def cli():
                              help="Disable auto-detection of common cover image file names. "
                                   "Useful when detection of an existing file on search path should be avoided. "
                                   "Ignored if ``--cover`` is explicitly specified.")
+        op_args.add_argument("--no-beautify", "--nB", action="store_true",
+                             help="Do not apply any field beautification operation. "
+                                  "If disabled, the resolved file name (if not '--no-rename') and applied "
+                                  "ID3 tags (if not '--no-update') will be left unmodified to use original "
+                                  "values resolved configurations (from '--info', '--all' and/or '--link').")
         op_args.add_argument("--no-rename", "--nR", action="store_true",
                              help="Do not apply any file rename operation. (note: implied when ``--dry`` is provided)")
         op_args.add_argument("--no-update", "--nU", action="store_true",
@@ -344,7 +349,7 @@ def cli():
 
 
 def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
-    # type: (List[Dict[str, str]], str, bool, Any) -> List[AudioConfig]
+    # type: (Iterable[Dict[str, str]], str, bool, **Any) -> List[AudioConfig]
     """
     Runs the main processing operations in a loop for all albums with an appropriate progression display.
     """
@@ -364,7 +369,13 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
                                  output_dir=album_path,
                                  force_progress=progress_display,
                                  **kwargs)
-            results.append(album_results)
+            if not isinstance(album_results, AudioConfig):
+                LOGGER.error(
+                    "Processing of [%s] with [%s] did not resolve in a valid audio configuration!",
+                    album_info["name"], album_info["link"],
+                )
+            else:
+                results.append(album_results)
     finally:
         LOGGER.setLevel(original_log_level)
     return results
@@ -412,6 +423,7 @@ def main(
          no_cover=False,                    # type: bool
          no_info=False,                     # type: bool
          no_all=False,                      # type: bool
+         no_beautify=False,                 # type: bool
          no_rename=False,                   # type: bool
          no_update=False,                   # type: bool
          no_output=False,                   # type: bool
@@ -423,7 +435,7 @@ def main(
     Main process of AIU CLI.
     """
     search_path = "." if search_path == "'.'" else search_path  # default provided as literal string with quotes
-    search_path = os.path.abspath(search_path or os.path.curdir)
+    search_path = os.path.abspath(str(search_path or os.path.curdir))
     search_dir = search_path if os.path.isdir(search_path) else os.path.split(search_path)[0]
     search_files_loc = search_path  # location of files, under search location or adjusted by output dir
     out_dir_opt = output_dir        # detect search path update based on given output dir, but must resolve dir to use
@@ -490,7 +502,7 @@ def main(
                     rename_format=rename_format, rename_title=rename_title, prefix_track=prefix_track,
                     remove_track=remove_track, backup=backup, dry=False,  # forced because of if/else
                     force_fetch=force_fetch, no_fetch=no_fetch, no_cover=no_cover, no_info=no_info, no_all=no_all,
-                    no_rename=no_rename, no_update=no_update, no_output=no_output,
+                    no_beautify=no_beautify, no_rename=no_rename, no_update=no_update, no_output=no_output,
                     no_result=True,  # forced to allow prettier progress bars of overall operation
                     progress_display=progress_display,
                 )
@@ -509,7 +521,7 @@ def main(
                 link, output_dir,
                 progress_display=progress_display, force_download=force_fetch
             )
-        youtube_config = AudioConfig(meta_json)
+        youtube_config = AudioConfig(meta_json, beautify=False)  # apply beautification later with aggregated configs
 
     # find configurations files
     cfg_info_file = info_file
@@ -614,6 +626,11 @@ def main(
     if not all(info for info in audio_config):
         LOGGER.error("Cannot process combined configuration with missing details for some tracks: [%s]", audio_config)
         sys.exit(-1)
+    if not no_beautify:
+        LOGGER.info("Applying beautification operation on resolved audio configurations...")
+        audio_config = audio_config.beautify()
+    else:
+        LOGGER.debug("Audio configuration beautification was disabled.")
     if backup:
         backup_dir = os.path.join(search_dir, "backup")
         LOGGER.info("%s of files in: [%s]", "Would backup" if dry else "Backup", backup_dir)

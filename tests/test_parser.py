@@ -116,7 +116,7 @@ def test_parser_config_tab_time_and_beautify():
     config_raw = parse_audio_config(os.path.join(CONFIG_DIR, "config-tab-time.txt"), FORMAT_MODE_TAB)
     aiu.Config.STOPWORDS_RENAME = None  # reset for reload
     aiu.Config.STOPWORDS_RENAME = load_config(aiu.Config.STOPWORDS_RENAME, DEFAULT_STOPWORDS_CONFIG, is_map=False)
-    config_clean = parse_audio_config(os.path.join(CONFIG_DIR, "config-tab-time.txt"), FORMAT_MODE_TAB)
+    config_clean = config_raw.beautify()
     assert isinstance(config_raw, list)
     assert len(config_raw) == 8
     for conf_raw, conf_clean, result in zip(config_raw, config_clean, [
