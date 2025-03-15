@@ -5,6 +5,7 @@ python-magic
 python-magic-bin
 PyYAML
 requests
+ruamel.yaml
 typing
 tqdm
 yt-dlp>=2022.4.8  # latest test: 2024.4.9
