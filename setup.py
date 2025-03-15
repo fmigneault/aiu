@@ -107,6 +107,9 @@ setup(
     # -- self - tests --------------------------------------------------------
     test_suite="tests",
     tests_require=TEST_REQUIREMENTS,
+    extras_require={
+        "tests": TEST_REQUIREMENTS,
+    },
 
     # -- script entry points -----------------------------------------------
     # scripts=["bin/{}".format(__meta__.__package__)],
