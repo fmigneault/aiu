@@ -15,6 +15,7 @@ jobs:
 
     strategy:
       matrix:
+        job: ['test']
         python-version:
           - '3.8'
           - '3.9'
@@ -22,6 +23,9 @@ jobs:
           - '3.11'
           - '3.12'
           - '3.13'
+        include:
+          - job: lint
+            python-version: '3.12'
 
     steps:
     - name: Checkout repository
@@ -41,6 +45,13 @@ jobs:
       run: |
         pip freeze
 
+    - name: Run linting
+      if: matrix.job == 'lint'
+      run: |
+        pylint .
+        isort --check-only --diff --recursive .
+
     - name: Run tests
+      if: matrix.job == 'test'
       run: |
         pytest

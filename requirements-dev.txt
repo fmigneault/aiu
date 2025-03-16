@@ -4,6 +4,7 @@ doc8
 flake8
 isort
 mock
+pylint
 pytest
 pytest-cov
 pylint
