@@ -4,10 +4,10 @@ doc8
 flake8
 isort
 mock
-pylint
+pylint>=3,<4
+pylint_quotes @ git+https://github.com/marekhanus/pylint-quotes.git@0.3.0a2
+pylint-per-file-ignores
 pytest
 pytest-cov
-pylint
-pylint_quotes
 pyup
 safety

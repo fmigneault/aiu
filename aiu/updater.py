@@ -1,3 +1,7 @@
+"""
+Operations for apply updates to the resulved audio files based on configuration and metadata parsing.
+"""
+
 import os
 import re
 from copy import deepcopy
@@ -72,7 +76,7 @@ def merge_audio_configs(configs, match_artist, audio_files, config_shared, delet
     else:
         max_audio_count = max(max_audio_count, total_files)
     merged_config = AudioConfig(shared=config_shared)
-    for i, (cfg_all, cfg) in enumerate(configs):
+    for i, (_, cfg) in enumerate(configs):
         cfg_size = len(cfg)
         if not i:
             # first config is written as is, or duplicated if unique
@@ -92,11 +96,10 @@ def merge_audio_configs(configs, match_artist, audio_files, config_shared, delet
                         merged_config.extend(cfg)
                         continue
                 raise ValueError(
-                    (
-                        "Cannot initialize audio config with [total = {}] and first config [size = {}]. "
-                        "First config must be [total = size] or [size = 1]. "
-                        "Please resolve missing items manually."
-                    ).format(max_audio_count, cfg_size)
+                    f"Cannot initialize audio config with [total = {max_audio_count}] "
+                    f"and first config [size = {cfg_size}]. "
+                    "First config must be [total = size] or [size = 1]. "
+                    "Please resolve missing items manually."
                 )
         elif cfg_size != max_audio_count:
             # following configs updates the first as required
@@ -182,10 +185,10 @@ def update_audio_tags(audio_file, audio_tags, overwrite=True):
 
     for tag, value in audio_tags.items():
         if not hasattr(audio_file, tag):
-            LOGGER.warning("unknown tag '{}'".format(tag))
+            LOGGER.warning("unknown tag '%s'", tag)
             continue
         if not overwrite and getattr(audio_file.tag, tag) is not None:
-            LOGGER.warning("tag '{}' already set".format(tag))
+            LOGGER.warning("tag '%s' already set", tag)
             continue
         setattr(audio_file.tag, tag, value)
     audio_file.tag.save()
@@ -427,22 +430,22 @@ def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_m
     """
     matches = {}
     for i, file_path in enumerate(audio_files):
-        file_dir, file_name = os.path.split(file_path)
+        _, file_name = os.path.split(file_path)
         matched_info = None  # type: Optional[AudioInfo]
         possible_matches = []
         for audio_info in audio_config:
             if audio_config.shared:
                 possible_matches.append(audio_config[i])
                 break
-            else:
-                clean_info_title = " ".join(clean_words(audio_info.title.lower(), Config.STOPWORDS_RENAME))
-                clean_file_name = " ".join(clean_words(file_name.lower(), Config.STOPWORDS_RENAME))
-                if clean_info_title in clean_file_name:
-                    possible_matches.append(audio_info)
+
+            clean_info_title = " ".join(clean_words(audio_info.title.lower(), Config.STOPWORDS_RENAME))
+            clean_file_name = " ".join(clean_words(file_name.lower(), Config.STOPWORDS_RENAME))
+            if clean_info_title in clean_file_name:
+                possible_matches.append(audio_info)
 
         if len(possible_matches) == 1:
             matched_info = possible_matches[0]
-        elif len(possible_matches):
+        elif possible_matches:
             # in case multiple audio files share partial/similar names, try guessing the most matching one
             search_titles = [info.title for info in possible_matches]
             matched_index, matched_text, matched_ratio = compute_best_match(file_name, search_titles)
@@ -462,7 +465,7 @@ def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_m
         (use_tag_match and use_word_match, lambda _files, _audio: compute_tag_match(_files, _audio, word_match=True)),
         (use_word_match, check_last_item),
     ]:
-        leftover_files = list(set(leftover_files) - {match for match in matches if matches[match]})
+        leftover_files = list(set(leftover_files) - {match for match, value in matches.items() if value})
         if not leftover_files:
             break
         if not use_heuristic:
@@ -490,7 +493,7 @@ def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_m
             if dry:
                 tag_info = list(sorted((k, v) for k, v in matched_info.items() if k not in ["file"]))
                 tag_info = [("file", matched_info.file)] + tag_info
-                tags_value_list = "\n".join('  {}: {}'.format(k, v) for k, v in tag_info)
+                tags_value_list = "\n".join(f"  {k}: {v}" for k, v in tag_info)
                 LOGGER.info("Would apply tag updates:\n%s", tags_value_list)
                 continue
             audio_file.tag.save()
@@ -512,7 +515,7 @@ def update_file_names(audio_config, rename_format, rename_title=False, prefix_tr
         if prefix_track:
             LOGGER.debug("Updating rename format with title and prefix.")
             track_digits = len(str(len(audio_config)))
-            rename_format = "%(TRACK)0{}d %(TITLE)s".format(track_digits)
+            rename_format = "%(TRACK)0{}d %(TITLE)s".format(track_digits)  # pylint: disable=consider-using-f-string
         else:
             LOGGER.debug("Updating rename format with title only.")
             rename_format = "%(TITLE)s"

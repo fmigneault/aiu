@@ -1,3 +1,7 @@
+"""
+Configurations for the application.
+"""
+
 import logging
 import os
 import sys
@@ -16,6 +20,7 @@ ExceptionsType = Optional[Dict[str, str]]
 
 
 class Config:
+    """Application configuration options."""
     EXCEPTIONS_RENAME = None    # type: ExceptionsType
     STOPWORDS_RENAME = None     # type: StopwordsType
     STOPWORDS_MATCH = None      # type: StopwordsType
@@ -28,6 +33,7 @@ AIU_SETUP_CONFIG = os.path.join(AIU_ROOT_DIR, "setup.cfg")
 
 
 class YamlEnabledLogger(logging.Logger):
+    """Logger that supports YAML output formatting."""
     def to_yaml(self, data, indent=2):
         # type: (dict, int) -> None
         handlers = self.handlers + self.parent.handlers + (self.root.handlers if hasattr(self, "root") else [])
@@ -47,10 +53,11 @@ LOGGER = logging.getLogger(__meta__.__package__)
 if not getattr(LOGGER, "__AIU_CONFIGURED__", False):
     def log_trace(msg, *args, **kwargs):
         if LOGGER.isEnabledFor(TRACE):
-            LOGGER._log(TRACE, msg, args, **kwargs)  # noqa
+            LOGGER._log(TRACE, msg, args, **kwargs)  # noqa  # pylint: disable=protected-access
 
     LOGGER.trace = log_trace
     if os.path.isfile(AIU_SETUP_CONFIG):
+        # pylint: disable=import-outside-toplevel,ungrouped-imports
         import configparser
         import logging.config
         # remove %% escape for logging format

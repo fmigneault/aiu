@@ -1,5 +1,9 @@
+"""
+Package metadata.
+"""
 __version__ = "1.11.1"
 __package__ = "aiu"
+__title__ = "Audio Info Updater"
 __author__ = "Francis Charette Migneault"
 __maintainer__ = "Francis Charette Migneault"
 __email__ = "francis.charette.migneault@gmail.com"

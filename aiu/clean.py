@@ -1,3 +1,7 @@
+"""
+Operations for cleanup of audio metadata fields.
+"""
+
 import re
 import string
 from typing import TYPE_CHECKING
@@ -8,6 +12,7 @@ if TYPE_CHECKING:
     from typing import Optional, Protocol
 
     class StringFormatter(Protocol):
+        """Generic string formatter."""
         def __call__(self, s):
             # type: (str) -> str
             ...

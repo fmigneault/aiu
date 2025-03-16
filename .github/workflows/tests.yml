@@ -48,7 +48,7 @@ jobs:
     - name: Run linting
       if: matrix.job == 'lint'
       run: |
-        pylint .
+        pylint --rcfile pylint.ini .
         isort --check-only --diff .
 
     - name: Run tests

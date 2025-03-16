@@ -1,10 +1,6 @@
-# pylint: disable=missing-module-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=missing-function-docstring
-
 import os
 
-import pytest  # noqa
+import pytest
 
 import aiu.tags as t
 from aiu.config import DEFAULT_STOPWORDS_CONFIG, Config

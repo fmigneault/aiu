@@ -71,10 +71,11 @@ from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
 
 def cli():
-    _PROG = "aiu"
-    _NAME = "Audio Info Updater ({})".format(_PROG)
-    _DESC = "{}. {}".format(_NAME, __doc__)
-    _HELP_FORMAT = """{} Format Modes
+    # pylint: disable=C0103,R0912,R0915
+    _PROG = __meta__.__package__
+    _NAME = f"{__meta__.__title__} ({_PROG})"
+    _DESC = f"{_NAME}. {__doc__}"
+    _HELP_FORMAT = f"""{_NAME} Format Modes
 
     Below are the applicable format modes for format/parser options.
     Note that not all modes necessarily apply to both.
@@ -115,7 +116,7 @@ def cli():
                 title-2
                 [duration-2]
                 ...
-    """.format(_NAME)
+    """
 
     try:
         ap = argparse.ArgumentParser(prog=_PROG, description=_DESC, add_help=False,
@@ -353,7 +354,7 @@ def cli():
         if logger_level == NOTSET:
             logger_level = INFO
         LOGGER.setLevel(logger_level)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=W0718
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
         LOGGER.error("Internal error during parsing.", exc_info=exc)
         return 3
@@ -361,7 +362,7 @@ def cli():
         result = main(**args)
         if result:
             return 0
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=W0718
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
         LOGGER.error("Internal error during operation.", exc_info=exc)
         return 2
@@ -402,7 +403,7 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
 
 
 @log_exception(LOGGER)
-def main(
+def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
          # --- file/parsing options ---
          link=None,                         # type: Optional[str]
          search_path=None,                  # type: Optional[str]
@@ -535,9 +536,9 @@ def main(
             return True  # avoid error on empty config
 
         if no_fetch:
-            meta_file, meta_json = get_metadata(link)
+            _, meta_json = get_metadata(link)
         else:
-            meta_file, meta_json = fetch_files(
+            _, meta_json = fetch_files(
                 link, output_dir,
                 progress_display=progress_display, force_download=force_fetch
             )

@@ -6,14 +6,14 @@ import posixpath
 try:
     from setuptools import setup
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup  # pylint: disable=deprecated-module
 
 from aiu import __meta__
 
-with open("README.rst") as readme_file:
+with open("README.rst", mode="r", encoding="utf-8") as readme_file:
     README = readme_file.read()
 
-with open("CHANGES.rst") as changes_file:
+with open("CHANGES.rst", mode="r", encoding="utf-8") as changes_file:
     HISTORY = changes_file.read().replace(".. :changelog:", "")
 
 
@@ -23,7 +23,7 @@ def _find_data_files(dir_name):
 
 
 def _parse_requirements(file_path, requirements, links):
-    with open(file_path, "r") as requirements_file:
+    with open(file_path, mode="r", encoding="utf-8") as requirements_file:
         for line in requirements_file:
             if "git+https" in line:
                 pkg = line.split("#")[-1]

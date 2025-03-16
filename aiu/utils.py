@@ -1,3 +1,6 @@
+"""
+Generic utilities used across the project.
+"""
 import os
 import re
 import shutil
@@ -13,7 +16,7 @@ from typing import (
 from aiu.config import LOGGER
 from aiu.typedefs import LoggerType
 
-FILENAME_ILLEGAL_CHARS = ['\\', '/', ':', '*', '?', '<', '>', '|', '"']
+FILENAME_ILLEGAL_CHARS = ["\\", "/", ":", "*", "?", "<", ">", "|", "\""]
 FILENAME_ILLEGAL_CHARS_REGEX = re.compile(rf"[{''.join(c for c in FILENAME_ILLEGAL_CHARS)}]")
 
 COMMON_WORD_SPLIT_CHARS = (
@@ -45,8 +48,8 @@ def log_exception(logger=None):
         def log_exc(*args, **kwargs):
             try:
                 return function(*args, **kwargs)
-            except Exception as ex:
-                logger.exception("{!r}".format(ex))
+            except Exception as ex:             # pylint: disable=W0718
+                logger.exception(f"{ex!r}")     # pylint: disable=W1202,W1203
         return log_exc
     return decorator
 

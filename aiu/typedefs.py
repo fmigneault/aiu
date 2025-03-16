@@ -1,3 +1,7 @@
+"""
+Audio field and container type definitions.
+"""
+
 import datetime
 import logging
 import os
@@ -10,6 +14,7 @@ from typing import (
     List,
     Optional,
     Tuple,
+    Type,
     TypeAlias,
     Union,
 )
@@ -24,6 +29,8 @@ from aiu.clean import beautify_string
 LoggerType = logging.Logger
 
 if TYPE_CHECKING:
+    # pylint: disable=invalid-name
+
     from io import FileIO
 
     Number = Union[int, float]
@@ -66,6 +73,9 @@ class FormatInfo(object):
 
 
 class BaseField(object):
+    """
+    General functionalities and properties for audio file metadata fields.
+    """
     _raw = None
     _value = None
     _field = None
@@ -105,6 +115,11 @@ class BaseField(object):
         return self._field
 
 
+
+Date = datetime.date
+AnyDuration = Union["Duration", datetime.timedelta, str, int]
+
+
 class Duration(BaseField, datetime.timedelta):
     """Audio duration representation.
 
@@ -117,7 +132,12 @@ class Duration(BaseField, datetime.timedelta):
         Duration(datetime.timedelta(hours=1, minutes=23, seconds=45))
         Duration(5025)  # int == 1*3600 + 23*60 + 45 seconds
     """
-    def __new__(cls, duration=None, *_, **kwargs):
+    def __new__(
+        cls: Type["Duration"],
+        *_: Any,
+        duration: Optional[AnyDuration] = None,
+        **kwargs: Any,
+    ) -> "Duration":
         if isinstance(duration, str):
             time_parts = duration.replace("-", ":").replace("/", ":").split(":")
             h, m, s = [""] + time_parts if len(time_parts) == 2 else time_parts
@@ -130,11 +150,11 @@ class Duration(BaseField, datetime.timedelta):
             d.__init__(**kwargs)
             d._raw = duration
             return d
-        elif isinstance(duration, int):
+        if isinstance(duration, int):
             d = Duration(datetime.timedelta(seconds=duration), **kwargs)
             d._raw = duration
             return d
-        elif duration is None:
+        if duration is None:
             h = kwargs.pop("hours", 0)
             m = kwargs.pop("minutes", 0)
             s = kwargs.pop("seconds", 0)
@@ -142,7 +162,7 @@ class Duration(BaseField, datetime.timedelta):
             d.__init__(**kwargs)
             d._raw = kwargs
             return d
-        elif isinstance(duration, datetime.timedelta):
+        if isinstance(duration, datetime.timedelta):
             h, r = divmod(duration.total_seconds(), 3600)
             m, s = divmod(r, 60)
             for kw in ["hours", "minutes", "seconds"]:
@@ -151,7 +171,7 @@ class Duration(BaseField, datetime.timedelta):
             d.__init__(**kwargs)
             d._raw = duration
             return d
-        raise ValueError("invalid value [{!s}] for [{}]".format(duration, cls.__name__))
+        raise ValueError(f"invalid value [{duration!s}] for [{cls.__name__}]")
 
     def __add__(self, other):
         return super(Duration, self).__add__(other)
@@ -191,19 +211,19 @@ class Duration(BaseField, datetime.timedelta):
         return self._sec % 3600 % 60
 
 
-Date = datetime.date
-
-
 # interfaces order important, inherit `BaseField` implementations before sub-type implementations
 class StrField(BaseField, str):
-    def __new__(cls, value, allow_none=True, beautify=False, *_, **__):
-        # type: (StrField, Optional[str], bool, bool, Any, Any) -> StrField
+    """
+    String field representation with optional beautification.
+    """
+    def __new__(cls, value, *_, allow_none=True, beautify=False, **__):
+        # type: (StrField, Optional[str], *Any, bool, bool, **Any) -> StrField
         value = str(value)
-        field = super(StrField, cls).__new__(cls, value)
+        field = super(StrField, cls).__new__(cls, value)  # type: BaseField
         field.__init__(*_, **__)
         field._allow_none = allow_none
         field._beautify = beautify
-        field.__set__(field, value)
+        field.__set__(field, value)  # pylint: disable=no-member
         return field
 
     def __str__(self):
@@ -216,7 +236,7 @@ class StrField(BaseField, str):
     def __set__(self, instance, value):
         # type: (StrField, Optional[str]) -> None
         if not (isinstance(value, str) or (self._allow_none and value is None)):
-            raise ValueError("invalid value [{!s}] for [{}]".format(value, type(self).__name__))
+            raise ValueError(f"invalid value [{value!s}] for [{type(self).__name__}]")
         self._raw = value
         if self._beautify and isinstance(value, str):
             value = beautify_string(value)
@@ -225,11 +245,14 @@ class StrField(BaseField, str):
 
 # interfaces order important, inherit `BaseField` implementations before sub-type implementations
 class IntField(int, BaseField):
+    """
+    Integer field representation.
+    """
     _value = None
     _is_none = True
 
-    def __new__(cls, value, allow_none=True, *_, **__):
-        # type: (IntField, Union[str, int, None], bool, Any, Any) -> IntField
+    def __new__(cls, value, *_, allow_none=True, **__):
+        # type: (IntField, Union[str, int, None], *Any, bool, **Any) -> IntField
         field = super(IntField, cls).__new__(cls, value or 0)
         field.__init__(*_, **__)
         field._allow_none = allow_none
@@ -262,9 +285,9 @@ class IntField(int, BaseField):
             try:
                 value = int(value)
             except ValueError as ex:
-                raise ValueError(str(ex).replace("int()", "{}()".format(type(self).__name__)))
+                raise ValueError(str(ex).replace("int()", f"{type(self).__name__}()"))
         if not (isinstance(value, int) or (self._allow_none and self._is_none)):
-            raise ValueError("invalid value [{!s}] for [{}]".format(value, type(self).__name__))
+            raise ValueError(f"invalid value [{value!s}] for [{type(self).__name__}]")
         self._value = value
 
     @property
@@ -277,11 +300,14 @@ CoverFileAny = Union[str, CoverFileRaw, "CoverFile"]
 
 
 class CoverFile(BaseField):
+    """
+    Field for the album image cover file.
+    """
     __slots__ = ["_name", "_path", "_link", "_image"]
 
     def __init__(self, image, *_, **__):
-        # type: (CoverFileAny, Any, Any) -> None
-        from aiu.parser import fetch_image
+        # type: (CoverFileAny, *Any, **Any) -> None
+        from aiu.parser import fetch_image  # pylint: disable=import-outside-toplevel
 
         super(CoverFile, self).__init__(*_, **__)
         self._raw = image
@@ -303,7 +329,7 @@ class CoverFile(BaseField):
             else:
                 self._name = "cover.png"
         else:
-            raise ValueError("invalid value [{!s}] for [{}]".format(image, type(self).__name__))
+            raise ValueError(f"invalid value [{image!s}] for [{type(self).__name__}]")
 
     @property
     def image(self):
@@ -354,8 +380,8 @@ class AudioInfo(dict):
         if args:
             for k, v in args:
                 self.set_field(k, v, validate=False)
-        for kw in kwargs:
-            self.set_field(kw, kwargs[kw], validate=False)
+        for kw, val in kwargs.items():
+            self.set_field(kw, val, validate=False)
 
     def set_field(self, key, value, validate=True):
         # if the field has an explicit property (custom handling/typing), apply it
@@ -365,13 +391,13 @@ class AudioInfo(dict):
         elif key in type(self).__fields__:
             self[key] = StrField(value, allow_none=True, beautify=self._beautify, field=getattr(Tag, key, None))
         elif validate:
-            raise KeyError("Invalid tag field is unknown: [{}] ({})".format(key, value))
+            raise KeyError(f"Invalid tag field is unknown: [{key}] ({value})")
 
     def __str__(self):
         cls_str = type(self).__name__
-        trk_str = "{}. ".format(self.track) if self.track else ""
-        dur_str = " - {}".format(self.duration) if self.duration else ""
-        return "{}({}{}{})".format(cls_str, trk_str, self.title, dur_str)
+        trk_str = f"{self.track}. " if self.track else ""
+        dur_str = f" - {self.duration}" if self.duration else ""
+        return f"{cls_str}({trk_str}{self.title}{dur_str})"
 
     @property
     def __dict__(self):

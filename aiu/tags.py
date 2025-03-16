@@ -1,3 +1,7 @@
+"""
+ID3 tags for audio files.
+"""
+
 TAG_ALBUM = "album"
 TAG_ALBUM_ARTIST = "album_artist"
 TAG_ARTIST = "artist"
