@@ -1,24 +1,34 @@
+"""
+Utilities for parsing audio metadata from various formats.
+"""
+
 import csv
-import itertools
-import logging
 import io
+import itertools
 import json
+import logging
 import math
 import os
 import re
 import tempfile
-import yaml
-from typing import Iterable, List, Optional, Union, overload
-from typing_extensions import Literal
+from typing import (
+    Iterable,
+    List,
+    Optional,
+    Union,
+    overload,
+)
+from typing_extensions import Literal, TypeVar
 
 import requests
+import yaml
 from eyed3.mimetype import guessMimetype
 from eyed3.mp3 import MIME_TYPES as MP3_MIME_TYPES
 from PIL import Image
 
+from aiu.config import LOGGER, ExceptionsType, StopwordsType
+from aiu.tags import TAG_DURATION, TAG_TITLE, TAG_TRACK
 from aiu.typedefs import AudioConfig, Duration, FormatInfo
-from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
-from aiu import LOGGER, ExceptionsType, StopwordsType
 
 AnyConfig = Union[ExceptionsType, StopwordsType]
 
@@ -30,6 +40,8 @@ duration_info = re.compile(r"""     # Match any 'duration' representation, need 
      (?:[0-5][0-9])                             # minutes time part (00-59)
      (?::[0-5][0-9])?)                          # seconds time part (00-59)
 """, re.VERBOSE)
+
+FormatInfoType = TypeVar("FormatInfoType", bound=FormatInfo)
 
 FORMAT_MODE_ANY = FormatInfo("any", "*")
 FORMAT_MODE_CSV = FormatInfo("csv", "csv")
@@ -45,6 +57,7 @@ FORMAT_MODES = frozenset([
     FORMAT_MODE_YAML,
     FORMAT_MODE_RAW,
 ])
+
 PARSER_MODES = frozenset([
     FORMAT_MODE_ANY,
     FORMAT_MODE_CSV,
@@ -75,17 +88,17 @@ def load_config(maybe_config, wanted_config, is_map):
     # type: (Optional[AnyConfig], Optional[Union[str, AnyConfig]], bool) -> Optional[AnyConfig]
     if maybe_config is None and isinstance(wanted_config, str) and os.path.isfile(wanted_config):
         try:
-            with open(wanted_config, mode='r', encoding="utf-8") as f:
-                lines = [w.strip() for w in f.readlines() if not w.startswith('#')]
+            with open(wanted_config, mode="r", encoding="utf-8") as f:
+                lines = [w.strip() for w in f.readlines() if not w.startswith("#")]
                 if is_map:
-                    lines = [line.split(':') for line in lines]
+                    lines = [line.split(":") for line in lines]
                     maybe_config = {k.strip().lower(): w.strip() for k, w in lines if k and w}
                 else:
                     maybe_config = [line.lower() for line in lines if line]
         except Exception:
-            raise ValueError("Invalid configuration file could not be parsed:\n  file: [{!s}]\n  map?: [{}]".format(
-                wanted_config, is_map
-            ))
+            raise ValueError(
+                f"Invalid configuration file could not be parsed:\n  file: [{wanted_config!s}]\n  map?: [{is_map}]"
+            )
     if isinstance(wanted_config, (list, dict)):
         maybe_config = wanted_config
     return maybe_config
@@ -101,23 +114,28 @@ def find_mode(mode, formats):
     return None
 
 
-def parse_audio_config(config_file, mode=FORMAT_MODE_ANY):
+def parse_audio_config(  # pylint: disable=broad-exception-caught  # raise at end to attempt alternate fallback formats
+    config_file,
+    mode=FORMAT_MODE_ANY,
+):
     # type: (str, Optional[Union[str, FormatInfo]]) -> AudioConfig
-    """Attempts various parsing methods to retrieve audio files metadata from a config file."""
+    """
+    Attempts various parsing methods to retrieve audio files metadata from a config file.
+    """
 
     if not os.path.isfile(config_file):
-        raise ValueError("invalid file path: [{}]".format(config_file))
+        raise ValueError(f"invalid file path: [{config_file}]")
 
     fmt_mode = find_mode(mode, PARSER_MODES)
     if not fmt_mode:
-        raise ValueError("invalid parser mode: [{}]".format(mode))
+        raise ValueError(f"invalid parser mode: [{mode}]")
     log_lvl = logging.WARNING if fmt_mode is FORMAT_MODE_ANY else logging.ERROR
 
     # --- CSV with header row ---
     if fmt_mode in [FORMAT_MODE_ANY, FORMAT_MODE_CSV]:
         LOGGER.debug("parsing using mode [%s]", FORMAT_MODE_CSV)
         try:
-            with open(config_file, 'r') as f:
+            with open(config_file, mode="r", encoding="utf-8") as f:
                 config = AudioConfig(list(csv.DictReader(f)))
             # avoid false positive when single field without header is valid against 'list' mode
             if not all(fields for fields in config):
@@ -172,7 +190,7 @@ def parse_audio_config_objects(config_file):
           duration: ""
         - ...
     """
-    with open(config_file, mode='r', encoding="utf-8") as f:
+    with open(config_file, mode="r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     if not isinstance(config, list):
         config = [config]
@@ -198,7 +216,7 @@ def parse_audio_config_list(config_file):
         [duration-2]
         ...
     """
-    with open(config_file, mode='r', encoding="utf-8") as f:
+    with open(config_file, mode="r", encoding="utf-8") as f:
         lines = [row.strip() for row in f.readlines() if row]
 
     # check for either track, duration or both + title for each
@@ -221,7 +239,7 @@ def parse_audio_config_list(config_file):
                 _durations = [grp for grp in _duration_groups]
                 _config = [{TAG_TRACK: track, TAG_TITLE: title, TAG_DURATION: duration}
                            for track, title, duration in zip(_tracks, _titles, _durations)]
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught  # fallback to caller
             LOGGER.trace("exception during [%s] parsing attempt (assuming 3 fields):", FORMAT_MODE_LIST, exc_info=exc)
         return _config
 
@@ -243,7 +261,7 @@ def parse_audio_config_list(config_file):
                     _durations = [grp for grp in _duration_groups]
                     _config = [{TAG_DURATION: duration, TAG_TITLE: title}
                                for duration, title in zip(_durations, _titles)]
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught  # fallback to caller
             LOGGER.trace("exception during [%s] parsing attempt (assuming 3 fields):", FORMAT_MODE_LIST, exc_info=exc)
         return _config
 
@@ -254,9 +272,9 @@ def parse_audio_config_list(config_file):
     if fields_2 and not config:
         config = _parse_fields_2()
     if not config:
-        raise ValueError("invalid number of lines to parse as [{}], moving on...".format(FORMAT_MODE_LIST))
+        raise ValueError(f"invalid number of lines to parse as [{FORMAT_MODE_LIST}], moving on...")
     if not all(isinstance(c, dict) for c in config):
-        raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_LIST))
+        raise ValueError(f"invalid parsing result as [{FORMAT_MODE_LIST}], moving on...")
     config = AudioConfig(config)
     LOGGER.debug("success using mode [%s]", FORMAT_MODE_LIST)
     return config
@@ -271,7 +289,7 @@ def parse_audio_config_tab(config_file):
 
         [track]   title   duration
     """
-    with open(config_file, 'r') as f:
+    with open(config_file, mode="r", encoding="utf-8") as f:
         lines = f.readlines()
     config = []
     for row in lines:
@@ -289,8 +307,8 @@ def parse_audio_config_tab(config_file):
             TAG_TITLE: row,
             TAG_DURATION: duration,
         })
-    if not all([isinstance(c, dict) for c in config]):
-        raise ValueError("invalid parsing result as [{}], moving on...".format(FORMAT_MODE_TAB))
+    if not all(isinstance(c, dict) for c in config):
+        raise ValueError(f"invalid parsing result as [{FORMAT_MODE_TAB}], moving on...")
     config = AudioConfig(config)
     LOGGER.debug("success using mode [%s]", FORMAT_MODE_TAB)
     return config
@@ -306,7 +324,7 @@ def write_config(audio_config, file_path, fmt_mode):
         fmt_mode = FORMAT_MODE_YAML
     else:
         audio_config = audio_config.value
-    with open(file_path, "w") as f:
+    with open(file_path, mode="w", encoding="utf-8") as f:
         if fmt_mode is FORMAT_MODE_JSON:
             json.dump(audio_config, f)
         elif fmt_mode is FORMAT_MODE_YAML:
@@ -324,13 +342,14 @@ def write_config(audio_config, file_path, fmt_mode):
                 .replace("title_tab", str(max_title_len)) \
                 .replace("track_tab", str(max_track_dot))
             for ac in audio_config:
+                track = f"{ac.track}." if all_have_track else ""
                 f.write(line_fmt.format(
-                    track="{}.".format(ac.track) if all_have_track else "",
+                    track=track,
                     title=ac.title,
                     duration=ac.duration if ac.duration else "")
                 )
         else:
-            raise NotImplementedError("format [{}] writing to file unknown".format(fmt_mode))
+            raise NotImplementedError(f"format [{fmt_mode}] writing to file unknown")
 
 
 def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False):
@@ -338,13 +357,14 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False)
     """Saves the audio config if permitted by the OS and using the corrected file extension."""
     fmt_mode = find_mode(mode, FORMAT_MODES)
     if not mode:
-        raise ValueError("invalid output format mode [{}], aborting...".format(mode))
+        raise ValueError(f"invalid output format mode [{mode}], aborting...")
     name, ext = os.path.splitext(file_path)
     if not fmt_mode.matches(ext):
         LOGGER.warning("file extension [%s] doesn't match requested save format [%s], fixing to [%s].",
                        ext, mode, fmt_mode.name)
         ext = fmt_mode.extensions[0]
-    file_path = "{}{}{}".format(name, "" if ext.startswith(".") else ".", ext)
+    dot = "" if ext.startswith(".") else "."
+    file_path = f"{name}{dot}{ext}"
     if os.path.isfile(file_path):
         if dry:
             LOGGER.debug("Would have removed file: [%s]", file_path)
@@ -366,7 +386,7 @@ def get_audio_files(path, allow_none=False):
         elif allow_none:
             return []
         else:
-            raise ValueError("invalid path: [{}]".format(path))
+            raise ValueError(f"invalid path: [{path}]")
     else:
         files = [os.path.join(path, f) for f in os.listdir(path)]
 
@@ -389,7 +409,7 @@ def fetch_image(link, output_dir=None):
 
     Images retrieved from URL will be cached for direct access on following calls.
     """
-    global _FETCHED_CACHE
+    global _FETCHED_CACHE  # pylint: disable=W0602
 
     # avoid over requesting to reduce transfer + avoid rate-limiting
     path = _FETCHED_CACHE.get(link)
@@ -400,12 +420,14 @@ def fetch_image(link, output_dir=None):
     LOGGER.debug("Fetching image: [%s]", link)
     resp = requests.get(link, timeout=5)
     if resp.status_code != 200:
-        raise ValueError("invalid link could not be reached [{!s}]".format(link))
+        raise ValueError(f"invalid link could not be reached [{link!s}]")
     mime = resp.headers.get("Content-Type", "")
     name = resp.headers.get("Content-Disposition", "").split("filename=")[-1].split(";")[0].replace("\"", "")
     if not (mime.startswith("image/") or name):
-        raise ValueError("invalid link does not correspond to image reference [{!s}] "
-                         "and does not not provide any filename".format(link))
+        raise ValueError(
+            f"invalid link does not correspond to image reference [{link!s}] "
+            "and does not not provide any filename"
+        )
     # if name:
     #     ext = os.path.splitext(name)[-1].replace(".", "")
     # else:

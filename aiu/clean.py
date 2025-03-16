@@ -1,12 +1,18 @@
-import aiu
+"""
+Operations for cleanup of audio metadata fields.
+"""
+
 import re
 import string
 from typing import TYPE_CHECKING
+
+from aiu.config import Config
 
 if TYPE_CHECKING:
     from typing import Optional, Protocol
 
     class StringFormatter(Protocol):
+        """Generic string formatter."""
         def __call__(self, s):
             # type: (str) -> str
             ...
@@ -39,11 +45,11 @@ def beautify_string(
             s = s.replace(c, ' ')
     while '  ' in s:
         s = s.replace('  ', ' ')
-    if aiu.Config.STOPWORDS_RENAME is not None:
+    if Config.STOPWORDS_RENAME is not None:
         word_sep_list = re.split(r'(\W+)', s)
         s = ''.join(
             word_formatter(w)
-            if w.lower() not in aiu.Config.STOPWORDS_RENAME
+            if w.lower() not in Config.STOPWORDS_RENAME
             else stop_word_formatter(w)
             for w in word_sep_list
         )
@@ -58,8 +64,8 @@ def beautify_string(
                 else:
                     parts[p] = word_formatter(parts)
         words = punctuation.join(parts)
-    if aiu.Config.EXCEPTIONS_RENAME is not None:
-        for k, w in aiu.Config.EXCEPTIONS_RENAME.items():
+    if Config.EXCEPTIONS_RENAME is not None:
+        for k, w in Config.EXCEPTIONS_RENAME.items():
             if k.lower() in words:
                 words = words.replace(k.lower(), w)
     return words

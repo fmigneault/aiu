@@ -11,20 +11,33 @@ import json
 import logging
 import os
 import sys
-from logging import DEBUG, INFO, WARNING, CRITICAL, NOTSET
-from typing import Any, Dict, Iterable, List, Optional, Union, Tuple
+from logging import (
+    CRITICAL,
+    DEBUG,
+    INFO,
+    NOTSET,
+    WARNING,
+)
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from tqdm import tqdm
 
-import aiu
-from aiu import (
+from aiu import __meta__, tags as t
+from aiu.config import (
     DEFAULT_EXCEPTIONS_CONFIG,
     DEFAULT_STOPWORDS_CONFIG,
     DEFAULT_STOPWORDS_MATCH,
     LOGGER,
     TRACE,
-    __meta__,
-    tags as t
+    Config,
 )
 from aiu.parser import (
     ALL_IMAGE_EXTENSIONS,
@@ -33,61 +46,69 @@ from aiu.parser import (
     FORMAT_MODE_YAML,
     FORMAT_MODES,
     PARSER_MODES,
+    FormatInfoType,
     get_audio_files,
     load_config,
     parse_audio_config,
-    save_audio_config
+    save_audio_config,
 )
-from aiu.updater import merge_audio_configs, apply_audio_config, save_cover_file, update_cover_file, update_file_names
+from aiu.typedefs import AudioConfig, Duration
+from aiu.updater import (
+    apply_audio_config,
+    merge_audio_configs,
+    save_cover_file,
+    update_cover_file,
+    update_file_names,
+)
 from aiu.utils import (
     backup_files,
     log_exception,
     look_for_default_file,
     make_dirs_cleaned,
-    validate_output_file
+    validate_output_file,
 )
-from aiu.typedefs import AudioConfig, Duration
 from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
 
 def cli():
-    _PROG = "aiu"
-    _NAME = "Audio Info Updater ({})".format(_PROG)
-    _DESC = "{}. {}".format(_NAME, __doc__)
-    _HELP_FORMAT = """{} Format Modes
-    
-    Below are the applicable format modes for format/parser options. 
-    Note that not all modes necessarily apply to both. 
+    # pylint: disable=C0103,R0912,R0915
+    _PROG = __meta__.__package__
+    _NAME = f"{__meta__.__title__} ({_PROG})"
+    _DESC = f"{_NAME}. {__doc__}"
+    _HELP_FORMAT = f"""{_NAME} Format Modes
+
+    Below are the applicable format modes for format/parser options.
+    Note that not all modes necessarily apply to both.
     Refer to their option of applicable values.
-    
+
         ``any``
             Attempts to automatically determine which of the formats to apply based
             on the contents of the provided information file. If this is causing
             problems, switch to explicit specification of the provided format.
-    
+
         ``csv``
             Expects an header row indicating the fields retrieved on following lines.
             Then, each line provide an entry to attempt matching against an audio file.
-    
+
         ``tab``
             Takes a plain list of (any amount of) tab delimited rows where each one
             represents a potential audio file to find. Rows are expected to have
             following format (bracket fields are optional):
-    
+
                 [track]     title       duration
-    
+
         ``json`` / ``yaml``
             Standard representation of corresponding formats of a list of objects.
             Each object provides fields and values to attempt match against audio files.
             Fields names correspond to the lower case values
-    
+
         ``list``
             Parses a plain list with each field placed on a separate row. Rows are
             expected to provide continuous intervals between corresponding field, as
-            presented below, for each audio files to attempt match. Corresponding fields 
-            must be provided for each entry. Either one or both of the TRACK/DURATION 
+            presented below, for each audio files to attempt match. Corresponding fields
+            must be provided for each entry. Either one or both of the TRACK/DURATION
             fields are mandatory.
-    
+
                 [track-1]
                 title-1
                 [duration-1]
@@ -95,7 +116,7 @@ def cli():
                 title-2
                 [duration-2]
                 ...
-    """.format(_NAME)
+    """
 
     try:
         ap = argparse.ArgumentParser(prog=_PROG, description=_DESC, add_help=False,
@@ -168,7 +189,7 @@ def cli():
                                   "(note: works best when combined with outputs of ``--verbose`` or ``--debug``)")
         op_args.add_argument("--backup", "-b", action="store_true",
                              help="Create a backup of files to be modified. Files are saved in directory named "
-                                  "``backup`` under the ``--path`` or parent directory of ``--file``. " 
+                                  "``backup`` under the ``--path`` or parent directory of ``--file``. "
                                   "No backup is accomplished otherwise.")
         op_args.add_argument("--rename-title", "--RT", action="store_true",
                              help="Specifies whether to rename matched audio files with their corresponding ``TITLE``. "
@@ -333,7 +354,7 @@ def cli():
         if logger_level == NOTSET:
             logger_level = INFO
         LOGGER.setLevel(logger_level)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=W0718
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
         LOGGER.error("Internal error during parsing.", exc_info=exc)
         return 3
@@ -341,7 +362,7 @@ def cli():
         result = main(**args)
         if result:
             return 0
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=W0718
         exc = exc if LOGGER.isEnabledFor(DEBUG) else False
         LOGGER.error("Internal error during operation.", exc_info=exc)
         return 2
@@ -382,7 +403,7 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
 
 
 @log_exception(LOGGER)
-def main(
+def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
          # --- file/parsing options ---
          link=None,                         # type: Optional[str]
          search_path=None,                  # type: Optional[str]
@@ -391,8 +412,8 @@ def main(
          cover_file=None,                   # type: Optional[str]
          output_file=None,                  # type: Optional[str]
          output_dir=None,                   # type: Optional[str]
-         output_mode=FORMAT_MODE_YAML,      # type: Union[FORMAT_MODES]
-         parser_mode=FORMAT_MODE_ANY,       # type: Union[PARSER_MODES]
+         output_mode=FORMAT_MODE_YAML,      # type: Union[FormatInfoType]
+         parser_mode=FORMAT_MODE_ANY,       # type: Union[FormatInfoType]
          exceptions_rename_config=None,     # type: Optional[str]
          stopwords_rename_config=None,      # type: Optional[str]
          # --- specific meta fields ---
@@ -515,9 +536,9 @@ def main(
             return True  # avoid error on empty config
 
         if no_fetch:
-            meta_file, meta_json = get_metadata(link)
+            _, meta_json = get_metadata(link)
         else:
-            meta_file, meta_json = fetch_files(
+            _, meta_json = fetch_files(
                 link, output_dir,
                 progress_display=progress_display, force_download=force_fetch
             )
@@ -558,11 +579,11 @@ def main(
     except_rename_file = exceptions_rename_config or DEFAULT_EXCEPTIONS_CONFIG
     LOGGER.info("Using %s rule renaming exceptions configuration: [%s]",
                 "default" if except_rename_file == DEFAULT_EXCEPTIONS_CONFIG else "custom", except_rename_file)
-    aiu.Config.EXCEPTIONS_RENAME = load_config(aiu.Config.EXCEPTIONS_RENAME, except_rename_file, is_map=True)
+    Config.EXCEPTIONS_RENAME = load_config(Config.EXCEPTIONS_RENAME, except_rename_file, is_map=True)
     stopword_rename_file = stopwords_rename_config or DEFAULT_STOPWORDS_CONFIG
     LOGGER.info("Using %s rule renaming stopwords configuration: [%s]",
                 "default" if stopword_rename_file == DEFAULT_STOPWORDS_CONFIG else "custom", stopword_rename_file)
-    aiu.Config.STOPWORDS_RENAME = load_config(aiu.Config.STOPWORDS_RENAME, stopword_rename_file, is_map=False)
+    Config.STOPWORDS_RENAME = load_config(Config.STOPWORDS_RENAME, stopword_rename_file, is_map=False)
     stopword_match_file = (
         None if heuristic_word_match_stopwords
         else heuristic_word_match_config or DEFAULT_STOPWORDS_MATCH
@@ -570,8 +591,8 @@ def main(
     LOGGER.info("Using %s heuristic word matching configuration: %s",
                 "default" if stopword_match_file == DEFAULT_STOPWORDS_MATCH else "custom",
                 heuristic_word_match_stopwords or [stopword_match_file])
-    aiu.Config.STOPWORDS_MATCH = load_config(
-        heuristic_word_match_stopwords or aiu.Config.STOPWORDS_MATCH,
+    Config.STOPWORDS_MATCH = load_config(
+        heuristic_word_match_stopwords or Config.STOPWORDS_MATCH,
         stopword_match_file,
         is_map=False,
     )

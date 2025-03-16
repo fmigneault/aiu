@@ -1,26 +1,36 @@
+"""
+Operations involving YouTube Music and YouTube Video links resolution to extract music, artist and album metadata.
+"""
 import json
-import tempfile
 import os
 import re
 import sys
+import tempfile
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
 import urllib3  # noqa
 import yt_dlp
 from tqdm import tqdm
+from ytm import utils as ytm_utils
 from ytm.apis.YouTubeMusic import YouTubeMusic
 from ytm.apis.YouTubeMusicDL.YouTubeMusicDL import BaseYouTubeMusicDL, YouTubeMusicDL
 from ytm.types.ids.ArtistId import ArtistId
-from ytm import utils as ytm_utils
 
-from aiu import LOGGER
-from aiu.utils import FILENAME_ILLEGAL_CHARS, FILENAME_ILLEGAL_CHARS_REGEX, make_dirs_cleaned
+from aiu.config import LOGGER
 from aiu.parser import fetch_image
 from aiu.typedefs import Duration
+from aiu.utils import FILENAME_ILLEGAL_CHARS, FILENAME_ILLEGAL_CHARS_REGEX, make_dirs_cleaned
 
 if TYPE_CHECKING:
-    from typing import Dict, List, Optional, Tuple, Union
+    from typing import (
+        Dict,
+        List,
+        Optional,
+        Tuple,
+        Union,
+    )
+
     from aiu.typedefs import JSON
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -51,8 +61,8 @@ class BaseYoutubeDLP(BaseYouTubeMusicDL):
     def __init__(self):
         super(BaseYoutubeDLP, self).__init__(youtube_downloader=YoutubeDLNoSanitizeFileName)
 
-    def _get_file_path(self, info, template, directory):
-        # type: (JSON, str, str) -> str
+    def _get_file_path(self, info, template, directory=None):
+        # type: (JSON, str, Optional[str]) -> str
         """
         Patch operations incorrectly handled when resolving downloaded music file path.
 
@@ -104,7 +114,7 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
     """
     _api = None  # type: YouTubeMusic  # only for annotation, replaced during YouTubeMusicDL.__init__ call
 
-    def __init__(self, force_download=False, *_, **__):
+    def __init__(self, *_, force_download=False, **__):
         super(CachedYoutubeMusicDL, self).__init__()
         self._base = BaseYoutubeDLP()  # drop-in replacement of YouTube downloader
         self.base_download = self._base._download
@@ -116,7 +126,7 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
             # some fields will sometime have minimalistic name that differ slightly from the others
             sanitized_name = metadata["title"]
             for char in FILENAME_ILLEGAL_CHARS:
-                sanitized_name = sanitized_name.replace(char, '_')
+                sanitized_name = sanitized_name.replace(char, "_")
             candidate_names = [metadata["title"], sanitized_name]
             if "track" in metadata:
                 candidate_names.append(metadata["track"])
@@ -175,11 +185,11 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
         since the file already is available. Any out of date ID3 Tags will be updated by us anyway.
         """
         ytdl = yt_dlp.YoutubeDL(params={"quiet": True, "outtmpl": "", "postprocessors": [], "format": "bestaudio"})
-        url = ytm_utils.url_yt("watch", params={"v": song_id})  # noqa
+        url = ytm_utils.url_yt("watch", params={"v": song_id})  # noqa  # pylint: disable=not-callable
         info = ytdl.extract_info(url=url, ie_key="Youtube", download=False)
 
         any_title = info.get("track", info.get("title"))
-        metadata = ytm_utils.filter({  # noqa
+        metadata = ytm_utils.filter({  # noqa  # pylint: disable=not-callable
             "title":       any_title,
             "artist":      info.get("artist"),
             "album":       info.get("album"),
@@ -215,7 +225,7 @@ class TqdmYouTubeMusicDL(CachedYoutubeMusicDL):
             self.progress_bar = tqdm(
                 # second line to leave space for download progress of each songs by 'yt_dlp.YoutubeDL'
                 position=1, total=total, unit="track",
-                desc="Downloading Album: [{}]".format(album["name"])
+                desc=f"Downloading Album: [{album['name']}]"
             )
             self.progress_bar.display()
         return album
@@ -249,26 +259,26 @@ def get_reference_id(link):
     :return: tuple of (album?, music?, ID)
     """
     if not link:
-        raise ValueError("Invalid link is undefined: [{!s}]".format(link))
+        raise ValueError(f"Invalid link is undefined: [{link!s}]")
     # ignore top level domain (eg: country abbrev/.com)
     music_link = link.startswith("https://music.youtube.") or link.startswith("https://www.music.youtube.")
     video_link = link.startswith("https://youtube.") or link.startswith("https://www.youtube.")
     if not (music_link or video_link):
-        raise ValueError("Invalid YouTube Music/Video link located at invalid host: [{!s}]".format(link))
+        raise ValueError(f"Invalid YouTube Music/Video link located at invalid host: [{link!s}]")
     query = urlparse(link).query
     params = parse_qs(query)
     # format: <youtube-link>/watch?v=<ID>
     if music_link and not any(ref in params for ref in ["v", "list"]):
-        raise ValueError("Invalid YouTube Music link does not provide a song or album reference: [{!s}]".format(link))
-    elif video_link and "v" not in params:  # ignore list (video playlist)
-        raise ValueError("Invalid YouTube Video link does not provide a video reference: [{!s}]".format(link))
+        raise ValueError(f"Invalid YouTube Music link does not provide a song or album reference: [{link!s}]")
+    if video_link and "v" not in params:  # ignore list (video playlist)
+        raise ValueError(f"Invalid YouTube Video link does not provide a video reference: [{link!s}]")
     # format: <youtube-link>/playlist?list=<ID>
     # note: "list=<ID>" can also be in "watch?v=<ID>" format
     if music_link and "list" in params:  # process list first in case somehow both watch/list are present
         album = params["list"][0]
         LOGGER.debug("Found YouTube Music album ID: [%s]", album)
         return True, True, album
-    elif music_link and "v" in params:
+    if music_link and "v" in params:
         song = params["v"][0]
         LOGGER.debug("Found YouTube Music song ID: [%s]", song)
         return False, True, song
@@ -292,13 +302,13 @@ def get_artist_albums(link, throw=True):
             raise
         return []
     api = YouTubeMusic()
-    meta = api.artist(artist)
+    meta = api.artist(artist)  # pylint: disable=no-member
     albums = meta.get("albums", {}).get("items", [])
     # get the playlist ID instead of Album ID to form the corresponding download/listing YouTube Music links
     album_meta = [
         {
             "name": info["name"],
-            "link": parts[0] + "/playlist?list={}".format(info["shuffle"]["playlist_id"]),
+            "link": f"{parts[0]}/playlist?list={info['shuffle']['playlist_id']}",
             "id": info["shuffle"]["playlist_id"],
         }
         for info in albums
@@ -368,9 +378,9 @@ def update_metadata(meta, fetch_cover=False):
 
 def get_metadata(link):
     # type: (str) -> Tuple[Optional[str], JSON]
-    is_album, is_music, ref_id = get_reference_id(link)
+    _, is_music, ref_id = get_reference_id(link)
     if not is_music:
-        raise ValueError("Cannot retrieve music metadata from YouTube Video link: [%s]", link)
+        raise ValueError(f"Cannot retrieve music metadata from YouTube Video link: [{link}]")
     LOGGER.debug("Retrieving metadata from link: [%s]", link)
     api = YouTubeMusic()
     meta = api.album(ref_id)
