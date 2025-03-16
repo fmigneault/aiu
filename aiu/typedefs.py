@@ -134,7 +134,6 @@ class Duration(BaseField, datetime.timedelta):
     """
     def __new__(
         cls: Type["Duration"],
-        *_: Any,
         duration: Optional[AnyDuration] = None,
         **kwargs: Any,
     ) -> "Duration":
