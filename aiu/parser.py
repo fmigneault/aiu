@@ -9,16 +9,16 @@ import re
 import tempfile
 import yaml
 from typing import Iterable, List, Optional, Union, overload
-from typing_extensions import Literal
+from typing_extensions import Literal, TypeVar
 
 import requests
 from eyed3.mimetype import guessMimetype
 from eyed3.mp3 import MIME_TYPES as MP3_MIME_TYPES
 from PIL import Image
 
+from aiu.config import LOGGER, ExceptionsType, StopwordsType
 from aiu.typedefs import AudioConfig, Duration, FormatInfo
 from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
-from aiu import LOGGER, ExceptionsType, StopwordsType
 
 AnyConfig = Union[ExceptionsType, StopwordsType]
 
@@ -30,6 +30,8 @@ duration_info = re.compile(r"""     # Match any 'duration' representation, need 
      (?:[0-5][0-9])                             # minutes time part (00-59)
      (?::[0-5][0-9])?)                          # seconds time part (00-59)
 """, re.VERBOSE)
+
+FormatInfoType = TypeVar("FormatInfoType", bound=FormatInfo)
 
 FORMAT_MODE_ANY = FormatInfo("any", "*")
 FORMAT_MODE_CSV = FormatInfo("csv", "csv")
@@ -45,6 +47,7 @@ FORMAT_MODES = frozenset([
     FORMAT_MODE_YAML,
     FORMAT_MODE_RAW,
 ])
+
 PARSER_MODES = frozenset([
     FORMAT_MODE_ANY,
     FORMAT_MODE_CSV,

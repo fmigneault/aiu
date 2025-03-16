@@ -14,7 +14,7 @@ from ytm.apis.YouTubeMusicDL.YouTubeMusicDL import BaseYouTubeMusicDL, YouTubeMu
 from ytm.types.ids.ArtistId import ArtistId
 from ytm import utils as ytm_utils
 
-from aiu import LOGGER
+from aiu.config import LOGGER
 from aiu.utils import FILENAME_ILLEGAL_CHARS, FILENAME_ILLEGAL_CHARS_REGEX, make_dirs_cleaned
 from aiu.parser import fetch_image
 from aiu.typedefs import Duration

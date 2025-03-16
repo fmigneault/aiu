@@ -321,7 +321,7 @@ class CoverFile(BaseField):
 
 
 AudioTagDict = Dict[str, Union[str, int]]
-AudioFile = eyed3.core.AudioFile
+AudioFile: TypeAlias = eyed3.core.AudioFile
 AudioFileAny = Union[str, AudioFile]
 AudioField = Union[None, int, str, StrField, Date, Duration, CoverFile]
 

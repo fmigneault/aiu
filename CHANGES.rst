@@ -4,6 +4,7 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Refactor definitions originally within ``aiu.__init__.py`` to ``aiu.config.py`` to avoid install import error.
 * Add ``--no-beautify`` option (beautification enabled by default) to control ID3 tag renaming and word/stopword
   operations employed to adjust the audio fields based on resolved configuration files. When disabled, the field
   values will be employed directly as provided or resolved by ``--info``, ``--all`` and ``--link`` references.

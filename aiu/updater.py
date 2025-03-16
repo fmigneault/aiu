@@ -8,8 +8,7 @@ from difflib import SequenceMatcher
 import eyed3
 from PIL import Image
 
-import aiu
-from aiu import StopwordsType
+from aiu.config import Config, LOGGER, StopwordsType
 from aiu.tags import TAG_TITLE
 from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioInfo, AudioTagDict, CoverFile, CoverFileAny
 from aiu.utils import (
@@ -18,7 +17,6 @@ from aiu.utils import (
     COMMON_WORD_SPLIT_CHARS,
     FILENAME_ILLEGAL_CHARS_REGEX
 )
-from aiu import LOGGER
 
 MatchT = TypeVar("MatchT", bound=Iterable)
 
@@ -299,11 +297,11 @@ def compute_word_match(search_files, search_info, threshold_match_words=0.6):
         some extra words that are not matched between the two sets, but sufficiently high to avoid matching anything.
     """
     search_file_words = [
-        (file, clean_words(os.path.splitext(os.path.split(file)[-1])[0], aiu.Config.STOPWORDS_MATCH))
+        (file, clean_words(os.path.splitext(os.path.split(file)[-1])[0], Config.STOPWORDS_MATCH))
         for file in search_files
     ]
     search_audio_words = [
-        clean_words(info.title, aiu.Config.STOPWORDS_MATCH)
+        clean_words(info.title, Config.STOPWORDS_MATCH)
         for info in search_info
     ]
     # A common scenario that causes no matches is when multiple files share a part of their name perfectly.
@@ -422,8 +420,8 @@ def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_m
                 possible_matches.append(audio_config[i])
                 break
             else:
-                clean_info_title = " ".join(clean_words(audio_info.title.lower(), aiu.Config.STOPWORDS_RENAME))
-                clean_file_name = " ".join(clean_words(file_name.lower(), aiu.Config.STOPWORDS_RENAME))
+                clean_info_title = " ".join(clean_words(audio_info.title.lower(), Config.STOPWORDS_RENAME))
+                clean_file_name = " ".join(clean_words(file_name.lower(), Config.STOPWORDS_RENAME))
                 if clean_info_title in clean_file_name:
                     possible_matches.append(audio_info)
 

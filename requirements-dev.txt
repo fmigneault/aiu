@@ -5,6 +5,7 @@ flake8
 isort
 mock
 pytest
+pytest-cov
 pylint
 pylint_quotes
 pyup

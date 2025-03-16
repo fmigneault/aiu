@@ -1,6 +1,6 @@
 import pytest
 
-import aiu
+from aiu.config import Config
 from aiu.clean import beautify_string
 
 
@@ -13,6 +13,6 @@ from aiu.clean import beautify_string
     ]
 )
 def test_beautify_string(test_string, expect_string, word_formatter, stop_word_formatter, first_word_formatter):
-    aiu.Config.STOPWORDS_RENAME = ["a"]
+    Config.STOPWORDS_RENAME = ["a"]
     result = beautify_string(test_string, word_formatter, stop_word_formatter, first_word_formatter)
     assert result == expect_string

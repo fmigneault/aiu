@@ -44,7 +44,11 @@ def test_make_dirs_cleaned():
         for test_dir in valid_tests:
             result_dir = _fix_path(test_dir)
             make_dirs_cleaned(test_dir)
-            mkdir_mock.assert_called_with(result_dir, **default_args)
+            called_args, called_kwargs = mkdir_mock.call_args
+            assert called_args[0].lower() == result_dir.lower()  # ignore case for varying drive letters on Windows
+            assert called_kwargs == default_args
         for test_dir, result_dir in invalid_tests:
             make_dirs_cleaned(test_dir)
-            mkdir_mock.assert_called_with(result_dir, **default_args)
+            called_args, called_kwargs = mkdir_mock.call_args
+            assert called_args[0].lower() == result_dir.lower()  # ignore case for varying drive letters on Windows
+            assert called_kwargs == default_args

@@ -6,9 +6,8 @@ import os
 
 import pytest  # noqa
 
-import aiu
 import aiu.tags as t
-from aiu import DEFAULT_STOPWORDS_CONFIG
+from aiu.config import DEFAULT_STOPWORDS_CONFIG, Config
 from aiu.parser import (
     FORMAT_MODE_CSV,
     FORMAT_MODE_TAB,
@@ -22,7 +21,7 @@ CONFIG_DIR = os.path.join(os.path.dirname(__file__), "configs")
 
 
 def test_parser_config_csv_basic():
-    aiu.Config.STOPWORDS_RENAME = []  # ignore
+    Config.STOPWORDS_RENAME = []  # ignore
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-basic.csv"), "csv")
     assert isinstance(config, list)
     assert len(config) == 2
@@ -64,7 +63,7 @@ def test_parser_config_yaml_basic():
 
 
 def test_parser_config_tab_basic():
-    aiu.Config.STOPWORDS_RENAME = []  # ignore
+    Config.STOPWORDS_RENAME = []  # ignore
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-tab-basic.txt"), FORMAT_MODE_TAB)
     assert isinstance(config, list)
     assert len(config) == 3
@@ -83,7 +82,7 @@ def test_parser_config_tab_basic():
 
 
 def test_parser_config_tab_numbered():
-    aiu.Config.STOPWORDS_RENAME = []  # ignore
+    Config.STOPWORDS_RENAME = []  # ignore
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-tab-number.txt"), FORMAT_MODE_TAB)
     assert isinstance(config, list)
     assert len(config) == 2
@@ -98,7 +97,7 @@ def test_parser_config_tab_numbered():
 
 
 def test_parser_config_tab_crazy():
-    aiu.Config.STOPWORDS_RENAME = []  # ignore
+    Config.STOPWORDS_RENAME = []  # ignore
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-tab-crazy.txt"), FORMAT_MODE_TAB)
     tests = [
         ("1", "blah"), ("2", "test"), ("3", "ok"), ("4", "what..."), ("5", "so fly"), ("6", "yep"),
@@ -112,10 +111,10 @@ def test_parser_config_tab_crazy():
 
 
 def test_parser_config_tab_time_and_beautify():
-    aiu.Config.STOPWORDS_RENAME = []    # ignore
+    Config.STOPWORDS_RENAME = []    # ignore
     config_raw = parse_audio_config(os.path.join(CONFIG_DIR, "config-tab-time.txt"), FORMAT_MODE_TAB)
-    aiu.Config.STOPWORDS_RENAME = None  # reset for reload
-    aiu.Config.STOPWORDS_RENAME = load_config(aiu.Config.STOPWORDS_RENAME, DEFAULT_STOPWORDS_CONFIG, is_map=False)
+    Config.STOPWORDS_RENAME = None  # reset for reload
+    Config.STOPWORDS_RENAME = load_config(Config.STOPWORDS_RENAME, DEFAULT_STOPWORDS_CONFIG, is_map=False)
     config_clean = config_raw.beautify()
     assert isinstance(config_raw, list)
     assert len(config_raw) == 8
@@ -152,7 +151,7 @@ def test_parser_config_tab_time_and_beautify():
 
 
 def test_parser_config_list_both():
-    aiu.Config.STOPWORDS_RENAME = []  # ignore
+    Config.STOPWORDS_RENAME = []  # ignore
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-list-both.lst"), FORMAT_MODE_LIST)
     assert isinstance(config, list)
     assert len(config) == 3
@@ -171,7 +170,7 @@ def test_parser_config_list_both():
 
 
 def test_parser_config_list_track():
-    aiu.Config.STOPWORDS_RENAME = []  # ignore
+    Config.STOPWORDS_RENAME = []  # ignore
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-list-track.lst"), FORMAT_MODE_LIST)
     assert isinstance(config, list)
     assert len(config) == 3
@@ -190,7 +189,7 @@ def test_parser_config_list_track():
 
 
 def test_parser_config_list_duration():
-    aiu.Config.STOPWORDS_RENAME = []  # ignore
+    Config.STOPWORDS_RENAME = []  # ignore
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-list-duration.lst"), FORMAT_MODE_LIST)
     assert isinstance(config, list)
     assert len(config) == 3

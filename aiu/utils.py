@@ -4,8 +4,8 @@ import shutil
 from functools import wraps
 from typing import Callable, Iterable, List, Optional, Union
 
+from aiu.config import LOGGER
 from aiu.typedefs import LoggerType
-from aiu import LOGGER
 
 FILENAME_ILLEGAL_CHARS = ['\\', '/', ':', '*', '?', '<', '>', '|', '"']
 FILENAME_ILLEGAL_CHARS_REGEX = re.compile(rf"[{''.join(c for c in FILENAME_ILLEGAL_CHARS)}]")
