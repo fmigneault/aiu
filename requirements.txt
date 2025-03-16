@@ -4,6 +4,7 @@ PyYAML
 requests
 ruamel.yaml
 typing
+typing_extensions
 tqdm
 #yt-dlp>=2022.4.8  # latest test: 2024.4.9
 yt-dlp @ git+https://github.com/yt-dlp/yt-dlp
