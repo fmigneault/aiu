@@ -15,9 +15,9 @@ from typing import (
     Optional,
     Tuple,
     Type,
-    TypeAlias,
     Union,
 )
+from typing_extensions import TypeAlias
 
 import eyed3
 from eyed3.id3.tag import Tag
