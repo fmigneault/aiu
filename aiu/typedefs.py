@@ -132,7 +132,7 @@ class Duration(BaseField, datetime.timedelta):
         Duration(datetime.timedelta(hours=1, minutes=23, seconds=45))
         Duration(5025)  # int == 1*3600 + 23*60 + 45 seconds
     """
-    def __new__(
+    def __new__(  # pylint: disable=signature-differs
         cls: Type["Duration"],
         duration: Optional[AnyDuration] = None,
         **kwargs: Any,
