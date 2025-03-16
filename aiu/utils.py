@@ -2,7 +2,13 @@ import os
 import re
 import shutil
 from functools import wraps
-from typing import Callable, Iterable, List, Optional, Union
+from typing import (
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    Union,
+)
 
 from aiu.config import LOGGER
 from aiu.typedefs import LoggerType

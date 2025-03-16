@@ -1,7 +1,7 @@
 import pytest
 
-from aiu.config import Config
 from aiu.clean import beautify_string
+from aiu.config import Config
 
 
 @pytest.mark.parametrize(

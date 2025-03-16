@@ -10,12 +10,18 @@ import aiu.tags as t
 from aiu.config import DEFAULT_STOPWORDS_CONFIG, Config
 from aiu.parser import (
     FORMAT_MODE_CSV,
-    FORMAT_MODE_TAB,
     FORMAT_MODE_LIST,
+    FORMAT_MODE_TAB,
     load_config,
     parse_audio_config,
 )
-from aiu.typedefs import Duration, IntField, StrField, AudioConfig, AudioInfo
+from aiu.typedefs import (
+    AudioConfig,
+    AudioInfo,
+    Duration,
+    IntField,
+    StrField,
+)
 
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), "configs")
 

@@ -1,24 +1,30 @@
 import csv
-import itertools
-import logging
 import io
+import itertools
 import json
+import logging
 import math
 import os
 import re
 import tempfile
-import yaml
-from typing import Iterable, List, Optional, Union, overload
+from typing import (
+    Iterable,
+    List,
+    Optional,
+    Union,
+    overload,
+)
 from typing_extensions import Literal, TypeVar
 
 import requests
+import yaml
 from eyed3.mimetype import guessMimetype
 from eyed3.mp3 import MIME_TYPES as MP3_MIME_TYPES
 from PIL import Image
 
 from aiu.config import LOGGER, ExceptionsType, StopwordsType
+from aiu.tags import TAG_DURATION, TAG_TITLE, TAG_TRACK
 from aiu.typedefs import AudioConfig, Duration, FormatInfo
-from aiu.tags import TAG_TRACK, TAG_TITLE, TAG_DURATION
 
 AnyConfig = Union[ExceptionsType, StopwordsType]
 

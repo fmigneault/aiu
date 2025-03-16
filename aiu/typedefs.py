@@ -2,14 +2,24 @@ import datetime
 import logging
 import os
 import shutil
-from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeAlias, Union, TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeAlias,
+    Union,
+)
 
 import eyed3
 from eyed3.id3.tag import Tag
 from PIL import Image
 
-from aiu.clean import beautify_string
 from aiu import tags as t
+from aiu.clean import beautify_string
 
 LoggerType = logging.Logger
 

@@ -1,26 +1,33 @@
 import json
-import tempfile
 import os
 import re
 import sys
+import tempfile
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
 import urllib3  # noqa
 import yt_dlp
 from tqdm import tqdm
+from ytm import utils as ytm_utils
 from ytm.apis.YouTubeMusic import YouTubeMusic
 from ytm.apis.YouTubeMusicDL.YouTubeMusicDL import BaseYouTubeMusicDL, YouTubeMusicDL
 from ytm.types.ids.ArtistId import ArtistId
-from ytm import utils as ytm_utils
 
 from aiu.config import LOGGER
-from aiu.utils import FILENAME_ILLEGAL_CHARS, FILENAME_ILLEGAL_CHARS_REGEX, make_dirs_cleaned
 from aiu.parser import fetch_image
 from aiu.typedefs import Duration
+from aiu.utils import FILENAME_ILLEGAL_CHARS, FILENAME_ILLEGAL_CHARS_REGEX, make_dirs_cleaned
 
 if TYPE_CHECKING:
-    from typing import Dict, List, Optional, Tuple, Union
+    from typing import (
+        Dict,
+        List,
+        Optional,
+        Tuple,
+        Union,
+    )
+
     from aiu.typedefs import JSON
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

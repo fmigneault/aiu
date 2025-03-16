@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import posixpath
 import os
+import posixpath
+
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
 from aiu import __meta__
 
 with open("README.rst") as readme_file:

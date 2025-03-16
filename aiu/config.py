@@ -1,7 +1,8 @@
-from typing import Dict, List, Optional
 import logging
 import os
 import sys
+from typing import Dict, List, Optional
+
 import yaml
 
 from aiu import __meta__
@@ -50,8 +51,8 @@ if not getattr(LOGGER, "__AIU_CONFIGURED__", False):
 
     LOGGER.trace = log_trace
     if os.path.isfile(AIU_SETUP_CONFIG):
-        import logging.config
         import configparser
+        import logging.config
         # remove %% escape for logging format
         config = configparser.RawConfigParser()
         config.read(AIU_SETUP_CONFIG)

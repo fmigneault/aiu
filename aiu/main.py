@@ -11,11 +11,26 @@ import json
 import logging
 import os
 import sys
-from logging import DEBUG, INFO, WARNING, CRITICAL, NOTSET
-from typing import Any, Dict, Iterable, List, Optional, Union, Tuple
+from logging import (
+    CRITICAL,
+    DEBUG,
+    INFO,
+    NOTSET,
+    WARNING,
+)
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from tqdm import tqdm
 
+from aiu import __meta__, tags as t
 from aiu.config import (
     DEFAULT_EXCEPTIONS_CONFIG,
     DEFAULT_STOPWORDS_CONFIG,
@@ -24,7 +39,6 @@ from aiu.config import (
     TRACE,
     Config,
 )
-from aiu import tags as t, __meta__
 from aiu.parser import (
     ALL_IMAGE_EXTENSIONS,
     ALL_PARSER_EXTENSIONS,
@@ -36,17 +50,23 @@ from aiu.parser import (
     get_audio_files,
     load_config,
     parse_audio_config,
-    save_audio_config
+    save_audio_config,
 )
-from aiu.updater import merge_audio_configs, apply_audio_config, save_cover_file, update_cover_file, update_file_names
+from aiu.typedefs import AudioConfig, Duration
+from aiu.updater import (
+    apply_audio_config,
+    merge_audio_configs,
+    save_cover_file,
+    update_cover_file,
+    update_file_names,
+)
 from aiu.utils import (
     backup_files,
     log_exception,
     look_for_default_file,
     make_dirs_cleaned,
-    validate_output_file
+    validate_output_file,
 )
-from aiu.typedefs import AudioConfig, Duration
 from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
 

@@ -1,21 +1,36 @@
 import os
 import re
 from copy import deepcopy
-from typing import Dict, Iterable, List, Optional, Tuple, TypeVar
-from unicodedata import normalize
 from difflib import SequenceMatcher
+from typing import (
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+)
+from unicodedata import normalize
 
 import eyed3
 from PIL import Image
 
-from aiu.config import Config, LOGGER, StopwordsType
+from aiu.config import LOGGER, Config, StopwordsType
 from aiu.tags import TAG_TITLE
-from aiu.typedefs import AudioConfig, AudioFile, AudioFileAny, AudioInfo, AudioTagDict, CoverFile, CoverFileAny
+from aiu.typedefs import (
+    AudioConfig,
+    AudioFile,
+    AudioFileAny,
+    AudioInfo,
+    AudioTagDict,
+    CoverFile,
+    CoverFileAny,
+)
 from aiu.utils import (
     COMMON_WORD_IGNORE_CHARS,
     COMMON_WORD_REPLACE_CHARS,
     COMMON_WORD_SPLIT_CHARS,
-    FILENAME_ILLEGAL_CHARS_REGEX
+    FILENAME_ILLEGAL_CHARS_REGEX,
 )
 
 MatchT = TypeVar("MatchT", bound=Iterable)
