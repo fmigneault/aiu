@@ -53,16 +53,21 @@ def beautify_string(
             else stop_word_formatter(w)
             for w in word_sep_list
         )
-    words = s.split(' ', maxsplit=1)
+    words = s.strip().split(' ', maxsplit=1)
     words = first_word_formatter(words[0]) + (' ' + words[1] if len(words) > 1 else '')
     for punctuation in PUNCTUATIONS:
         parts = words.split(punctuation)
         for p in range(1, len(parts)):
             if parts[p]:
-                if parts[p][0] == ' ':
-                    parts[p] = ' ' + word_formatter(parts[p][1:])
-                else:
-                    parts[p] = word_formatter(parts)
+                part_start = 0
+                if parts[p][0] == " ":
+                    part_start = 1
+                part_end = parts[p][part_start:].find(" ") + part_start
+                parts[p] = (
+                    parts[p][:part_start] +
+                    word_formatter(parts[p][part_start:part_end]) +
+                    parts[p][part_end:]
+                )
         words = punctuation.join(parts)
     if Config.EXCEPTIONS_RENAME is not None:
         for k, w in Config.EXCEPTIONS_RENAME.items():
