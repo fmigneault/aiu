@@ -16,3 +16,38 @@ def test_beautify_string(test_string, expect_string, word_formatter, stop_word_f
     Config.STOPWORDS_RENAME = ["a"]
     result = beautify_string(test_string, word_formatter, stop_word_formatter, first_word_formatter)
     assert result == expect_string
+
+
+def test_beautify_string_multi_spaces():
+    test_string = "This  is    a test  "
+    expect_string = "This Is a Test"
+    Config.STOPWORDS_RENAME = ["a"]
+    result = beautify_string(test_string)
+    assert result == expect_string
+
+
+@pytest.mark.parametrize(
+    "whitespace",
+    "\t\n\r\v\f",
+)
+def test_beautify_string_whitespaces(whitespace):
+    test_string = f"This is{whitespace}a test."
+    expect_string = "This Is a Test."
+    Config.STOPWORDS_RENAME = ["a"]
+    result = beautify_string(test_string)
+    assert result == expect_string
+
+
+@pytest.mark.parametrize(
+    ["test_string", "expect_string"],
+    [
+        (
+            "This IS A TEsT. This IS A TEsT! This IS A TEsT?",
+            "This Is a Test. This Is a Test! This Is a Test?",
+        ),
+    ]
+)
+def test_beautify_string_punctuation(test_string, expect_string):
+    Config.STOPWORDS_RENAME = ["a"]
+    result = beautify_string(test_string)
+    assert result == expect_string

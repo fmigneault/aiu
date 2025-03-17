@@ -17,9 +17,9 @@ if TYPE_CHECKING:
             # type: (str) -> str
             ...
 
-SEPARATORS = frozenset([',', ';', ':', '!', '?', '.', ])
-PUNCTUATIONS = frozenset(['.', '!', '?'])
-WHITESPACES_NO_SPACE = string.whitespace.replace(' ', '')
+SEPARATORS = frozenset([",", ";", ":", "!", "?", ".", ])
+PUNCTUATIONS = frozenset([".", "!", "?"])
+WHITESPACES_NO_SPACE = string.whitespace.replace(" ", "")
 
 
 def beautify_string(
@@ -42,27 +42,32 @@ def beautify_string(
     first_word_formatter = first_word_formatter or word_formatter
     for c in WHITESPACES_NO_SPACE:
         if c in s:
-            s = s.replace(c, ' ')
-    while '  ' in s:
-        s = s.replace('  ', ' ')
+            s = s.replace(c, " ")
+    while "  " in s:
+        s = s.replace("  ", " ")
     if Config.STOPWORDS_RENAME is not None:
-        word_sep_list = re.split(r'(\W+)', s)
-        s = ''.join(
+        word_sep_list = re.split(r"(\W+)", s)
+        s = "".join(
             word_formatter(w)
             if w.lower() not in Config.STOPWORDS_RENAME
             else stop_word_formatter(w)
             for w in word_sep_list
         )
-    words = s.split(' ', maxsplit=1)
-    words = first_word_formatter(words[0]) + (' ' + words[1] if len(words) > 1 else '')
+    words = s.strip().split(" ", maxsplit=1)
+    words = first_word_formatter(words[0]) + (" " + words[1] if len(words) > 1 else "")
     for punctuation in PUNCTUATIONS:
         parts = words.split(punctuation)
         for p in range(1, len(parts)):
             if parts[p]:
-                if parts[p][0] == ' ':
-                    parts[p] = ' ' + word_formatter(parts[p][1:])
-                else:
-                    parts[p] = word_formatter(parts)
+                part_start = 0
+                if parts[p][0] == " ":
+                    part_start = 1
+                part_end = parts[p][part_start:].find(" ") + part_start
+                parts[p] = (
+                    parts[p][:part_start] +
+                    word_formatter(parts[p][part_start:part_end]) +
+                    parts[p][part_end:]
+                )
         words = punctuation.join(parts)
     if Config.EXCEPTIONS_RENAME is not None:
         for k, w in Config.EXCEPTIONS_RENAME.items():

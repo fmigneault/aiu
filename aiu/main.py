@@ -404,54 +404,54 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
 
 @log_exception(LOGGER)
 def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
-         # --- file/parsing options ---
-         link=None,                         # type: Optional[str]
-         search_path=None,                  # type: Optional[str]
-         info_file=None,                    # type: Optional[str]
-         all_info_file=None,                # type: Optional[str]
-         cover_file=None,                   # type: Optional[str]
-         output_file=None,                  # type: Optional[str]
-         output_dir=None,                   # type: Optional[str]
-         output_mode=FORMAT_MODE_YAML,      # type: Union[FormatInfoType]
-         parser_mode=FORMAT_MODE_ANY,       # type: Union[FormatInfoType]
-         exceptions_rename_config=None,     # type: Optional[str]
-         stopwords_rename_config=None,      # type: Optional[str]
-         # --- specific meta fields ---
-         artist=None,                       # type: Optional[str]
-         album=None,                        # type: Optional[str]
-         album_artist=None,                 # type: Optional[str]
-         title=None,                        # type: Optional[str]
-         track=None,                        # type: Optional[int]
-         genre=None,                        # type: Optional[str]
-         duration=None,                     # type: Optional[Union[Duration, str]]
-         year=None,                         # type: Optional[int]
-         match_artist=True,                 # type: bool
-         # --- heuristic feature flags ---
-         heuristic_delete_duplicates=True,  # type: bool
-         heuristic_tag_match=True,          # type: bool
-         heuristic_word_match=True,         # type: bool
-         heuristic_word_match_stopwords=None,   # type: Optional[List[str]]
-         heuristic_word_match_config=None,  # type: Optional[str]
-         # --- other operation flags ---
-         rename_format=None,                # type: Optional[str]
-         rename_title=False,                # type: bool
-         prefix_track=False,                # type: bool
-         remove_track=False,                # type: bool
-         dry=False,                         # type: bool
-         backup=False,                      # type: bool
-         force_fetch=False,                 # type: bool
-         no_fetch=False,                    # type: bool
-         no_cover=False,                    # type: bool
-         no_info=False,                     # type: bool
-         no_all=False,                      # type: bool
-         no_beautify=False,                 # type: bool
-         no_rename=False,                   # type: bool
-         no_update=False,                   # type: bool
-         no_output=False,                   # type: bool
-         no_result=False,                   # type: bool
-         no_progress=False,                 # type: bool
-         force_progress=False,              # type: bool
-         ):                                 # type: (...) -> Union[AudioConfig, bool]
+    # --- file/parsing options ---
+    link=None,                              # type: Optional[str]
+    search_path=None,                       # type: Optional[str]
+    info_file=None,                         # type: Optional[str]
+    all_info_file=None,                     # type: Optional[str]
+    cover_file=None,                        # type: Optional[str]
+    output_file=None,                       # type: Optional[str]
+    output_dir=None,                        # type: Optional[str]
+    output_mode=FORMAT_MODE_YAML,           # type: Union[FormatInfoType]
+    parser_mode=FORMAT_MODE_ANY,            # type: Union[FormatInfoType]
+    exceptions_rename_config=None,          # type: Optional[str]
+    stopwords_rename_config=None,           # type: Optional[str]
+    # --- specific meta fields ---
+    artist=None,                            # type: Optional[str]
+    album=None,                             # type: Optional[str]
+    album_artist=None,                      # type: Optional[str]
+    title=None,                             # type: Optional[str]
+    track=None,                             # type: Optional[int]
+    genre=None,                             # type: Optional[str]
+    duration=None,                          # type: Optional[Union[Duration, str]]
+    year=None,                              # type: Optional[int]
+    match_artist=True,                      # type: bool
+    # --- heuristic feature flags ---
+    heuristic_delete_duplicates=True,       # type: bool
+    heuristic_tag_match=True,               # type: bool
+    heuristic_word_match=True,              # type: bool
+    heuristic_word_match_stopwords=None,    # type: Optional[List[str]]
+    heuristic_word_match_config=None,       # type: Optional[str]
+    # --- other operation flags ---
+    rename_format=None,                     # type: Optional[str]
+    rename_title=False,                     # type: bool
+    prefix_track=False,                     # type: bool
+    remove_track=False,                     # type: bool
+    dry=False,                              # type: bool
+    backup=False,                           # type: bool
+    force_fetch=False,                      # type: bool
+    no_fetch=False,                         # type: bool
+    no_cover=False,                         # type: bool
+    no_info=False,                          # type: bool
+    no_all=False,                           # type: bool
+    no_beautify=False,                      # type: bool
+    no_rename=False,                        # type: bool
+    no_update=False,                        # type: bool
+    no_output=False,                        # type: bool
+    no_result=False,                        # type: bool
+    no_progress=False,                      # type: bool
+    force_progress=False,                   # type: bool
+):                                          # type: (...) -> Union[AudioConfig, bool]
     """
     Main process of AIU CLI.
     """

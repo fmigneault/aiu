@@ -115,7 +115,6 @@ class BaseField(object):
         return self._field
 
 
-
 Date = datetime.date
 AnyDuration = Union["Duration", datetime.timedelta, str, int]
 
