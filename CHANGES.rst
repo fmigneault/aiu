@@ -4,7 +4,7 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Fix ``Duration`` class positional arguments failing when generated from ``deepcopy`` calling ``__new__``.
 
 `2.0.1 <https://github.com/fmigneault/aiu/tree/2.0.1>`_ (2025-03-17)
 ------------------------------------------------------------------------------------

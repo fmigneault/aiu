@@ -1,6 +1,14 @@
+import copy
 import datetime
 
 from aiu.typedefs import Duration
+
+
+def test_duration_deepcopy():
+    duration = Duration("1:23:45")
+    duration_copy = copy.deepcopy(duration)
+    assert duration == duration_copy
+    assert duration is not duration_copy
 
 
 def test_duration_from_str():
