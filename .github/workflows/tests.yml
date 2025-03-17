@@ -48,6 +48,7 @@ jobs:
 
     - name: Run linting
       if: matrix.job == 'lint'
+      shell: bash
       run: |
         make check-only
 
