@@ -19,7 +19,7 @@ def test_beautify_string(test_string, expect_string, word_formatter, stop_word_f
 
 
 def test_beautify_string_multi_spaces():
-    test_string = f"This  is    a test  "
+    test_string = "This  is    a test  "
     expect_string = "This Is a Test"
     Config.STOPWORDS_RENAME = ["a"]
     result = beautify_string(test_string)

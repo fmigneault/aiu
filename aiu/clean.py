@@ -17,9 +17,9 @@ if TYPE_CHECKING:
             # type: (str) -> str
             ...
 
-SEPARATORS = frozenset([',', ';', ':', '!', '?', '.', ])
-PUNCTUATIONS = frozenset(['.', '!', '?'])
-WHITESPACES_NO_SPACE = string.whitespace.replace(' ', '')
+SEPARATORS = frozenset([",", ";", ":", "!", "?", ".", ])
+PUNCTUATIONS = frozenset([".", "!", "?"])
+WHITESPACES_NO_SPACE = string.whitespace.replace(" ", "")
 
 
 def beautify_string(
@@ -42,19 +42,19 @@ def beautify_string(
     first_word_formatter = first_word_formatter or word_formatter
     for c in WHITESPACES_NO_SPACE:
         if c in s:
-            s = s.replace(c, ' ')
-    while '  ' in s:
-        s = s.replace('  ', ' ')
+            s = s.replace(c, " ")
+    while "  " in s:
+        s = s.replace("  ", " ")
     if Config.STOPWORDS_RENAME is not None:
-        word_sep_list = re.split(r'(\W+)', s)
-        s = ''.join(
+        word_sep_list = re.split(r"(\W+)", s)
+        s = "".join(
             word_formatter(w)
             if w.lower() not in Config.STOPWORDS_RENAME
             else stop_word_formatter(w)
             for w in word_sep_list
         )
-    words = s.strip().split(' ', maxsplit=1)
-    words = first_word_formatter(words[0]) + (' ' + words[1] if len(words) > 1 else '')
+    words = s.strip().split(" ", maxsplit=1)
+    words = first_word_formatter(words[0]) + (" " + words[1] if len(words) > 1 else "")
     for punctuation in PUNCTUATIONS:
         parts = words.split(punctuation)
         for p in range(1, len(parts)):
