@@ -99,7 +99,7 @@ mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-CHECKS := pep8 lint security security-code security-deps doc8 links imports css
+CHECKS := pep8 lint security security-code security-deps doc8 imports
 CHECKS := $(addprefix check-, $(CHECKS))
 
 $(CHECKS): check-%: install-dev check-%-only
@@ -163,8 +163,9 @@ check-docs-only: check-doc8-only check-docf-only	## run every code documentation
 check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-doc8.txt"
-	@doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
-		1> >(tee "$(REPORTS_DIR)/check-doc8.txt")
+	@[ ! -d "$(APP_ROOT)/docs" ] && echo "No docs to verify!" || \
+		doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
+			1> >(tee "$(REPORTS_DIR)/check-doc8.txt")
 
 # FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
 # NOTE: docformatter only reports files with errors on stderr, redirect trace stderr & stdout to file with tee
@@ -190,7 +191,7 @@ check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 check-imports-only: mkdir-reports	## run imports code checks
 	@echo "Running import checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
-	@isort --check-only --diff --recursive $(APP_ROOT) \
+	@isort --check-only --diff "$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")
 
 # autogen tests variants with pre-install of dependencies using the '-only' target references
