@@ -4,7 +4,7 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Fix ``AudioConfig.beautify()`` failing from generator of nested ``AudioInfo`` object pre-exhausted.
 
 `2.0.2 <https://github.com/fmigneault/aiu/tree/2.0.2>`_ (2025-03-17)
 ------------------------------------------------------------------------------------
