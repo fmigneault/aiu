@@ -12,7 +12,9 @@ if TYPE_CHECKING:
     from typing import LiteralString, Optional, Protocol, Union
 
     class StringFormatter(Protocol):
-        """Generic string formatter."""
+        """
+        Generic string formatter.
+        """
 
         def __call__(self, s):
             # type: (Union[str, LiteralString]) -> Union[str, LiteralString]
@@ -31,12 +33,13 @@ def beautify_string(
 ):                                  # type: (...) -> str
     """
     Applies `beatification` operations for a `field` string.
-        - removes invalid whitespaces
-        - removes redundant spaces
-        - applies the words formatter except for `stopwords` if specified (``None`` to skip, default: capitalize)
-        - applies `stopwords` formatter if specified (``None`` to skip, default: lowercase)
-        - applies the first word formatter of each sentence (default: same as word formatter)
-        - literal replacement of case-insensitive match of `exceptions` by their explicit value
+
+    - removes invalid whitespaces
+    - removes redundant spaces
+    - applies the words formatter except for `stopwords` if specified (``None`` to skip, default: capitalize)
+    - applies `stopwords` formatter if specified (``None`` to skip, default: lowercase)
+    - applies the first word formatter of each sentence (default: same as word formatter)
+    - literal replacement of case-insensitive match of `exceptions` by their explicit value
     """
     word_formatter = word_formatter or str
     stop_word_formatter = stop_word_formatter or str
@@ -55,7 +58,7 @@ def beautify_string(
             for w in word_sep_list
         )
     words = s.strip().split(" ", maxsplit=1)
-    words = first_word_formatter(words[0]) + (" " + words[1] if len(words) > 1 else "")
+    words = first_word_formatter(words[0]) + (f" {words[1]}" if len(words) > 1 else "")
     for punctuation in PUNCTUATIONS:
         parts = words.split(punctuation)
         for p in range(1, len(parts)):

@@ -4,12 +4,7 @@ import pytest
 
 import aiu.tags as t
 from aiu.config import Config
-from aiu.parser import (
-    FORMAT_MODE_CSV,
-    FORMAT_MODE_LIST,
-    FORMAT_MODE_TAB,
-    parse_audio_config,
-)
+from aiu.parser import FORMAT_MODE_CSV, FORMAT_MODE_LIST, FORMAT_MODE_TAB, parse_audio_config
 from aiu.typedefs import (
     AudioConfig,
     AudioInfo,
@@ -37,7 +32,9 @@ def test_parser_config_csv_basic():
 
 
 def test_parser_config_csv_typing():
-    """Validate config formats, fields, properties and key getters."""
+    """
+    Validate config formats, fields, properties and key getters.
+    """
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-basic.csv"), FORMAT_MODE_CSV)
     assert isinstance(config, list)
     assert isinstance(config, AudioConfig)

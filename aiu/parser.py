@@ -316,7 +316,9 @@ def parse_audio_config_tab(config_file):
 
 def write_config(audio_config, file_path, fmt_mode):
     # type: (AudioConfig, str, FormatInfo) -> None
-    """Raw writing operation to dump audio config to file with specified format."""
+    """
+    Raw writing operation to dump audio config to file with specified format.
+    """
     all_have_track = all(isinstance(_.track, int) for _ in audio_config)
     audio_config = AudioConfig(sorted(audio_config, key=lambda _: _.track if all_have_track else _.title or _.file))
     if fmt_mode is FORMAT_MODE_RAW:
@@ -354,7 +356,9 @@ def write_config(audio_config, file_path, fmt_mode):
 
 def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False):
     # type: (AudioConfig, str, Optional[Union[str, FormatInfo]], bool) -> bool
-    """Saves the audio config if permitted by the OS and using the corrected file extension."""
+    """
+    Saves the audio config if permitted by the OS and using the corrected file extension.
+    """
     fmt_mode = find_mode(mode, FORMAT_MODES)
     if not mode:
         raise ValueError(f"invalid output format mode [{mode}], aborting...")
@@ -379,7 +383,9 @@ def save_audio_config(audio_config, file_path, mode=FORMAT_MODE_YAML, dry=False)
 
 def get_audio_files(path, allow_none=False):
     # type: (str, bool) -> List[str]
-    """Retrieves all supported audio files from the specified path (file or directory)."""
+    """
+    Retrieves all supported audio files from the specified path (file or directory).
+    """
     if not os.path.isdir(path):
         if os.path.isfile(path):
             files = [path]

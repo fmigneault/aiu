@@ -44,7 +44,9 @@ if TYPE_CHECKING:
 
 
 class FormatInfo(object):
-    """Format information container for parsing and input/output of metadata config files."""
+    """
+    Format information container for parsing and input/output of metadata config files.
+    """
 
     __slots__ = ["_name", "_ext"]
 
@@ -101,17 +103,23 @@ class BaseField(object):
 
     @property
     def raw(self):
-        """Represents the initial value provided on initialization, before any *possible* modification."""
+        """
+        Represents the initial value provided on initialization, before any *possible* modification.
+        """
         return self._raw
 
     @property
     def value(self):
-        """Represents the stored value updated as required by various conditions of the class."""
+        """
+        Represents the stored value updated as required by various conditions of the class.
+        """
         return self._value or self.raw
 
     @property
     def field(self):
-        """Name of the real ID3 tag to update using :mod:`eyeD3` package."""
+        """
+        Name of the real ID3 tag to update using :mod:`eyeD3` package.
+        """
         return self._field
 
 
@@ -120,7 +128,8 @@ AnyDuration = Union["Duration", datetime.timedelta, str, int]
 
 
 class Duration(BaseField, datetime.timedelta):
-    """Audio duration representation.
+    """
+    Audio duration representation.
 
     Instantiation examples::
 
@@ -177,8 +186,8 @@ class Duration(BaseField, datetime.timedelta):
 
     def __str__(self):
         """
-        Display the time as `MM:SS` if less than 1H or `<H>:MM:SS` otherwise,
-        where `<H>` is an N digit number representing the total amount of hours.
+        Display the time as `MM:SS` if less than 1H or `<H>:MM:SS` otherwise, where `<H>` is an N digit number
+        representing the total amount of hours.
         """
         s = super(Duration, self).__str__()
         return s if self._sec >= 3600 else s[2:]
@@ -194,19 +203,25 @@ class Duration(BaseField, datetime.timedelta):
     @property
     def hours(self):
         # type: (...) -> int
-        """Hours part of the duration."""
+        """
+        Hours part of the duration.
+        """
         return self._sec // 3600
 
     @property
     def minutes(self):
         # type: (...) -> int
-        """Minutes part of the duration."""
+        """
+        Minutes part of the duration.
+        """
         return self._sec % 3600 // 60
 
     @property
     def seconds(self):
         # type: (...) -> int
-        """Seconds part of the duration."""
+        """
+        Seconds part of the duration.
+        """
         return self._sec % 3600 % 60
 
 
@@ -363,8 +378,8 @@ AudioField = Union[None, int, str, StrField, Date, Duration, CoverFile]
 
 class AudioInfo(dict):
     """
-    Represents an audio file information container, each field corresponding to some details as represented
-    in a configuration file row.
+    Represents an audio file information container, each field corresponding to some details as represented in a
+    configuration file row.
     """
     __slots__ = ["_beautify"]
     __fields__ = set(t.TAGS) | {"file", "cover"}
@@ -498,8 +513,8 @@ AnyAudioSpec = Union[AudioInfo, Iterable[AudioInfo], Dict[str, AudioField], Iter
 
 class AudioConfig(List[AudioInfo]):
     """
-    Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing
-    and audio file definition and fields.
+    Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing and audio
+    file definition and fields.
     """
 
     def __init__(self, raw_config=None, shared=False, beautify=False):

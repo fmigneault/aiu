@@ -169,7 +169,7 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
 
             # attempt match
             for name in candidate_names:
-                path = os.path.join(directory, name + ".mp3")
+                path = os.path.join(directory, f"{name}.mp3")
                 if os.path.isfile(path):
                     result = self.fetch_metadata(song_id, metadata=metadata)
                     self.log("Found already downloaded file [%s] for [%s]. "

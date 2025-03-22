@@ -33,7 +33,7 @@ def test_make_dirs_cleaned():
         ("/tmp/random/not>valid", _fix_path("/tmp/random/not-valid")),
         ("/tmp/random/not|valid", _fix_path("/tmp/random/not-valid")),
         ("/tmp/random/not ok?", _fix_path("/tmp/random/not ok-")),
-        ("./ok/yes|no/good/not:good", _fix_path(cur_dir + "/ok/yes-no/good/not-good")),
+        ("./ok/yes|no/good/not:good", _fix_path(f"{cur_dir}/ok/yes-no/good/not-good")),
     ]
 
     with mock.patch("os.makedirs") as mkdir_mock:

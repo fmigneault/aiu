@@ -130,7 +130,7 @@ check-lint-only: mkdir-reports		## run linting code style checks
 		pylint \
 			--rcfile="$(APP_ROOT)/pylint.ini" \
 			--reports y \
-			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" \
+			"$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
 .PHONY: check-security-only
@@ -248,7 +248,7 @@ fix-imports-only: mkdir-reports	## apply import code checks corrections
 	@echo "Fixing flagged import checks..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
-		isort $(APP_ROOT) \
+		isort "$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
 # FIXME: https://github.com/PyCQA/pycodestyle/issues/996

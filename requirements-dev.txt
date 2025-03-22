@@ -1,10 +1,12 @@
 autopep8
+coverage>=7.5
 docformatter
 doc8
 flake8
 flynt
 isort>=5
 mock
+pydocstyle
 pylint>=3,<4
 pylint_quotes @ git+https://github.com/marekhanus/pylint-quotes.git@0.3.0a2
 pylint-per-file-ignores

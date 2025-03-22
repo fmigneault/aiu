@@ -20,7 +20,9 @@ ExceptionsType = Optional[Dict[str, str]]
 
 
 class Config:
-    """Application configuration options."""
+    """
+    Application configuration options.
+    """
     EXCEPTIONS_RENAME = None    # type: ExceptionsType
     STOPWORDS_RENAME = None     # type: StopwordsType
     STOPWORDS_MATCH = None      # type: StopwordsType
@@ -33,7 +35,9 @@ AIU_SETUP_CONFIG = os.path.join(AIU_ROOT_DIR, "setup.cfg")
 
 
 class YamlEnabledLogger(logging.Logger):
-    """Logger that supports YAML output formatting."""
+    """
+    Logger that supports YAML output formatting.
+    """
 
     def to_yaml(self, data, indent=2):
         # type: (dict, int) -> None
