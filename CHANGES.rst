@@ -5,6 +5,7 @@ CHANGES
 ------------------------------------------------------------------------------------
 
 * Fix ``AudioConfig.beautify()`` failing from generator of nested ``AudioInfo`` object pre-exhausted.
+* Replace ``eyeD3==0.9.6`` by ``fmigneault/eyeD3@no-install-tests`` to avoid invalid extra tests dependencies.
 
 `2.0.2 <https://github.com/fmigneault/aiu/tree/2.0.2>`_ (2025-03-17)
 ------------------------------------------------------------------------------------
