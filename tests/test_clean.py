@@ -1,7 +1,12 @@
+from typing import TYPE_CHECKING
+
 import pytest
 
 from aiu.clean import beautify_string
 from aiu.config import Config
+
+if TYPE_CHECKING:
+    from aiu.clean import StringFormatter
 
 
 @pytest.mark.parametrize(
@@ -13,6 +18,7 @@ from aiu.config import Config
     ]
 )
 def test_beautify_string(test_string, expect_string, word_formatter, stop_word_formatter, first_word_formatter):
+    # type: (str, str, StringFormatter, StringFormatter, StringFormatter) -> None
     Config.STOPWORDS_RENAME = ["a"]
     result = beautify_string(test_string, word_formatter, stop_word_formatter, first_word_formatter)
     assert result == expect_string

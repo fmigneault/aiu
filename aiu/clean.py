@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING
 from aiu.config import Config
 
 if TYPE_CHECKING:
-    from typing import Optional, Protocol
+    from typing import LiteralString, Optional, Protocol, Union
 
     class StringFormatter(Protocol):
         """Generic string formatter."""
         def __call__(self, s):
-            # type: (str) -> str
+            # type: (Union[str, LiteralString]) -> Union[str, LiteralString]
             ...
 
 SEPARATORS = frozenset([",", ";", ":", "!", "?", ".", ])

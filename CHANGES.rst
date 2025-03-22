@@ -16,7 +16,7 @@ CHANGES
 
 * Fix ``aiu.clean.beautify_string`` lookup of first word separated by sentence punctuations.
 * Fix ``aiu.clean.beautify_string`` potentially applying beautification an entire sentence as if it was a single word,
-  leanding to lowercase characters for following words of the sentence not properly capitalized by the string formatter.
+  leading to lowercase characters for following words of the sentence not properly capitalized by the string formatter.
 
 `2.0.0 <https://github.com/fmigneault/aiu/tree/2.0.0>`_ (2025-03-16)
 ------------------------------------------------------------------------------------
