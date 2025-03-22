@@ -1,8 +1,9 @@
-bandit
+autopep8
 docformatter
 doc8
 flake8
-isort
+flynt
+isort>=5
 mock
 pylint>=3,<4
 pylint_quotes @ git+https://github.com/marekhanus/pylint-quotes.git@0.3.0a2
