@@ -1,4 +1,5 @@
 autopep8
+bandit
 coverage>=7.5
 docformatter
 doc8
