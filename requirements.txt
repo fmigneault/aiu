@@ -1,4 +1,4 @@
-eyed3==0.9.6
+eyed3 @ git+https://github.com/fmigneault/eyeD3.git@no-install-tests
 Pillow
 PyYAML
 requests
