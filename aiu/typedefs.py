@@ -511,7 +511,12 @@ class AudioConfig(List[AudioInfo]):
                 raw_config = [raw_config]
             if not all(isinstance(c, dict) for c in raw_config):
                 raise TypeError("Invalid audio information must be dict-like.")
-            config = [AudioInfo(**cfg, beautify=beautify) for cfg in raw_config]
+            config = [
+                cfg
+                if isinstance(cfg, AudioInfo) and not beautify else
+                AudioInfo(**cfg, beautify=beautify)
+                for cfg in raw_config
+            ]
         super(AudioConfig, self).__init__(config)
 
     @property
