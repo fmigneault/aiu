@@ -515,7 +515,7 @@ def update_file_names(audio_config, rename_format, rename_title=False, prefix_tr
         if prefix_track:
             LOGGER.debug("Updating rename format with title and prefix.")
             track_digits = len(str(len(audio_config)))
-            rename_format = "%(TRACK)0{}d %(TITLE)s".format(track_digits)  # pylint: disable=consider-using-f-string
+            rename_format = f"%(TRACK)0{track_digits}d %(TITLE)s"
         else:
             LOGGER.debug("Updating rename format with title only.")
             rename_format = "%(TITLE)s"

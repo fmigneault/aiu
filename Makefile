@@ -99,7 +99,7 @@ mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-CHECKS := pep8 lint security security-code security-deps doc8 imports
+CHECKS := pep8 lint security security-code security-deps doc8 docf docstring fstring imports
 CHECKS := $(addprefix check-, $(CHECKS))
 
 $(CHECKS): check-%: install-dev check-%-only
@@ -129,8 +129,7 @@ check-lint-only: mkdir-reports		## run linting code style checks
 	@bash -c '$(CONDA_CMD) \
 		pylint \
 			--rcfile="$(APP_ROOT)/pylint.ini" \
-			--reports y \
-			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/tests" \
+			"$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
 .PHONY: check-security-only
@@ -171,26 +170,38 @@ check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
 			doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
 			1> >(tee "$(REPORTS_DIR)/check-doc8.txt")'
 
-# FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
-# NOTE: docformatter only reports files with errors on stderr, redirect trace stderr & stdout to file with tee
-# NOTE:
-#	Don't employ '--wrap-descriptions 120' since they *enforce* that length and rearranges format if any word can fit
-#	within remaining space, which often cause big diffs of ugly formatting for no important reason. Instead only check
-#	general formatting operations, and let other linter capture docstrings going over 120 (what we really care about).
 .PHONY: check-docf-only
 check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
 	@-rm -fr "$(REPORTS_DIR)/check-docf.txt"
 	@bash -c '$(CONDA_CMD) \
-		docformatter \
-			--pre-summary-newline \
-			--wrap-descriptions 0 \
-			--wrap-summaries 120 \
-			--make-summary-multi-line \
-			--check \
-			--recursive \
-			"$(APP_ROOT)" \
+		docformatter --check --diff --recursive --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)" \
 		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
+
+# FIXME: no configuration file support
+define FLYNT_FLAGS
+--line-length 120 \
+--verbose
+endef
+ifeq ($(shell test "$${PYTHON_VERSION_MAJOR:-3}" -eq 3 && test "$${PYTHON_VERSION_MINOR:-10}" -ge 8; echo $$?),0)
+  FLYNT_FLAGS := $(FLYNT_FLAGS) --transform-concats
+endif
+
+.PHONY: check-fstring-only
+check-fstring-only: mkdir-reports	## check f-string format definitions
+	@echo "Running code f-string formats substitutions..."
+	@-rm -f "$(REPORTS_DIR)/check-fstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		flynt --dry-run --fail-on-change $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/check-fstring.txt")'
+
+.PHONY: check-docstring-only
+check-docstring-only: mkdir-reports  ## check code docstring style and linting
+	@echo "Running docstring checks..."
+	@-rm -fr "$(REPORTS_DIR)/check-docstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		pydocstyle --explain --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/check-docstring.txt")'
 
 .PHONY: check-imports-only
 check-imports-only: mkdir-reports	## run imports code checks
@@ -199,6 +210,83 @@ check-imports-only: mkdir-reports	## run imports code checks
 	@bash -c '$(CONDA_CMD) \
 		isort --check-only --diff "$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
+
+.PHONY: fixme-list-only
+fixme-list-only: mkdir-reports  	## list all FIXME/TODO/HACK items that require attention in the code
+	@echo "Listing code that requires fixes..."
+	@echo '[MISCELLANEOUS]\nnotes=FIXME,TODO,HACK' > "$(REPORTS_DIR)/fixmerc"
+	@bash -c '$(CONDA_CMD) \
+		pylint \
+			--disable=all,use-symbolic-message-instead --enable=miscellaneous,W0511 \
+			--score n --persistent n \
+			--rcfile="$(REPORTS_DIR)/fixmerc" \
+			-f colorized \
+			"$(APP_ROOT)/weaver" "$(APP_ROOT)/tests" \
+		1> >(tee "$(REPORTS_DIR)/fixme.txt")'
+
+.PHONY: fixme-list
+fixme-list: install-dev fixme-list-only  ## list all FIXME/TODO/HACK items with pre-installation of dependencies
+
+# autogen check variants with pre-install of dependencies using the '-only' target references
+FIXES := imports lint docf fstring
+FIXES := $(addprefix fix-, $(FIXES))
+
+$(FIXES): fix-%: install-dev fix-%-only
+
+.PHONY: fix
+fix: fix-all 	## alias for 'fix-all' target
+
+.PHONY: fix-only
+fix-only: $(addsuffix -only, $(FIXES))	## run all automatic fixes without development dependencies pre-install
+
+.PHONY: fix-all
+fix-all: install-dev $(FIXES_ALL)  ## fix all code check problems automatically after install of dependencies
+
+.PHONY: fix-imports-only
+fix-imports-only: mkdir-reports	## apply import code checks corrections
+	@echo "Fixing flagged import checks..."
+	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
+	@bash -c '$(CONDA_CMD) \
+		isort "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
+
+# FIXME: https://github.com/PyCQA/pycodestyle/issues/996
+# Tool "pycodestyle" doesn't respect "# noqa: E241" locally, but "flake8" and other tools do.
+# Because "autopep8" uses "pycodestyle", it is impossible to disable locally extra spaces (as in tests to align values).
+# Override the codes here from "setup.cfg" because "autopep8" also uses the "flake8" config, and we want to preserve
+# global detection of those errors (typos, bad indents), unless explicitly added and excluded for readability purposes.
+# WARNING: this will cause inconsistencies between what 'check-lint' detects and what 'fix-lint' can actually fix
+_DEFAULT_SETUP_ERROR := E126,E226,E402,F401,W503,W504
+_EXTRA_SETUP_ERROR := E241,E731
+
+.PHONY: fix-lint-only
+fix-lint-only: mkdir-reports  ## fix some PEP8 code style problems automatically
+	@echo "Fixing PEP8 code style problems..."
+	@-rm -fr "$(REPORTS_DIR)/fixed-lint.txt"
+	@bash -c '$(CONDA_CMD) \
+		autopep8 \
+		 	--global-config "$(APP_ROOT)/setup.cfg" \
+		 	--ignore "$(_DEFAULT_SETUP_ERROR),$(_EXTRA_SETUP_ERROR)" \
+			-v -j 0 -i -r "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
+
+
+.PHONY: fix-docf-only
+fix-docf-only: mkdir-reports  ## fix some PEP8 code documentation style problems automatically
+	@echo "Fixing PEP8 code documentation problems..."
+	@-rm -fr "$(REPORTS_DIR)/fixed-docf.txt"
+	@bash -c '$(CONDA_CMD) \
+		docformatter --in-place --diff --recursive --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
+
+.PHONY: fix-fstring-only
+fix-fstring-only: mkdir-reports
+	@echo "Fixing code string formats substitutions to f-string definitions..."
+	@-rm -f "$(REPORTS_DIR)/fixed-fstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		flynt $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
+
 
 # autogen tests variants with pre-install of dependencies using the '-only' target references
 TESTS := cli local

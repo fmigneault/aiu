@@ -64,7 +64,7 @@ setup(
     name=__meta__.__package__,
     version=__meta__.__version__,
     description=__meta__.__description__,
-    long_description=README + "\n\n" + HISTORY,
+    long_description=f"{README}\n\n{HISTORY}",
     long_description_content_type="text/x-rst",
     author=__meta__.__author__,
     maintainer=__meta__.__maintainer__,

@@ -11,10 +11,9 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         job: ['test']
         python-version:
           - '3.8'
@@ -26,6 +25,9 @@ jobs:
         include:
           - job: lint
             python-version: '3.12'
+            os: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout repository

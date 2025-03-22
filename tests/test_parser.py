@@ -3,14 +3,8 @@ import os
 import pytest
 
 import aiu.tags as t
-from aiu.config import DEFAULT_STOPWORDS_CONFIG, Config
-from aiu.parser import (
-    FORMAT_MODE_CSV,
-    FORMAT_MODE_LIST,
-    FORMAT_MODE_TAB,
-    load_config,
-    parse_audio_config,
-)
+from aiu.config import Config
+from aiu.parser import FORMAT_MODE_CSV, FORMAT_MODE_LIST, FORMAT_MODE_TAB, parse_audio_config
 from aiu.typedefs import (
     AudioConfig,
     AudioInfo,
@@ -38,7 +32,9 @@ def test_parser_config_csv_basic():
 
 
 def test_parser_config_csv_typing():
-    """Validate config formats, fields, properties and key getters."""
+    """
+    Validate config formats, fields, properties and key getters.
+    """
     config = parse_audio_config(os.path.join(CONFIG_DIR, "config-basic.csv"), FORMAT_MODE_CSV)
     assert isinstance(config, list)
     assert isinstance(config, AudioConfig)
@@ -115,34 +111,41 @@ def test_parser_config_tab_crazy():
 def test_parser_config_tab_time_and_beautify():
     Config.STOPWORDS_RENAME = []    # ignore
     config_raw = parse_audio_config(os.path.join(CONFIG_DIR, "config-tab-time.txt"), FORMAT_MODE_TAB)
-    Config.STOPWORDS_RENAME = None  # reset for reload
-    Config.STOPWORDS_RENAME = load_config(Config.STOPWORDS_RENAME, DEFAULT_STOPWORDS_CONFIG, is_map=False)
+    Config.STOPWORDS_RENAME = ["a", "in", "and", "to", "with"]
     config_clean = config_raw.beautify()
     assert isinstance(config_raw, list)
     assert len(config_raw) == 8
     for conf_raw, conf_clean, result in zip(config_raw, config_clean, [
-        {t.TAG_TRACK: 1, "title_raw": "Nothing to say",
+        {t.TAG_TRACK: 1,
+         "title_raw": "Nothing to say",
          "title_clean": "Nothing to Say",
          t.TAG_DURATION: Duration(minutes=1, seconds=23)},
-        {t.TAG_TRACK: 2, "title_raw": "A random song",
+        {t.TAG_TRACK: 2,
+         "title_raw": "A random song",
          "title_clean": "A Random Song",
          t.TAG_DURATION: Duration(minutes=4, seconds=56)},
-        {t.TAG_TRACK: 3, "title_raw": "I Love Long Songs",
+        {t.TAG_TRACK: 3,
+         "title_raw": "I Love Long Songs",
          "title_clean": "I Love Long Songs",
          t.TAG_DURATION: Duration(hours=1, minutes=2, seconds=17)},
-        {t.TAG_TRACK: 4, "title_raw": "Got 1 number in here",
+        {t.TAG_TRACK: 4,
+         "title_raw": "Got 1 number in here",
          "title_clean": "Got 1 Number in Here",
          t.TAG_DURATION: Duration(minutes=3, seconds=29)},
-        {t.TAG_TRACK: 5, "title_raw": "Have 2 here: 6, and there 11",
+        {t.TAG_TRACK: 5,
+         "title_raw": "Have 2 here: 6, and there 11",
          "title_clean": "Have 2 Here: 6, and There 11",
          t.TAG_DURATION: Duration(minutes=3, seconds=29)},
-        {t.TAG_TRACK: 6, "title_raw": "Have fun with this: 1:23",
+        {t.TAG_TRACK: 6,
+         "title_raw": "Have fun with this: 1:23",
          "title_clean": "Have Fun with This: 1:23",
          t.TAG_DURATION: Duration(minutes=2, seconds=54)},
-        {t.TAG_TRACK: 7, "title_raw": "At 4:20 is when it happens",
+        {t.TAG_TRACK: 7,
+         "title_raw": "At 4:20 is when it happens",
          "title_clean": "At 4:20 Is When It Happens",
          t.TAG_DURATION: Duration(hours=3, minutes=20, seconds=54)},
-        {t.TAG_TRACK: 8, "title_raw": "Some absolutely crazy long song",
+        {t.TAG_TRACK: 8,
+         "title_raw": "Some absolutely crazy long song",
          "title_clean": "Some Absolutely Crazy Long Song",
          t.TAG_DURATION: Duration(hours=104, minutes=56, seconds=20)},
     ]):

@@ -39,7 +39,9 @@ COMMON_WORD_IGNORE_CHARS = (
 
 def log_exception(logger=None):
     # type: (LoggerType) -> Callable
-    """Decorator that logs an exception on raise within the passed ``function``."""
+    """
+    Decorator that logs an exception on raise within the passed ``function``.
+    """
     if not isinstance(logger, LoggerType):
         logger = LOGGER
 

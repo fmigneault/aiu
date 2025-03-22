@@ -4,7 +4,8 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Fix ``AudioConfig.beautify()`` failing from generator of nested ``AudioInfo`` object pre-exhausted.
+* Replace ``eyeD3==0.9.6`` by ``fmigneault/eyeD3@no-install-tests`` to avoid invalid extra tests dependencies.
 
 `2.0.2 <https://github.com/fmigneault/aiu/tree/2.0.2>`_ (2025-03-17)
 ------------------------------------------------------------------------------------
@@ -16,7 +17,7 @@ CHANGES
 
 * Fix ``aiu.clean.beautify_string`` lookup of first word separated by sentence punctuations.
 * Fix ``aiu.clean.beautify_string`` potentially applying beautification an entire sentence as if it was a single word,
-  leanding to lowercase characters for following words of the sentence not properly capitalized by the string formatter.
+  leading to lowercase characters for following words of the sentence not properly capitalized by the string formatter.
 
 `2.0.0 <https://github.com/fmigneault/aiu/tree/2.0.0>`_ (2025-03-16)
 ------------------------------------------------------------------------------------
