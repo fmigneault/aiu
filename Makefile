@@ -268,7 +268,7 @@ fix-lint-only: mkdir-reports  ## fix some PEP8 code style problems automatically
 		autopep8 \
 		 	--global-config "$(APP_ROOT)/setup.cfg" \
 		 	--ignore "$(_DEFAULT_SETUP_ERROR),$(_EXTRA_SETUP_ERROR)" \
-			-v -j 0 -i -r $(APP_ROOT) \
+			-v -j 0 -i -r "$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
 
 

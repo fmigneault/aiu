@@ -46,6 +46,7 @@ class YoutubeDLNoSanitizeFileName(yt_dlp.YoutubeDL):
     perform the sanitization process ourselves such that only invalid characters for file-system path resolution are
     adjusted, which will match exactly with later operations retrieving the downloaded file using the same metadata.
     """
+
     def prepare_outtmpl(self, outtmpl, info_dict, sanitize=False):
         # type: (str, Dict[str, str], bool) -> str
         output, tmpl_info = super().prepare_outtmpl(outtmpl, info_dict, sanitize=False)  # force no sanitize
@@ -58,6 +59,7 @@ class BaseYoutubeDLP(BaseYouTubeMusicDL):
     """
     Base class of the YouTube Music downloader with drop-in replacement of :mod:`youtube_dl` by improved :mod:`yt_dlp`.
     """
+
     def __init__(self):
         super(BaseYoutubeDLP, self).__init__(youtube_downloader=YoutubeDLNoSanitizeFileName)
 
@@ -210,6 +212,7 @@ class TqdmYouTubeMusicDL(CachedYoutubeMusicDL):
     """
     Setup hooks around methods that process the `download album` operation to display progress per track downloaded.
     """
+
     def __init__(self, *_, **__):
         super(TqdmYouTubeMusicDL, self).__init__(*_, **__)
         self.api_album = self._api.album

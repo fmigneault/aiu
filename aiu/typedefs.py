@@ -501,6 +501,7 @@ class AudioConfig(List[AudioInfo]):
     Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing
     and audio file definition and fields.
     """
+
     def __init__(self, raw_config=None, shared=False, beautify=False):
         # type: (AnyAudioSpec, bool, bool) -> None
         self._shared = shared

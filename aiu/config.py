@@ -34,6 +34,7 @@ AIU_SETUP_CONFIG = os.path.join(AIU_ROOT_DIR, "setup.cfg")
 
 class YamlEnabledLogger(logging.Logger):
     """Logger that supports YAML output formatting."""
+
     def to_yaml(self, data, indent=2):
         # type: (dict, int) -> None
         handlers = self.handlers + self.parent.handlers + (self.root.handlers if hasattr(self, "root") else [])

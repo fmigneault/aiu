@@ -3,12 +3,11 @@ import os
 import pytest
 
 import aiu.tags as t
-from aiu.config import DEFAULT_STOPWORDS_CONFIG, Config
+from aiu.config import Config
 from aiu.parser import (
     FORMAT_MODE_CSV,
     FORMAT_MODE_LIST,
     FORMAT_MODE_TAB,
-    load_config,
     parse_audio_config,
 )
 from aiu.typedefs import (

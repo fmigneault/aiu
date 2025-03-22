@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
     class StringFormatter(Protocol):
         """Generic string formatter."""
+
         def __call__(self, s):
             # type: (Union[str, LiteralString]) -> Union[str, LiteralString]
             ...
