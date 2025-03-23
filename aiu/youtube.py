@@ -308,8 +308,8 @@ def get_artist_albums(link, throw=True):
 
     # do what 'api.artist()' does but manually to handle exceptions more gracefully
     api = YouTubeMusic()
-    meta = api._base.browse_artist(artist)  # pylint: disable=no-member
-    data = parse_artist(meta)
+    meta = api._base.browse_artist(artist)  # pylint: disable=no-member,protected-access
+    data = parse_artist(meta)  # pylint: disable=not-callable
     album_info = data.get("albums", {})
     if not album_info:
         name = data.get("name")
