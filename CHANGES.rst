@@ -4,6 +4,11 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.0.4 <https://github.com/fmigneault/aiu/tree/2.0.4>`_ (2025-03-22)
+------------------------------------------------------------------------------------
+
 * Add more gracefull error handling and warning message if no albums are found for the provided YouTube Music link.
 
 `2.0.3 <https://github.com/fmigneault/aiu/tree/2.0.3>`_ (2025-03-22)
