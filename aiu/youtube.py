@@ -15,6 +15,7 @@ from tqdm import tqdm
 from ytm import utils as ytm_utils
 from ytm.apis.YouTubeMusic import YouTubeMusic
 from ytm.apis.YouTubeMusicDL.YouTubeMusicDL import BaseYouTubeMusicDL, YouTubeMusicDL
+from ytm.parsers import artist as parse_artist
 from ytm.types.ids.ArtistId import ArtistId
 
 from aiu.config import LOGGER
@@ -304,9 +305,18 @@ def get_artist_albums(link, throw=True):
         if throw:
             raise
         return []
+
+    # do what 'api.artist()' does but manually to handle exceptions more gracefully
     api = YouTubeMusic()
-    meta = api.artist(artist)  # pylint: disable=no-member
-    albums = meta.get("albums", {}).get("items", [])
+    meta = api._base.browse_artist(artist)  # pylint: disable=no-member
+    data = parse_artist(meta)
+    album_info = data.get("albums", {})
+    if not album_info:
+        name = data.get("name")
+        LOGGER.warning("Artist [%s] does not have any albums listed under: [%s]", name, link)
+        return []
+    albums = album_info.get("items", [])
+
     # get the playlist ID instead of Album ID to form the corresponding download/listing YouTube Music links
     album_meta = [
         {
