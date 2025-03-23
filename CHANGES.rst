@@ -4,13 +4,13 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add more gracefull error handling and warning message if no albums are found for the provided YouTube Music link.
 
 `2.0.3 <https://github.com/fmigneault/aiu/tree/2.0.3>`_ (2025-03-22)
 ------------------------------------------------------------------------------------
 
 * Fix ``AudioConfig.beautify()`` failing from generator of nested ``AudioInfo`` object pre-exhausted.
-* Replace ``eyeD3==0.9.6`` 
+* Replace ``eyeD3==0.9.6``
   by `fmigneault/eyeD3@no-install-tests <https://github.com/fmigneault/eyeD3/tree/no-install-tests>`_
   to avoid invalid extra tests dependencies.
 * Fix `CR/LF` across repository using portable `LF` everywhere.
