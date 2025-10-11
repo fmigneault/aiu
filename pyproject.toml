@@ -2,8 +2,8 @@
 requires = ["setuptools>=78.1.1", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["aiu"]
+[tool.setuptools.package-dir]
+aiu = "aiu"
 
 [tool.setuptools.package-data]
 aiu = ["config/*"]
@@ -11,17 +11,17 @@ aiu = ["config/*"]
 [project]
 name = "aiu"
 version = "2.0.4"
-description = "Audio Info Updater: audio, music, editor, tag, id3, mp3, metadata, parser, youtube"
+keywords = ["audio", "music", "editor", "tag", "id3", "mp3", "metadata", "parser", "youtube"]
+description = "Tool for updating ID3 tags of audio files using text metadata and configuration files."
 authors = [
-    { name = "Your Author Name", email = "your@email.com" }
+    { name = "Francis Charette-Migneault", email = "francis.charette.migneault@gmail.com" }
 ]
 maintainers = [
-    { name = "Your Maintainer Name", email = "your@email.com" }
+    { name = "Francis Charette-Migneault", email = "francis.charette.migneault@gmail.com" }
 ]
-license = { text = "MIT" }
-readme = "README.rst"
+license = { file = "LICENSE" }
+readme = { file = "README.rst", content-type = "text/x-rst" }
 requires-python = ">=3.6, <4"
-keywords = ["audio", "music", "editor", "tag", "id3", "mp3", "metadata", "parser", "youtube"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -232,17 +232,17 @@ tag = true
 tag_name = "{new_version}"
 
 [[tool.bumpversion.files]]
-path = "README.rst"
+filename = "README.rst"
 search = "{current_version}"
 replace = "{new_version}"
 
 [[tool.bumpversion.files]]
-path = "aiu/__meta__.py"
+filename = "aiu/__meta__.py"
 search = "__version__ = \"{current_version}\""
 replace = "__version__ = \"{new_version}\""
 
 [[tool.bumpversion.files]]
-path = "CHANGES.rst"
+filename = "CHANGES.rst"
 search = """
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------

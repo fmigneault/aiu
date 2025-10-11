@@ -31,8 +31,8 @@ endif
 bump:	## bump version using VERSION specified as user input (make VERSION=<X.Y.Z> bump)
 	@-echo "Updating package version ..."
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
-	@-test -f "$(CONDA_ENV_PATH)/bin/$(BUMP_TOOL)" || pip install $(PIP_XARGS) bump2version
-	@-$(BUMP_TOOL) $(BUMP_XARGS) --new-version "${VERSION}" patch;
+	@-test -f "$(CONDA_ENV_PATH)/bin/$(BUMP_TOOL)" || pip install $(PIP_XARGS) $(BUMP_TOOL)
+	@$(BUMP_TOOL) bump $(BUMP_XARGS) --new-version "${VERSION}" patch;
 
 ## --- Installation targets --- ##
 
