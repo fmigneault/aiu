@@ -30,7 +30,8 @@ from typing import (
 
 from tqdm import tqdm
 
-from aiu import __meta__, tags as t
+from aiu import __meta__
+from aiu import tags as t
 from aiu.config import (
     DEFAULT_EXCEPTIONS_CONFIG,
     DEFAULT_STOPWORDS_CONFIG,
@@ -70,7 +71,7 @@ from aiu.utils import (
 from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
 
-def cli():  # noqa: C0103,PLR0912,PLR0915
+def cli():  # noqa: PLR0912,PLR0915
     # pylint: disable=C0103,R0912,R0915
     _PROG = __meta__.__package__
     _NAME = f"{__meta__.__title__} ({_PROG})"

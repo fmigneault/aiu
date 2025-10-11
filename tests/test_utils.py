@@ -1,6 +1,5 @@
 import os
 import platform
-
 import unittest.mock
 
 from aiu.utils import make_dirs_cleaned

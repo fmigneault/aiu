@@ -145,7 +145,7 @@ check-security-deps-only: mkdir-reports  ## run security checks on package depen
 	@-rm -fr "$(REPORTS_DIR)/check-security-deps.txt"
 	@bash -c '$(CONDA_CMD) \
 		safety check \
-			--policy "$(APP_ROOT)/.safety-policy.yml" \
+			--policy-file "$(APP_ROOT)/.safety-policy.yml" \
 			-r "$(APP_ROOT)/pyproject.toml" \
 		1> >(tee "$(REPORTS_DIR)/check-security-deps.txt")'
 
@@ -154,7 +154,7 @@ check-security-code-only: mkdir-reports  ## run security checks on source code
 	@echo "Running security code checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-security-code.txt"
 	@bash -c '$(CONDA_CMD) \
-		bandit -v --ini "$(APP_ROOT)/pyproject.toml" -r \
+		bandit -v -c "$(APP_ROOT)/pyproject.toml" -r "$(APP_ROOT)/aiu" \
 		1> >(tee "$(REPORTS_DIR)/check-security-code.txt")'
 
 .PHONY: check-docs-only
@@ -177,21 +177,12 @@ check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 		docformatter --check --diff --recursive --config "$(APP_ROOT)/pyproject.toml" "$(APP_ROOT)" \
 		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
-# FIXME: no configuration file support
-define FLYNT_FLAGS
---line-length 120 \
---verbose
-endef
-ifeq ($(shell test "$${PYTHON_VERSION_MAJOR:-3}" -eq 3 && test "$${PYTHON_VERSION_MINOR:-10}" -ge 8; echo $$?),0)
-  FLYNT_FLAGS := $(FLYNT_FLAGS) --transform-concats
-endif
-
 .PHONY: check-fstring-only
 check-fstring-only: mkdir-reports	## check f-string format definitions
 	@echo "Running code f-string formats substitutions..."
 	@-rm -f "$(REPORTS_DIR)/check-fstring.txt"
 	@bash -c '$(CONDA_CMD) \
-		flynt --dry-run --fail-on-change $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		ruff check --select FLY "$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/check-fstring.txt")'
 
 .PHONY: check-docstring-only

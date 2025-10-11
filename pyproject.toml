@@ -63,13 +63,6 @@ dev = [
     "coverage>=7.5",
     "docformatter",
     "doc8",
-    "flynt",
-    "isort>=5",
-    "mock",
-    "pydocstyle",
-    "pylint>=3,<4",
-    "pylint_quotes @ git+https://github.com/marekhanus/pylint-quotes.git@0.3.0a2",
-    "pylint-per-file-ignores",
     "pytest",
     "pytest-cov",
     "pyup",
@@ -151,6 +144,7 @@ ignore = [
     "D105",
     "D107",
     "D200",
+    "D203",
     "D205",
     "D212",
     "D400",
@@ -172,6 +166,7 @@ ignore = [
     "UP006",
     "UP007",
     "UP008",
+    "UP009",
     "UP015",
     "UP035",
     "UP045",
@@ -199,6 +194,10 @@ exclude = [
     "T201",  # print() is acceptable in main script for help message
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["aiu", "tests"]
+extra-standard-library = ["posixpath", "typing", "typing_extensions"]
+
 [tool.ruff.lint.pylint]
 max-branches = 20
 
@@ -210,12 +209,7 @@ docstring-quotes = "double"
 [tool.bandit]
 skips = ["B101", "B320", "B410"]
 exclude = ["*.egg-info", "./build", "./dist", "./env", "./tests", "test_*"]
-targets = ["."]
-
-[tool.pydocstyle]
-add_ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D107", "D200", "D202", "D204", "D212", "D401"]
-add_select = ["D201", "D213"]
-match-dir = "^(aiu|tests)/.*"
+targets = ["aiu"]
 
 [tool.docformatter]
 recursive = true

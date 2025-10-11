@@ -425,7 +425,7 @@ def check_last_item(search_files, search_audio):
     return matches
 
 
-def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_match=True, dry=False):
+def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_match=True, dry=False):  # noqa: PLR0915
     # type: (Iterable[str], AudioConfig, bool, bool, bool) -> AudioConfig
     """
     Applies the metadata fields to the corresponding audio files.
