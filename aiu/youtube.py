@@ -41,7 +41,7 @@ class YoutubeDLNoSanitizeFileName(yt_dlp.YoutubeDL):
     """
     Override the sanitize option to disable it.
 
-    The default Youtube Downloader operation sanitizes additional characters of the target file name such as characters
+    The default YouTube Downloader operation sanitizes additional characters of the target file name such as characters
     with accents, disallowed characters, or general ponctuation replacement (e.g.: ? -> ？). Because of this, there are
     often mismatches between its overly-sanitized name and the expected file-system-sanitized file name. Instead,
     perform the sanitization process ourselves such that only invalid characters for file-system path resolution are
@@ -115,6 +115,7 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
     """
     Downloader that will bypass the actual download of the file if the information and files are already available.
     """
+
     _api = None  # type: YouTubeMusic  # only for annotation, replaced during YouTubeMusicDL.__init__ call
 
     def __init__(self, *_, force_download=False, **__):

@@ -70,7 +70,7 @@ def look_for_default_file(path, allowed_names, allowed_extensions=None):
     for c in contents:
         c_name, c_ext = os.path.splitext(c)
         c_ext = c_ext.replace(".", "")
-        if c_name in names and c_ext != "":
+        if c_name in names and c_ext != "":  # noqa: SIM102
             if not allowed_extensions or c_ext in allowed_extensions:
                 return os.path.abspath(os.path.join(path, c))
     return None

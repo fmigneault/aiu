@@ -132,14 +132,14 @@ def filter_duplicates(file_paths):
     # use names to avoid high match values due to the rest of the paths that should correspond as base directory
     file_names = [os.path.split(file)[-1] for file in file_paths]
     # use size map simply to avoid re-compute each time the value are used
-    file_sizes = {name: float(os.stat(file).st_size) for name, file in zip(file_names, file_paths)}
+    file_sizes = {name: float(os.stat(file).st_size) for name, file in zip(file_names, file_paths, strict=True)}
     match_results = [
         (
             # for each name, compare against all other files, and obtain the best fuzzy match
             compute_best_match(name, file_names[:i] + file_names[i + 1:]),  # (index, name, ratio)
             (name, path)
         )
-        for i, (name, path) in enumerate(zip(file_names, file_paths))
+        for i, (name, path) in enumerate(zip(file_names, file_paths, strict=True))
     ]
     filter_results = list(filter(lambda res: res[0][-1] > match_name_threshold, match_results))
     filter_results = [
@@ -328,7 +328,11 @@ def compute_word_match(search_files, search_info, threshold_match_words=0.6):
     # which causes all matching attempts to yield a low score.
     # Remove them to increase matches using only discriminative words between available choices.
     filtered_file_words = filter_shared_items([words for _, words in search_file_words])
-    search_file_words = [(search[0], words) for search, words in zip(search_file_words, filtered_file_words)]
+    search_file_words = [
+        (search[0], words)
+        for search, words
+        in zip(search_file_words, filtered_file_words, strict=True)
+    ]
 
     matches = {}  # type: Dict[str, Optional[AudioInfo]]
     for file, sf_words in search_file_words:

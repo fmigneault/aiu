@@ -1,0 +1,3 @@
+ignore:
+  - 42194  # https://github.com/kvesteri/sqlalchemy-utils/issues/166
+  - 51668  # https://github.com/sqlalchemy/sqlalchemy/pull/8563

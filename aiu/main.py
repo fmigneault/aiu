@@ -70,7 +70,7 @@ from aiu.utils import (
 from aiu.youtube import fetch_files, get_artist_albums, get_metadata
 
 
-def cli():
+def cli():  # noqa: C0103,PLR0912,PLR0915
     # pylint: disable=C0103,R0912,R0915
     _PROG = __meta__.__package__
     _NAME = f"{__meta__.__title__} ({_PROG})"
@@ -403,7 +403,7 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
 
 
 @log_exception(LOGGER)
-def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
+def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260  # noqa: PLR0912,PLR0913,PLR0915
     # --- file/parsing options ---
     link=None,                              # type: Optional[str]
     search_path=None,                       # type: Optional[str]
@@ -528,7 +528,7 @@ def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
                     progress_display=progress_display,
                 )
                 if not no_result and LOGGER.isEnabledFor(INFO):
-                    for album_info, album_config in zip(albums, album_results):
+                    for album_info, album_config in zip(albums, album_results, strict=True):
                         if not album_config:
                             continue
                         LOGGER.info("Output configuration for [%s]", album_info["name"])
