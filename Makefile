@@ -269,7 +269,7 @@ fix-fstring-only: mkdir-reports
 TESTS := cli local
 TESTS := $(addprefix test-, $(TESTS))
 TEST_VERBOSITY ?= -vvv
-TEST_LOG_LEVEL ?= ll
+TEST_LOG_LEVEL ?= --log-level INFO
 
 $(TESTS): test-%: install install-dev test-%-only
 
