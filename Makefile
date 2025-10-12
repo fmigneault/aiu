@@ -218,7 +218,7 @@ fixme-list-only: mkdir-reports  	## list all FIXME/TODO/HACK items that require 
 fixme-list: install-dev fixme-list-only  ## list all FIXME/TODO/HACK items with pre-installation of dependencies
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-FIXES := imports lint docf fstring
+FIXES := imports lint docf docstring fstring
 FIXES := $(addprefix fix-, $(FIXES))
 
 $(FIXES): fix-%: install-dev fix-%-only
@@ -237,7 +237,9 @@ fix-imports-only: mkdir-reports	## apply import code checks corrections
 	@echo "Fixing flagged import checks..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
-		ruff check --select I --fix --config "$(APP_ROOT)/pyproject.toml" "$(APP_ROOT)" \
+		ruff check --config "$(APP_ROOT)/pyproject.toml" \
+			--fix --fixable I \
+			"$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
 .PHONY: fix-lint-only
@@ -245,8 +247,20 @@ fix-lint-only: mkdir-reports  ## fix some PEP8 code style problems automatically
 	@echo "Fixing PEP8 code style problems..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-lint.txt"
 	@bash -c '$(CONDA_CMD) \
-		ruff check --config "$(APP_ROOT)/pyproject.toml" --fix "$(APP_ROOT)" \
+		ruff check --config "$(APP_ROOT)/pyproject.toml" \
+			--fix --fixable B,C,F,PLR,PLW,RUF,SIM,UP \
+			"$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
+
+.PHONY: fix-docstring-only
+fix-docstring-only: mkdir-reports  ## fix some PEP8 code docstring style problems automatically
+	@echo "Fixing PEP8 code docstring problems..."
+	@-rm -fr "$(REPORTS_DIR)/fixed-docstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		ruff check --config "$(APP_ROOT)/pyproject.toml" \
+			--fix --fixable D,DOC \
+			"$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/fixed-docstring.txt")'
 
 .PHONY: fix-docf-only
 fix-docf-only: mkdir-reports  ## fix some PEP8 code documentation style problems automatically
@@ -261,7 +275,9 @@ fix-fstring-only: mkdir-reports
 	@echo "Fixing code string formats substitutions to f-string definitions..."
 	@-rm -f "$(REPORTS_DIR)/fixed-fstring.txt"
 	@bash -c '$(CONDA_CMD) \
-		flynt $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		ruff check --config "$(APP_ROOT)/pyproject.toml" \
+			--fix --fixable FLY \
+			"$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
 
 

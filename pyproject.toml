@@ -194,6 +194,20 @@ exclude = [
     "N806",  # allow non-lowercase variable names in main script for CLI entry point
     "T201",  # print() is acceptable in main script for help message
 ]
+"tests/**/*.py" = [
+    "D100",  # allow missing docstrings in tests
+    "D101",  # allow missing docstrings in tests
+    "D102",  # allow missing docstrings in tests
+    "D103",  # allow missing docstrings in tests
+    "D104",  # allow missing docstrings in tests
+    "D105",  # allow missing docstrings in tests
+    "D106",  # allow missing docstrings in tests
+    "D107",  # allow missing docstrings in tests
+    "D200",  # allow spacing docstrings in tests
+    "D203",  # allow spacing docstrings in tests
+    "D212",  # allow spacing docstrings in tests
+    "S101",  # allow use of assert statements in tests
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["aiu", "tests"]
