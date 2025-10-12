@@ -42,7 +42,7 @@ install-dep:
 
 .PHONY: install-pkg
 install-pkg:
-	@cd "$(APP_ROOT)" && pip install --no-depds -e .
+	@cd "$(APP_ROOT)" && pip install --no-deps -e .
 
 .PHONY: install
 install: install-dep install-pkg
