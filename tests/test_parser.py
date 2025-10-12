@@ -148,7 +148,7 @@ def test_parser_config_tab_time_and_beautify():
          "title_raw": "Some absolutely crazy long song",
          "title_clean": "Some Absolutely Crazy Long Song",
          t.TAG_DURATION: Duration(hours=104, minutes=56, seconds=20)},
-    ], strict=True):
+    ]):
         assert conf_clean[t.TAG_TITLE] == result["title_clean"]
         assert conf_raw[t.TAG_TITLE] == result["title_raw"]
         assert conf_raw[t.TAG_TRACK] == result[t.TAG_TRACK]

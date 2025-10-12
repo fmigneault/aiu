@@ -529,7 +529,7 @@ def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260  # noqa: PLR0912,PLR0
                     progress_display=progress_display,
                 )
                 if not no_result and LOGGER.isEnabledFor(INFO):
-                    for album_info, album_config in zip(albums, album_results, strict=True):
+                    for album_info, album_config in zip(albums, album_results):
                         if not album_config:
                             continue
                         LOGGER.info("Output configuration for [%s]", album_info["name"])

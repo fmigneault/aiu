@@ -137,6 +137,7 @@ ignore = [
     "B010",
     "B023",
     "B904",
+    "B905",  # zip(..., strict=True) requires Python 3.10+, not backwards compatible
     "D100",
     "D101",
     "D102",

@@ -237,7 +237,7 @@ def parse_audio_config_list(config_file):  # noqa: PLR0915
                 _tracks = [grp[0] for grp in _track_groups]
                 _durations = [grp for grp in _duration_groups]
                 _config = [{TAG_TRACK: track, TAG_TITLE: title, TAG_DURATION: duration}
-                           for track, title, duration in zip(_tracks, _titles, _durations, strict=True)]
+                           for track, title, duration in zip(_tracks, _titles, _durations)]
         except Exception as exc:  # pylint: disable=broad-exception-caught  # fallback to caller
             LOGGER.trace("exception during [%s] parsing attempt (assuming 3 fields):", FORMAT_MODE_LIST, exc_info=exc)
         return _config
@@ -255,7 +255,7 @@ def parse_audio_config_list(config_file):  # noqa: PLR0915
                     _config = [
                         {TAG_TRACK: track, TAG_TITLE: title}
                         for track, title
-                        in zip(_tracks, _titles, strict=True)
+                        in zip(_tracks, _titles)
                     ]
             elif all(match is not None for match in _duration_matches):
                 _duration_groups = [list(m.groups())[0] for m in _duration_matches]
@@ -265,7 +265,7 @@ def parse_audio_config_list(config_file):  # noqa: PLR0915
                     _config = [
                         {TAG_DURATION: duration, TAG_TITLE: title}
                         for duration, title
-                        in zip(_durations, _titles, strict=True)
+                        in zip(_durations, _titles)
                     ]
         except Exception as exc:  # pylint: disable=broad-exception-caught  # fallback to caller
             LOGGER.trace("exception during [%s] parsing attempt (assuming 3 fields):", FORMAT_MODE_LIST, exc_info=exc)
