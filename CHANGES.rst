@@ -4,6 +4,7 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Add support of YouTube Music playlist links corresponding to singles and EPs "pseudo-albums" of an artist.
 * Modernize Python project and linting tools.
 
 `2.0.4 <https://github.com/fmigneault/aiu/tree/2.0.4>`_ (2025-03-22)
