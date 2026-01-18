@@ -190,7 +190,8 @@ check-docstring-only: mkdir-reports  ## check code docstring style and linting
 	@echo "Running docstring checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-docstring.txt"
 	@bash -c '$(CONDA_CMD) \
-		ruff check --select D --config "$(APP_ROOT)/pyproject.toml" "$(APP_ROOT)" \
+		ruff check --extend-ignore "B,C,E,F,W,I,PL,N,RUF,SIM,UP,T" \
+			--config "$(APP_ROOT)/pyproject.toml" "$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/check-docstring.txt")'
 
 .PHONY: check-imports-only
@@ -248,7 +249,7 @@ fix-lint-only: mkdir-reports  ## fix some PEP8 code style problems automatically
 	@-rm -fr "$(REPORTS_DIR)/fixed-lint.txt"
 	@bash -c '$(CONDA_CMD) \
 		ruff check --config "$(APP_ROOT)/pyproject.toml" \
-			--fix --fixable B,C,F,I,PLR,PLW,RUF,SIM,UP \
+			--fix --fixable B,C,F,PLR,PLW,RUF,SIM,UP \
 			"$(APP_ROOT)" \
 		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
 

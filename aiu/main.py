@@ -68,7 +68,7 @@ from aiu.utils import (
     make_dirs_cleaned,
     validate_output_file,
 )
-from aiu.youtube import fetch_files, get_artist_albums, get_metadata
+from aiu.youtube import fetch_files, get_album_metadata, get_artist_albums
 
 
 def cli():  # noqa: PLR0912,PLR0915
@@ -540,7 +540,7 @@ def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260  # noqa: PLR0912,PLR0
             return True  # avoid error on empty config
 
         if no_fetch:
-            _, meta_json = get_metadata(link)
+            _, meta_json = get_album_metadata(link)
         else:
             _, meta_json = fetch_files(
                 link, output_dir,

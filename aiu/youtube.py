@@ -12,7 +12,8 @@ from urllib.parse import parse_qs, urlparse
 import urllib3  # noqa
 import yt_dlp
 from tqdm import tqdm
-from ytm import constants, utils as ytm_utils
+from ytm import constants
+from ytm import utils as ytm_utils
 from ytm.apis.YouTubeMusic import YouTubeMusic
 from ytm.apis.YouTubeMusicDL.YouTubeMusicDL import BaseYouTubeMusicDL, YouTubeMusicDL
 from ytm.parsers import artist as parse_artist
@@ -547,8 +548,11 @@ def update_metadata(meta, fetch_cover=False):
     return file.name, meta["tracks"]
 
 
-def get_metadata(link):
+def get_album_metadata(link):
     # type: (str) -> Tuple[Optional[str], JSON]
+    """
+    Retrieves the album metadata from the given YouTube Music link.
+    """
     _, is_music, ref_id = get_reference_id(link)
     if not is_music:
         raise ValueError(f"Cannot retrieve music metadata from YouTube Video link: [{link}]")
@@ -562,6 +566,9 @@ def get_metadata(link):
 
 def fetch_files(link, output_dir, with_cover=True, progress_display=True, force_download=False):
     # type: (str, str, bool, bool, bool) -> Tuple[Optional[str], JSON]
+    """
+    Downloads the specified files from the given YouTube Music/Video link into the output directory.
+    """
     LOGGER.debug("Fetching files from link: [%s]", link)
     if progress_display:
         api = TqdmYouTubeMusicDL(force_download=force_download)
