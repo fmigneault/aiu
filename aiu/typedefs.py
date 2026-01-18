@@ -78,6 +78,7 @@ class BaseField(object):
     """
     General functionalities and properties for audio file metadata fields.
     """
+
     _raw = None
     _value = None
     _field = None
@@ -140,6 +141,7 @@ class Duration(BaseField, datetime.timedelta):
         Duration(datetime.timedelta(hours=1, minutes=23, seconds=45))
         Duration(5025)  # int == 1*3600 + 23*60 + 45 seconds
     """
+
     def __new__(  # pylint: disable=signature-differs,keyword-arg-before-vararg
         cls: Type["Duration"],
         duration: Optional[AnyDuration] = None,
@@ -230,6 +232,7 @@ class StrField(BaseField, str):
     """
     String field representation with optional beautification.
     """
+
     def __new__(cls, value, *_, allow_none=True, beautify=False, **__):
         # type: (StrField, Optional[str], *Any, bool, bool, **Any) -> StrField
         value = str(value)
@@ -262,6 +265,7 @@ class IntField(int, BaseField):
     """
     Integer field representation.
     """
+
     _value = None
     _is_none = True
 
@@ -317,11 +321,12 @@ class CoverFile(BaseField):
     """
     Field for the album image cover file.
     """
+
     __slots__ = ["_name", "_path", "_link", "_image"]
 
     def __init__(self, image, *_, **__):
         # type: (CoverFileAny, *Any, **Any) -> None
-        from aiu.parser import fetch_image  # pylint: disable=import-outside-toplevel
+        from aiu.parser import fetch_image  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
         super(CoverFile, self).__init__(*_, **__)
         self._raw = image
@@ -378,9 +383,11 @@ AudioField = Union[None, int, str, StrField, Date, Duration, CoverFile]
 
 class AudioInfo(dict):
     """
-    Represents an audio file information container, each field corresponding to some details as represented in a
-    configuration file row.
+    Represents an audio file information container.
+
+    Each field corresponds to some details as represented in a configuration file row.
     """
+
     __slots__ = ["_beautify"]
     __fields__ = set(t.TAGS) | {"file", "cover"}
 
@@ -461,7 +468,7 @@ class AudioInfo(dict):
 
     def _set_track(self, track):
         # type: (Optional[int]) -> None
-        if isinstance(track, int) and track < 1 or track in ["", None]:
+        if (isinstance(track, int) and track < 1) or track in ["", None]:
             track = None  # unset track number
         self[t.TAG_TRACK] = IntField(track, field=Tag.track_num, allow_none=True)
 
@@ -513,8 +520,9 @@ AnyAudioSpec = Union[AudioInfo, Iterable[AudioInfo], Dict[str, AudioField], Iter
 
 class AudioConfig(List[AudioInfo]):
     """
-    Represents a set of :class:`AudioInfo`, similarly to each row of a configuration file each representing and audio
-    file definition and fields.
+    Represents a set of :class:`AudioInfo`.
+
+    Similar to each row of a configuration file, each representing an audio file definition and fields.
     """
 
     def __init__(self, raw_config=None, shared=False, beautify=False):

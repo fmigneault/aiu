@@ -1,0 +1,440 @@
+[build-system]
+requires = ["setuptools>=75.3.2", "setuptools-scm>=8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+aiu = "aiu"
+
+[tool.setuptools.package-data]
+aiu = ["config/*"]
+
+[project]
+name = "aiu"
+version = "2.0.4"
+keywords = ["audio", "music", "editor", "tag", "id3", "mp3", "metadata", "parser", "youtube"]
+description = "Tool for updating ID3 tags of audio files using text metadata and configuration files."
+authors = [
+    { name = "Francis Charette-Migneault", email = "francis.charette.migneault@gmail.com" }
+]
+maintainers = [
+    { name = "Francis Charette-Migneault", email = "francis.charette.migneault@gmail.com" }
+]
+license = { file = "LICENSE" }
+readme = { file = "README.rst", content-type = "text/x-rst" }
+requires-python = ">=3.6, <4"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: Microsoft",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Editors",
+    "Topic :: Utilities"
+]
+dependencies = [
+    "eyed3 @ git+https://github.com/fmigneault/eyeD3.git@no-install-tests",
+    "Pillow",
+    "PyYAML",
+    "requests",
+    "ruamel.yaml",
+    "typing",
+    "typing_extensions",
+    "tqdm"
+]
+
+[project.optional-dependencies]
+dev = [
+    "bandit",
+    "bump-my-version",
+    "coverage>=7.5",
+    "docformatter",
+    "doc8",
+    "pytest",
+    "pytest-cov",
+    "pyup",
+    "ruff",
+    "safety"
+]
+yt-music = [
+    "yt-dlp>=2022.4.8; python_version < '3.9'",
+    "yt-dlp @ git+https://github.com/yt-dlp/yt-dlp ; python_version >= '3.9'",
+    "ytm[dl] @ git+https://github.com/fmigneault/python-youtube-music@master"
+]
+
+[project.urls]
+Homepage = "https://github.com/fmigneault/aiu"
+License = "https://github.com/fmigneault/aiu/blob/master/LICENSE"
+
+[project.scripts]
+aiu = "aiu.main:cli"
+
+[tool.pytest.ini_options]
+addopts = "--verbose"
+
+[tool.isort]
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 5
+combine_as_imports = true
+order_by_type = true
+classes = "JSON"
+treat_all_comments_as_code = true
+default_section = "THIRDPARTY"
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+extra_standard_library = ["posixpath", "typing", "typing_extensions"]
+known_third_party = ["mock"]
+known_first_party = ["aiu", "tests"]
+skip = ["*.egg*", "build", "env", "src", "venv", "reports", "node_modules"]
+only_modified = true
+
+[tool.ruff]
+line-length = 120
+output-format = "full"
+show-fixes = true
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "D",
+    "D201",
+    "D203",
+    "D204",
+    "D213",
+    "UP",
+    "N",
+    "B",
+    "C4",
+    "T20",
+    "SIM",
+    "PL",
+    "RUF",
+]
+ignore = [
+    "E226",
+    "E241",
+    "E402",
+    "F401",
+    "C413",  # explicit list(sorted()) needed for backwards compatibility
+    "C416",  # also "unnecessary" list()
+    "B007",
+    "B009",
+    "B010",
+    "B023",
+    "B904",
+    "B905",  # zip(..., strict=True) requires Python 3.10+, not backwards compatible
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D105",
+    "D107",
+    "D200",
+    "D203",
+    "D205",
+    "D212",
+    "D400",
+    "D401",
+    "D415",
+    "DOC501",
+    "PLR2004",
+    "PLW1641",
+    "PLW0602",
+    "PLW2901",
+    "SIM108",
+    "RUF001",
+    "RUF002",
+    "RUF005",
+    "RUF015",
+    "RUF023",
+    "RUF100",
+    "UP004",
+    "UP006",
+    "UP007",
+    "UP008",
+    "UP009",
+    "UP015",
+    "UP035",
+    "UP045",
+]
+exclude = [
+    "src",
+    ".git",
+    "__pycache__",
+    "docs",
+    "build",
+    "dist",
+    "eggs",
+    "env",
+    "parts",
+    "examples",
+    "reports",
+    "node_modules",
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"aiu/youtube.py" = ["E241"]
+"aiu/main.py" = [
+    "N802",  # allow non-lowercase function names in main script for CLI entry point
+    "N806",  # allow non-lowercase variable names in main script for CLI entry point
+    "T201",  # print() is acceptable in main script for help message
+]
+"tests/**/*.py" = [
+    "D100",  # allow missing docstrings in tests
+    "D101",  # allow missing docstrings in tests
+    "D102",  # allow missing docstrings in tests
+    "D103",  # allow missing docstrings in tests
+    "D104",  # allow missing docstrings in tests
+    "D105",  # allow missing docstrings in tests
+    "D106",  # allow missing docstrings in tests
+    "D107",  # allow missing docstrings in tests
+    "D200",  # allow spacing docstrings in tests
+    "D203",  # allow spacing docstrings in tests
+    "D212",  # allow spacing docstrings in tests
+    "S101",  # allow use of assert statements in tests
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["aiu", "tests"]
+extra-standard-library = ["posixpath", "typing", "typing_extensions"]
+
+[tool.ruff.lint.pylint]
+max-branches = 20
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "double"
+multiline-quotes = "double"
+docstring-quotes = "double"
+
+[tool.bandit]
+skips = ["B101", "B320", "B410"]
+exclude = ["*.egg-info", "./build", "./dist", "./env", "./tests", "test_*"]
+targets = ["aiu"]
+
+[tool.docformatter]
+recursive = true
+wrap-descriptions = 0
+wrap-summaries = 120
+make-summary-multi-line = true
+pre-summary-newline = true
+
+[tool.coverage.run]
+branch = true
+source = ["./"]
+include = ["aiu/*"]
+omit = ["/tmp/*", "setup.py", "tests/*"]
+
+[tool.bumpversion]
+allow_dirty = true
+current_version = "2.0.4"
+commit = true
+tag = true
+tag_name = "{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "README.rst"
+search = "{current_version}"
+replace = "{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "aiu/__meta__.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "CHANGES.rst"
+search = """
+`Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
+------------------------------------------------------------------------------------
+"""
+replace = """
+`Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
+------------------------------------------------------------------------------------
+
+* Nothing yet.
+
+`{new_version} <https://github.com/fmigneault/aiu/tree/{new_version}>`_ ({now:%Y-%m-%d})
+------------------------------------------------------------------------------------
+"""
+
+[tool.pylint]
+# MAIN section
+analyse-fallback-blocks = false
+clear-cache-post-run = false
+fail-under = 10
+ignore = [".git", "build", "reports"]
+ignore-paths = ["build", "dist", "aiu.egg-info", "reports"]
+ignore-patterns = "^\\.#"
+jobs = 0
+limit-inference-results = 100
+load-plugins = ["pylint.extensions.docparams", "pylint.extensions.mccabe", "pylint_per_file_ignores"]
+# FIXME: medium/lower-high complexity permitted, should focus toward <20 to facilitate testing and debugging
+max-complexity = 20
+accept-no-param-doc = true
+accept-no-raise-doc = true
+accept-no-return-doc = true
+accept-no-yields-doc = true
+default-docstring-type = "sphinx"
+string-quote = "double"
+triple-quote = "double"
+docstring-quote = "double"
+persistent = true
+py-version = "3.10"
+recursive = true
+suggestion-mode = true
+unsafe-load-any-extension = false
+fail-on = ""
+extension-pkg-allow-list = ""
+extension-pkg-whitelist = ""
+source-roots = ""
+
+# BASIC section
+argument-naming-style = "snake_case"
+attr-naming-style = "snake_case"
+bad-names = ["foo", "bar", "baz", "toto", "tutu", "tata"]
+class-attribute-naming-style = "any"
+class-const-naming-style = "UPPER_CASE"
+class-naming-style = "PascalCase"
+const-naming-style = "UPPER_CASE"
+docstring-min-length = -1
+function-naming-style = "snake_case"
+good-names = ["i", "j", "k", "ex", "Run", "_"]
+include-naming-hint = false
+inlinevar-naming-style = "any"
+method-naming-style = "snake_case"
+module-naming-style = "snake_case"
+no-docstring-rgx = "^_"
+property-classes = ["abc.abstractproperty"]
+typevar-rgx = "^[A-Z][A-Za-z0-9_]+T(ype)?$"
+variable-naming-style = "snake_case"
+
+# CLASSES section
+check-protected-access-in-special-methods = false
+defining-attr-methods = ["__init__", "__new__", "setUp", "asyncSetUp", "__post_init__"]
+exclude-protected = ["_asdict", "_fields", "_replace", "_source", "_make", "os._exit"]
+valid-classmethod-first-arg = ["cls"]
+valid-metaclass-classmethod-first-arg = ["mcs"]
+
+# DESIGN section
+max-args = 5
+max-attributes = 7
+max-bool-expr = 5
+max-branches = 20
+max-locals = 15
+max-parents = 7
+max-public-methods = 20
+max-returns = 6
+max-statements = 80
+min-public-methods = 0
+
+# EXCEPTIONS section
+overgeneral-exceptions = ["builtins.BaseException", "builtins.Exception"]
+
+# FORMAT section
+expected-line-ending-format = ""
+ignore-long-lines = "^\\s*(# )?<https?://\\S+>?$"
+indent-after-paren = 4
+indent-string = "    "
+max-line-length = 120
+max-module-lines = 1000
+single-line-class-stmt = false
+single-line-if-stmt = false
+
+# IMPORTS section
+allow-any-import-level = ""
+allow-reexport-from-package = false
+allow-wildcard-with-all = false
+deprecated-modules = ""
+ext-import-graph = ""
+import-graph = ""
+int-import-graph = ""
+known-standard-library = ""
+known-third-party = ["enchant"]
+preferred-modules = ""
+
+# LOGGING section
+logging-format-style = "old"
+logging-modules = ["logging"]
+
+# MESSAGES CONTROL section
+confidence = ["HIGH", "INFERENCE", "INFERENCE_FAILURE", "UNDEFINED"]
+disable = [
+    "raw-checker-failed", "bad-inline-option", "locally-disabled", "file-ignored", "suppressed-message", "useless-suppression", "deprecated-pragma", "use-symbolic-message-instead", "C0116", "missing-function-docstring", "C2801", "unnecessary-dunder-call", "R0205", "useless-return", "R0801", "R0914", "too-many-local-variables", "R1710", "inconsistent-return-statements", "R1721", "unnecessary-comprehension", "R1725", "super-with-arguments", "E0015", "unrecognized-option", "W0012", "unknown-option-value", "W0211", "arguments-differ", "W0246", "useless-parent-delegation", "W05111", "fixme", "W0707", "raise-missing-from"
+]
+enable = ["c-extension-no-member"]
+per-file-ignores = [
+    "__meta__.py:W0622",
+    "aiu/clean.py:R0401",
+    "setup.py:C0114,C0115,C0116",
+    "tests/*:C0114,C0115,C0116,R0401",
+    "tests/__init__.py:F0010"
+]
+
+# METHOD_ARGS section
+timeout-methods = [
+    "requests.api.delete", "requests.api.get", "requests.api.head", "requests.api.options", "requests.api.patch", "requests.api.post", "requests.api.put", "requests.api.request"
+]
+
+# MISCELLANEOUS section
+notes = ["FIXME", "XXX", "TODO"]
+
+# REFACTORING section
+max-nested-blocks = 7
+never-returning-functions = ["sys.exit", "argparse.parse_error"]
+
+# REPORTS section
+evaluation = "max(0, 0 if fatal else 10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10))"
+reports = true
+score = true
+
+# SIMILARITIES section
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true
+ignore-signatures = true
+min-similarity-lines = 4
+
+# SPELLING section
+max-spelling-suggestions = 4
+spelling-ignore-comment-directives = ["fmt: on", "fmt: off", "noqa:", "noqa", "nosec", "isort:skip", "mypy:"]
+spelling-store-unknown-words = false
+
+# STRING section
+check-quote-consistency = true
+check-str-concat-over-line-jumps = false
+
+# TYPECHECK section
+contextmanager-decorators = ["contextlib.contextmanager"]
+ignore-none = true
+ignore-on-opaque-inference = true
+ignored-checks-for-mixins = ["no-member", "not-async-context-manager", "not-context-manager", "attribute-defined-outside-init"]
+ignored-classes = ["optparse.Values", "thread._local", "_thread._local", "argparse.Namespace"]
+missing-member-hint = true
+missing-member-hint-distance = 1
+missing-member-max-choices = 1
+mixin-class-rgx = ".*[Mm]ixin"
+
+# VARIABLES section
+allow-global-unused-variables = true
+callbacks = ["cb_", "_cb"]
+dummy-variables-rgx = "_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_"
+ignored-argument-names = "_.*|^ignored_|^unused_"
+init-import = false
+redefining-builtins-modules = ["six.moves", "past.builtins", "future.builtins", "builtins", "io"]

@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 import urllib3  # noqa
 import yt_dlp
 from tqdm import tqdm
+from ytm import constants
 from ytm import utils as ytm_utils
 from ytm.apis.YouTubeMusic import YouTubeMusic
 from ytm.apis.YouTubeMusicDL.YouTubeMusicDL import BaseYouTubeMusicDL, YouTubeMusicDL
@@ -41,7 +42,7 @@ class YoutubeDLNoSanitizeFileName(yt_dlp.YoutubeDL):
     """
     Override the sanitize option to disable it.
 
-    The default Youtube Downloader operation sanitizes additional characters of the target file name such as characters
+    The default YouTube Downloader operation sanitizes additional characters of the target file name such as characters
     with accents, disallowed characters, or general ponctuation replacement (e.g.: ? -> ？). Because of this, there are
     often mismatches between its overly-sanitized name and the expected file-system-sanitized file name. Instead,
     perform the sanitization process ourselves such that only invalid characters for file-system path resolution are
@@ -115,6 +116,7 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
     """
     Downloader that will bypass the actual download of the file if the information and files are already available.
     """
+
     _api = None  # type: YouTubeMusic  # only for annotation, replaced during YouTubeMusicDL.__init__ call
 
     def __init__(self, *_, force_download=False, **__):
@@ -291,47 +293,204 @@ def get_reference_id(link):
     return False, False, video
 
 
+def parse_singles_eps(data: dict) -> list:
+    """
+    Parse data: Singles & EPs.
+    """
+    assert data, "No data to parse"
+
+    grid_items = ytm_utils.get(
+        data,
+        "contents",
+        "singleColumnBrowseResultsRenderer",
+        "tabs",
+        0,
+        "tabRenderer",
+        "content",
+        "sectionListRenderer",
+        "contents",
+        0,
+        "gridRenderer",
+        "items",
+        default=(),
+    )
+    assert grid_items
+
+    tracks = []
+    for track in grid_items:
+        track = ytm_utils.first(track)
+        track_title = ytm_utils.get(
+            track,
+            "title",
+            "runs",
+            0,
+            "text",
+        )
+        album_id = ytm_utils.get(
+            track,
+            "title",
+            "runs",
+            0,
+            "navigationEndpoint",
+            "browseEndpoint",
+            "browseId",
+        )
+        album_playlist_id = ytm_utils.get(
+            track,
+            "thumbnailOverlay",
+            "musicItemThumbnailOverlayRenderer",
+            "content",
+            "musicPlayButtonRenderer",
+            "playNavigationEndpoint",
+            "watchPlaylistEndpoint",
+            "playlistId",
+        )
+        track_thumbnail = ytm_utils.get(
+            track,
+            "thumbnailRenderer",
+            "musicThumbnailRenderer",
+            "thumbnail",
+            "thumbnails",
+            -1,
+        )
+        track_info = ytm_utils.get(
+            track,
+            "subtitle",
+            "runs",
+        )
+        track_year = ytm_utils.get(
+            track_info,
+            -1,
+            "text",
+            func=lambda views: views.strip().split(" ")[0]
+        )
+        track_album = ytm_utils.get(
+            track_info,
+            0,
+            "text",
+            func=lambda views: views.strip().split(" ")[0]
+        )
+        artist_container = ytm_utils.get(
+            track,
+            "menu",
+            "menuRenderer",
+            "items",
+        )
+        artist_container = ytm_utils.filter(
+            artist_container,
+            lambda item: ytm_utils.get(
+                item,
+                "menuNavigationItemRenderer",
+                "navigationEndpoint",
+                "browseEndpoint",
+                "browseEndpointContextSupportedConfigs",
+                "browseEndpointContextMusicConfig",
+                "pageType",
+            ) == constants.PAGE_TYPE_ARTIST
+        )
+        artist_browse_id = ytm_utils.get(
+            artist_container,
+            0,
+            "menuNavigationItemRenderer",
+            "navigationEndpoint",
+            "browseEndpoint",
+            "browseId",
+        )
+
+        track_data = {
+            # "id":        track_id,
+            "name":      track_title,
+            "year":      track_year,
+            "album": {
+                "id":   album_id,
+                "name": track_album,
+                "playlist_id": album_playlist_id,
+            },
+            "artist": {
+                "id":    artist_browse_id,
+            },
+            # "artists":          track_artists,
+            # "artist_id":        track_artist_id,
+            "thumbnail": track_thumbnail,
+            # "music_video_type": track_music_video_type,
+        }
+
+        tracks.append(track_data)
+
+    return tracks
+
+
 def get_artist_albums(link, throw=True):
     # type: (str, bool) -> List[Dict[str, str]]
     """
     Obtains all album IDs produced by a given artist ID extracted from appropriate YouTube Music link.
     """
+    singles = None
+    artist = None
+    prefix = None
     try:
-        parts = link.split("/channel/")
-        if len(parts) != 2:
-            raise ValueError(f"Not a valid channel link: [{link}]")
-        artist = ArtistId(parts[1])  # raise TypeError if invalid
+        channel_parts = link.split("/channel/")
+        browse_parts = link.split("/browse/")
+        if len(channel_parts) == 2:
+            artist = ArtistId(channel_parts[1])  # raise TypeError if invalid
+            prefix = channel_parts[0]
+        elif len(browse_parts) == 2:
+            singles = browse_parts[1]
+            prefix = browse_parts[0]
+        else:
+            raise ValueError(f"Not a valid channel/browse link: [{link}]")
     except (TypeError, ValueError):
         if throw:
             raise
         return []
 
-    # do what 'api.artist()' does but manually to handle exceptions more gracefully
     api = YouTubeMusic()
-    meta = api._base.browse_artist(artist)  # pylint: disable=no-member,protected-access
-    data = parse_artist(meta)  # pylint: disable=not-callable
-    album_info = data.get("albums", {})
-    if not album_info:
-        name = data.get("name")
-        LOGGER.warning("Artist [%s] does not have any albums listed under: [%s]", name, link)
-        return []
-    albums = album_info.get("items", [])
 
-    # get the playlist ID instead of Album ID to form the corresponding download/listing YouTube Music links
-    album_meta = [
-        {
-            "name": info["name"],
-            "link": f"{parts[0]}/playlist?list={info['shuffle']['playlist_id']}",
-            "id": info["shuffle"]["playlist_id"],
-        }
-        for info in albums
-    ]
+    # do what 'api.artist()' does but manually to handle exceptions more gracefully
+    if artist:
+        meta = api._base.browse_artist(artist)  # pylint: disable=no-member,protected-access
+        data = parse_artist(meta)  # pylint: disable=not-callable
+        album_info = data.get("albums", {})
+        if not album_info:
+            name = data.get("name")
+            LOGGER.warning("Artist [%s] does not have any albums listed under: [%s]", name, link)
+            LOGGER.warning(
+                "If the provided reference corresponds to an artist channel with only EPs/Singles, "
+                "provide the link to them instead."
+            )
+            return []
+        albums = album_info.get("items", [])
+        # get the playlist ID instead of Album ID to form the corresponding download/listing YouTube Music links
+        album_meta = [
+            {
+                "name": info["name"],
+                "link": f"{prefix}/playlist?list={info['shuffle']['playlist_id']}",
+                "id": info["shuffle"]["playlist_id"],
+            }
+            for info in albums
+        ]
+    elif singles:
+        meta = api._base.browse(singles)  # pylint: disable=no-member,protected-access
+        data = parse_singles_eps(meta)
+        album_meta = [
+            {
+                "name": info["album"]["name"],
+                "link": f"{prefix}/playlist?list={info['album']['playlist_id']}",
+                "id": info["album"]["id"],
+            }
+            for info in data
+        ]
+    elif throw:
+        raise ValueError(f"Could not resolve artist or singles from link: [{link}]")
+    else:
+        return []
+
     # duplicate album names is allowed (usually duplicate uploads, contents equivalent)
     # remove them since only unique output directories can be created
     album_found = []
     album_names = set()
     for album_info in album_meta:
-        if album_info["name"] in album_names:
+        if album_info["name"] in album_names and not singles:  # ignore singles since all same "album" name
             continue
         album_names.add(album_info["name"])
         album_found.append(album_info)
@@ -389,8 +548,11 @@ def update_metadata(meta, fetch_cover=False):
     return file.name, meta["tracks"]
 
 
-def get_metadata(link):
+def get_album_metadata(link):
     # type: (str) -> Tuple[Optional[str], JSON]
+    """
+    Retrieves the album metadata from the given YouTube Music link.
+    """
     _, is_music, ref_id = get_reference_id(link)
     if not is_music:
         raise ValueError(f"Cannot retrieve music metadata from YouTube Video link: [{link}]")
@@ -404,6 +566,9 @@ def get_metadata(link):
 
 def fetch_files(link, output_dir, with_cover=True, progress_display=True, force_download=False):
     # type: (str, str, bool, bool, bool) -> Tuple[Optional[str], JSON]
+    """
+    Downloads the specified files from the given YouTube Music/Video link into the output directory.
+    """
     LOGGER.debug("Fetching files from link: [%s]", link)
     if progress_display:
         api = TqdmYouTubeMusicDL(force_download=force_download)

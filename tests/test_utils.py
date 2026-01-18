@@ -1,7 +1,6 @@
 import os
 import platform
-
-import mock
+import unittest.mock
 
 from aiu.utils import make_dirs_cleaned
 
@@ -36,7 +35,7 @@ def test_make_dirs_cleaned():
         ("./ok/yes|no/good/not:good", _fix_path(f"{cur_dir}/ok/yes-no/good/not-good")),
     ]
 
-    with mock.patch("os.makedirs") as mkdir_mock:
+    with unittest.mock.patch("os.makedirs") as mkdir_mock:
         for test_dir in valid_tests:
             result_dir = _fix_path(test_dir)
             make_dirs_cleaned(test_dir)

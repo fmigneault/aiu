@@ -3,3 +3,4 @@
 """
 AIU: Audio Info Updater
 """
+from aiu.__meta__ import __version__

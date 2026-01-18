@@ -122,7 +122,6 @@ def parse_audio_config(  # pylint: disable=broad-exception-caught  # raise at en
     """
     Attempts various parsing methods to retrieve audio files metadata from a config file.
     """
-
     if not os.path.isfile(config_file):
         raise ValueError(f"invalid file path: [{config_file}]")
 
@@ -199,7 +198,7 @@ def parse_audio_config_objects(config_file):
     return config
 
 
-def parse_audio_config_list(config_file):
+def parse_audio_config_list(config_file):  # noqa: PLR0915
     # type: (str) -> AudioConfig
     """
     Parse a file formatted with list row-fields of continuous intervals.
@@ -253,14 +252,21 @@ def parse_audio_config_list(config_file):
                 if all(grp[0].isnumeric() and grp[1] == "" for grp in _track_groups):
                     _tracks = [grp[0] for grp in _track_groups]
                     _titles = [lines[i + 1] for i in range(0, len(lines), 2)]
-                    _config = [{TAG_TRACK: track, TAG_TITLE: title} for track, title in zip(_tracks, _titles)]
+                    _config = [
+                        {TAG_TRACK: track, TAG_TITLE: title}
+                        for track, title
+                        in zip(_tracks, _titles)
+                    ]
             elif all(match is not None for match in _duration_matches):
                 _duration_groups = [list(m.groups())[0] for m in _duration_matches]
                 if all(Duration(grp) for grp in _duration_groups):  # will raise on any invalid parsing
                     _titles = [lines[i] for i in range(0, len(lines), 2)]
                     _durations = [grp for grp in _duration_groups]
-                    _config = [{TAG_DURATION: duration, TAG_TITLE: title}
-                               for duration, title in zip(_durations, _titles)]
+                    _config = [
+                        {TAG_DURATION: duration, TAG_TITLE: title}
+                        for duration, title
+                        in zip(_durations, _titles)
+                    ]
         except Exception as exc:  # pylint: disable=broad-exception-caught  # fallback to caller
             LOGGER.trace("exception during [%s] parsing attempt (assuming 3 fields):", FORMAT_MODE_LIST, exc_info=exc)
         return _config

@@ -23,6 +23,7 @@ class Config:
     """
     Application configuration options.
     """
+
     EXCEPTIONS_RENAME = None    # type: ExceptionsType
     STOPWORDS_RENAME = None     # type: StopwordsType
     STOPWORDS_MATCH = None      # type: StopwordsType
@@ -31,7 +32,7 @@ class Config:
 DEFAULT_STOPWORDS_CONFIG = os.path.join(AIU_CONFIG_DIR, "stopwords.cfg")
 DEFAULT_EXCEPTIONS_CONFIG = os.path.join(AIU_CONFIG_DIR, "exceptions.cfg")
 DEFAULT_STOPWORDS_MATCH = os.path.join(AIU_CONFIG_DIR, "ignore.cfg")
-AIU_SETUP_CONFIG = os.path.join(AIU_ROOT_DIR, "setup.cfg")
+AIU_LOGGING_CONFIG = os.path.join(AIU_ROOT_DIR, "logging.ini")
 
 
 class YamlEnabledLogger(logging.Logger):
@@ -61,13 +62,13 @@ if not getattr(LOGGER, "__AIU_CONFIGURED__", False):
             LOGGER._log(TRACE, msg, args, **kwargs)  # noqa  # pylint: disable=protected-access
 
     LOGGER.trace = log_trace
-    if os.path.isfile(AIU_SETUP_CONFIG):
+    if os.path.isfile(AIU_LOGGING_CONFIG):
         # pylint: disable=import-outside-toplevel,ungrouped-imports
         import configparser
         import logging.config
         # remove %% escape for logging format
         config = configparser.RawConfigParser()
-        config.read(AIU_SETUP_CONFIG)
+        config.read(AIU_LOGGING_CONFIG)
         for section in config:
             if section == "formatter_generic":
                 config.set("formatter_generic", "format", config["formatter_generic"]["format"].replace("%%", "%"))

@@ -30,7 +30,8 @@ from typing import (
 
 from tqdm import tqdm
 
-from aiu import __meta__, tags as t
+from aiu import __meta__
+from aiu import tags as t
 from aiu.config import (
     DEFAULT_EXCEPTIONS_CONFIG,
     DEFAULT_STOPWORDS_CONFIG,
@@ -67,10 +68,10 @@ from aiu.utils import (
     make_dirs_cleaned,
     validate_output_file,
 )
-from aiu.youtube import fetch_files, get_artist_albums, get_metadata
+from aiu.youtube import fetch_files, get_album_metadata, get_artist_albums
 
 
-def cli():
+def cli():  # noqa: PLR0912,PLR0915
     # pylint: disable=C0103,R0912,R0915
     _PROG = __meta__.__package__
     _NAME = f"{__meta__.__title__} ({_PROG})"
@@ -403,7 +404,7 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
 
 
 @log_exception(LOGGER)
-def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
+def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260  # noqa: PLR0912,PLR0913,PLR0915
     # --- file/parsing options ---
     link=None,                              # type: Optional[str]
     search_path=None,                       # type: Optional[str]
@@ -497,13 +498,14 @@ def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
         progress_display = force_progress or (LOGGER.isEnabledFor(logging.INFO) and not no_progress)
         albums = get_artist_albums(link, throw=False)
         if albums:
+            # remove duplicates that should have been skipped for real albums, but can exist for singles pseudo albums
+            album_names = sorted({album["name"] for album in albums})
             if dry:
                 LOGGER.info("Would attempt processing each album link iteratively:\n%s",
-                            json.dumps([album_info["link"] for album_info in albums], indent=2))
+                            json.dumps(album_names, indent=2))
             else:
                 # pass down all parameters except links defined by each album
-                LOGGER.info("Found albums to process:\n%s",
-                            json.dumps([album_info["name"] for album_info in albums], indent=2))
+                LOGGER.info("Found albums to process:\n%s", json.dumps(album_names, indent=2))
                 album_results = multi_fetch_albums(
                     albums,
                     # file/parsing options
@@ -511,8 +513,10 @@ def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
                     output_file=output_file, output_dir=output_dir, output_mode=output_mode, parser_mode=parser_mode,
                     exceptions_rename_config=exceptions_rename_config, stopwords_rename_config=stopwords_rename_config,
                     # specific meta fields
-                    artist=artist, album=album, album_artist=album_artist, title=title, track=track,
-                    genre=genre, duration=duration, year=year, match_artist=match_artist,
+                    artist=artist, album_artist=album_artist,
+                    genre=genre, year=year, match_artist=match_artist,
+                    # override values that wouldn't make sense to be the same for multiple albums
+                    album=None, track=None, title=None, duration=None,
                     # heuristics flags
                     heuristic_delete_duplicates=heuristic_delete_duplicates,
                     heuristic_tag_match=heuristic_tag_match,
@@ -536,7 +540,7 @@ def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260
             return True  # avoid error on empty config
 
         if no_fetch:
-            _, meta_json = get_metadata(link)
+            _, meta_json = get_album_metadata(link)
         else:
             _, meta_json = fetch_files(
                 link, output_dir,

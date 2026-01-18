@@ -328,7 +328,11 @@ def compute_word_match(search_files, search_info, threshold_match_words=0.6):
     # which causes all matching attempts to yield a low score.
     # Remove them to increase matches using only discriminative words between available choices.
     filtered_file_words = filter_shared_items([words for _, words in search_file_words])
-    search_file_words = [(search[0], words) for search, words in zip(search_file_words, filtered_file_words)]
+    search_file_words = [
+        (search[0], words)
+        for search, words
+        in zip(search_file_words, filtered_file_words)
+    ]
 
     matches = {}  # type: Dict[str, Optional[AudioInfo]]
     for file, sf_words in search_file_words:
@@ -421,7 +425,7 @@ def check_last_item(search_files, search_audio):
     return matches
 
 
-def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_match=True, dry=False):
+def apply_audio_config(audio_files, audio_config, use_tag_match=True, use_word_match=True, dry=False):  # noqa: PLR0915
     # type: (Iterable[str], AudioConfig, bool, bool, bool) -> AudioConfig
     """
     Applies the metadata fields to the corresponding audio files.
