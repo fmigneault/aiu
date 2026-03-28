@@ -24,9 +24,9 @@ class Config:
     Application configuration options.
     """
 
-    EXCEPTIONS_RENAME = None    # type: ExceptionsType
-    STOPWORDS_RENAME = None     # type: StopwordsType
-    STOPWORDS_MATCH = None      # type: StopwordsType
+    EXCEPTIONS_RENAME = {}      # type: ExceptionsType
+    STOPWORDS_RENAME = []       # type: StopwordsType
+    STOPWORDS_MATCH = []        # type: StopwordsType
 
 
 DEFAULT_STOPWORDS_CONFIG = os.path.join(AIU_CONFIG_DIR, "stopwords.cfg")

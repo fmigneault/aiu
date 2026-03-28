@@ -6,10 +6,10 @@ import os
 import re
 import sys
 import tempfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import parse_qs, urlparse
 
-import urllib3  # noqa
+import urllib3
 import yt_dlp
 from tqdm import tqdm
 from ytm import constants
@@ -26,14 +26,44 @@ from aiu.utils import FILENAME_ILLEGAL_CHARS, FILENAME_ILLEGAL_CHARS_REGEX, make
 
 if TYPE_CHECKING:
     from typing import (
+        Any,
         Dict,
         List,
         Optional,
         Tuple,
         Union,
     )
+    from typing_extensions import TypedDict
+
+    from yt_dlp import _Params
+    from yt_dlp.extractor.common import _InfoDict
 
     from aiu.typedefs import JSON
+
+    MusicInfoDict = TypedDict(
+        "MusicInfoDict",
+        {
+            "name": str,
+            "track": Union[str, int],
+            "title": str,
+            "alt_title": str,
+            "album": str,
+            "artist": str,
+            "albumartist": str,
+            "discnumber": str,
+            "tracknumber": str,
+            "date": Dict[str, str],
+            "year": str,
+            "release_year": str,
+            "upload_date": str,
+            "duration": str,
+            "length": float,
+            "cover": str,
+            "tracks": Optional[List["MusicInfoDict"]],
+        },
+        total=True,
+    )
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -43,14 +73,14 @@ class YoutubeDLNoSanitizeFileName(yt_dlp.YoutubeDL):
     Override the sanitize option to disable it.
 
     The default YouTube Downloader operation sanitizes additional characters of the target file name such as characters
-    with accents, disallowed characters, or general ponctuation replacement (e.g.: ? -> ？). Because of this, there are
+    with accents, disallowed characters, or general punctuation replacement (e.g.: ? -> ？). Because of this, there are
     often mismatches between its overly-sanitized name and the expected file-system-sanitized file name. Instead,
     perform the sanitization process ourselves such that only invalid characters for file-system path resolution are
     adjusted, which will match exactly with later operations retrieving the downloaded file using the same metadata.
     """
 
     def prepare_outtmpl(self, outtmpl, info_dict, sanitize=False):
-        # type: (str, Dict[str, str], bool) -> str
+        # type: (str, Union[Dict[str, str], _InfoDict], bool) -> Tuple[str, Dict[str, Any]]
         output, tmpl_info = super().prepare_outtmpl(outtmpl, info_dict, sanitize=False)  # force no sanitize
         for key in tmpl_info:
             tmpl_info[key] = re.sub(FILENAME_ILLEGAL_CHARS_REGEX, "_", tmpl_info[key])
@@ -189,9 +219,10 @@ class CachedYoutubeMusicDL(YouTubeMusicDL):
         all operations related to the actual download and the creation of base ID3 tags from retrieved metadata
         since the file already is available. Any out of date ID3 Tags will be updated by us anyway.
         """
-        ytdl = yt_dlp.YoutubeDL(params={"quiet": True, "outtmpl": "", "postprocessors": [], "format": "bestaudio"})
+        params = cast("_Params", {"quiet": True, "outtmpl": "", "postprocessors": [], "format": "bestaudio"})
+        ytdl = yt_dlp.YoutubeDL(params=params)
         url = ytm_utils.url_yt("watch", params={"v": song_id})  # noqa  # pylint: disable=not-callable
-        info = ytdl.extract_info(url=url, ie_key="Youtube", download=False)
+        info = cast("MusicInfoDict", ytdl.extract_info(url=url, ie_key="Youtube", download=False))
 
         any_title = info.get("track", info.get("title"))
         metadata = ytm_utils.filter({  # noqa  # pylint: disable=not-callable
@@ -217,12 +248,12 @@ class TqdmYouTubeMusicDL(CachedYoutubeMusicDL):
     """
 
     def __init__(self, *_, **__):
+        self.progress_bar = None  # type: Optional[tqdm]
+        self._log_after = []
         super(TqdmYouTubeMusicDL, self).__init__(*_, **__)
         self.api_album = self._api.album
         self._api.album = self.tqdm_album
         self._base._download = self.tqdm_download
-        self.progress_bar = None  # type: Optional[tqdm]
-        self._log_after = []
 
     def tqdm_album(self, album_id):
         album = self.api_album(album_id)
@@ -449,7 +480,7 @@ def get_artist_albums(link, throw=True):
     # do what 'api.artist()' does but manually to handle exceptions more gracefully
     if artist:
         meta = api._base.browse_artist(artist)  # pylint: disable=no-member,protected-access
-        data = parse_artist(meta)  # pylint: disable=not-callable
+        data = parse_artist(meta)  # pylint: disable=not-callable  # noqa
         album_info = data.get("albums", {})
         if not album_info:
             name = data.get("name")
@@ -511,8 +542,8 @@ def update_metadata(meta, fetch_cover=False):
     LOGGER.debug("Updating YouTube Music/Video metadata for Single/Album")
     album_cover = meta["thumbnail"]
     album_cover = album_cover.get("path", album_cover["url"])
-    for song in meta["tracks"]:
-        # find best possible song name
+    for song in cast("List[MusicInfoDict]", meta["tracks"]):
+        # find the best possible song name
         if "name" in song:
             song["title"] = song["name"]
         elif "track" in song and isinstance(song["track"], str):
@@ -586,7 +617,7 @@ def fetch_files(link, output_dir, with_cover=True, progress_display=True, force_
         else:
             # pick squarest and largest thumbnail if many are available but not one was pre-selected
             #   closest to 0 with |w/h - 1| will be the squarest
-            #   in case of equivalent ratios, pick by height to favor larger images
+            #   in case of equivalent ratios, pick by height to favour larger images
             covers = meta["thumbnails"]
             for img in covers:
                 img["ratio"] = abs((float(img["width"]) / float(img["height"])) - 1)
