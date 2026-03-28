@@ -10,7 +10,7 @@ aiu = ["config/*"]
 
 [project]
 name = "aiu"
-version = "3.0.0"
+version = "3.0.1"
 keywords = ["audio", "music", "editor", "tag", "id3", "mp3", "metadata", "parser", "youtube"]
 description = "Tool for updating ID3 tags of audio files using text metadata and configuration files."
 authors = [
@@ -243,7 +243,7 @@ omit = ["/tmp/*", "setup.py", "tests/*"]
 
 [tool.bumpversion]
 allow_dirty = true
-current_version = "3.0.0"
+current_version = "3.0.1"
 commit = true
 tag = true
 tag_name = "{new_version}"
