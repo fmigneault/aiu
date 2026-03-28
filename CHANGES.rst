@@ -6,6 +6,12 @@ CHANGES
 
 * Nothing yet.
 
+`3.0.1 <https://github.com/fmigneault/aiu/tree/3.0.1>`_ (2026-03-28)
+------------------------------------------------------------------------------------
+
+* Fix default configuration values to avoid ``NoneType`` errors if no configuration file was found.
+* Typing fixes.
+
 `3.0.0 <https://github.com/fmigneault/aiu/tree/3.0.0>`_ (2026-01-18)
 ------------------------------------------------------------------------------------
 
