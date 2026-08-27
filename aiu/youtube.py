@@ -481,10 +481,35 @@ def parse_singles_eps(data: dict) -> list:
     return tracks
 
 
+def _resolve_handle_artist_id(link):
+    # type: (str) -> Optional[ArtistId]
+    """
+    Resolve a ``https://music.youtube.com/@handle`` YouTube Music artist URL to its channel ArtistId.
+    """
+    try:
+        ydl = yt_dlp.YoutubeDL({
+            "quiet": True,
+            "no_warnings": True,
+            "extract_flat": True,
+            "skip_download": True,
+        })
+        info = ydl.extract_info(link, download=False) or {}
+        artist_id = info.get("channel_id")
+        if not artist_id:
+            entries = info.get("entries") or []
+            if entries:
+                artist_id = entries[0].get("channel_id")
+        if artist_id:
+            return ArtistId(artist_id)
+    except Exception:  # pylint: disable=broad-except
+        LOGGER.debug("Failed resolving @handle artist link [%s]", link, exc_info=True)
+    return None
+
+
 def get_artist_albums(link, throw=True):
     # type: (str, bool) -> List[Dict[str, str]]
     """
-    Obtains all album IDs produced by a given artist ID extracted from appropriate YouTube Music link.
+    Obtains all album IDs produced by a given artist ID extracted from an appropriate YouTube Music link.
     """
     singles = None
     artist = None
@@ -498,6 +523,11 @@ def get_artist_albums(link, throw=True):
         elif len(browse_parts) == 2:
             singles = browse_parts[1]
             prefix = browse_parts[0]
+        elif "/@" in link:
+            artist = _resolve_handle_artist_id(link)
+            prefix = link.split("/@", 1)[0]
+            if not artist:
+                raise ValueError(f"Could not resolve artist from handle link: [{link}]")
         else:
             raise ValueError(f"Not a valid channel/browse link: [{link}]")
     except (TypeError, ValueError):
