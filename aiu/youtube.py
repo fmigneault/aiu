@@ -94,6 +94,36 @@ class BaseYoutubeDLP(BaseYouTubeMusicDL):
 
     def __init__(self):
         super(BaseYoutubeDLP, self).__init__(youtube_downloader=YoutubeDLNoSanitizeFileName)
+        self._yt_dl = self._yt_dlp_factory
+
+    @staticmethod
+    def _yt_dlp_factory(params):
+        # type: (Dict[str, Any]) -> YoutubeDLNoSanitizeFileName
+        """
+        Build a yt-dlp instance with resilient defaults for YouTube Music fetches.
+
+        Using the Android player client mitigates recurring 403 responses observed
+        on some music/video endpoints with the default client profile.
+        """
+        base_params = {
+            "no_warnings": True,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android"],
+                }
+            },
+            "http_headers": {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/126.0.0.0 Safari/537.36"
+                ),
+            },
+            "retries": 10,
+            "fragment_retries": 10,
+        }
+        base_params.update(params or {})
+        return YoutubeDLNoSanitizeFileName(params=base_params)
 
     def _get_file_path(self, info, template, directory=None):
         # type: (JSON, str, Optional[str]) -> str

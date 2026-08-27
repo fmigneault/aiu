@@ -4,7 +4,12 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Force ``yt_dlp`` YouTube extractor to use Android client profile by default for ``aiu --link`` fetch operations,
+  reducing recurring ``HTTP 403`` download failures observed with the default client.
+* Add resilient ``yt_dlp`` request defaults (retries and fragment retries) for improved stability during album fetches.
+* Suppress non-fatal upstream ``yt_dlp`` warning spam (notably SABR-related missing URL warnings) during normal fetches.
+* Use audio format fallback ``bestaudio/best`` in underlying downloader path to avoid hard failures when strict
+  ``bestaudio`` variants are temporarily unavailable.
 
 `3.0.1 <https://github.com/fmigneault/aiu/tree/3.0.1>`_ (2026-03-28)
 ------------------------------------------------------------------------------------
