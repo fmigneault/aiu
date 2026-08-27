@@ -1,7 +1,7 @@
 """
 Package metadata.
 """
-__version__ = "3.0.1"
+__version__ = "3.1.0"
 __package__ = "aiu"
 __title__ = "Audio Info Updater"
 __author__ = "Francis Charette-Migneault"
