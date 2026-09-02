@@ -72,8 +72,9 @@ dev = [
     # - https://github.com/pyupio/safety/issues/853
     # - https://github.com/authlib/authlib/pull/909
     # - https://github.com/pydantic/httpx2/issues/1162
-    "authlib<1.8.0",
-    "safety>=3.8.1"
+    "authlib<1.8.0; python_version >= '3.10'",
+    "safety>=3.8.1; python_version >= '3.10'",
+    "safety; python_version < '3.10'"
 ]
 yt-music = [
     "yt-dlp>=2022.4.8; python_version < '3.9'",
