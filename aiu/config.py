@@ -5,7 +5,7 @@ Configurations for the application.
 import logging
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 import yaml
 
@@ -24,9 +24,9 @@ class Config:
     Application configuration options.
     """
 
-    EXCEPTIONS_RENAME = {}      # type: ExceptionsType
-    STOPWORDS_RENAME = []       # type: StopwordsType
-    STOPWORDS_MATCH = []        # type: StopwordsType
+    EXCEPTIONS_RENAME: ClassVar[ExceptionsType] = {}
+    STOPWORDS_RENAME: ClassVar[StopwordsType] = []
+    STOPWORDS_MATCH: ClassVar[StopwordsType] = []
 
 
 DEFAULT_STOPWORDS_CONFIG = os.path.join(AIU_CONFIG_DIR, "stopwords.cfg")
