@@ -4,7 +4,7 @@ CHANGES
 `Unreleased <https://github.com/fmigneault/aiu/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Support for YouTube Music links directly referring to an ``https://music.youtube.com/@handle`` artist's channel.
 
 `3.1.0 <https://github.com/fmigneault/aiu/tree/3.1.0>`_ (2026-08-27)
 ------------------------------------------------------------------------------------

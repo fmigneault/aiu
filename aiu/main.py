@@ -6,6 +6,7 @@ All options defining specific metadata fields (``--artist``, ``--year``, etc.) o
 corresponding information fields found in configurations files from options ``--info`` or ``--all``.
 Applied changes listed in ``--output`` file.
 """
+
 import argparse
 import json
 import logging
@@ -404,7 +405,7 @@ def multi_fetch_albums(albums, output_dir, progress_display=True, **kwargs):
 
 
 @log_exception(LOGGER)
-def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260  # noqa: PLR0912,PLR0913,PLR0915
+def main(  # pylint: disable=R0912,R0913,R0915,R0917,R1260  # noqa: PLR0912,PLR0913,PLR0915,PLR0917
     # --- file/parsing options ---
     link=None,                              # type: Optional[str]
     search_path=None,                       # type: Optional[str]
