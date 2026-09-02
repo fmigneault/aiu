@@ -67,7 +67,13 @@ dev = [
     "pytest-cov",
     "pyup",
     "ruff",
-    "safety"
+    # pin authlib to patch broken safety dependency chain
+    # - https://github.com/pyupio/safety/issues/822
+    # - https://github.com/pyupio/safety/issues/853
+    # - https://github.com/authlib/authlib/pull/909
+    # - https://github.com/pydantic/httpx2/issues/1162
+    "authlib<1.8.0",
+    "safety>=3.8.1"
 ]
 yt-music = [
     "yt-dlp>=2022.4.8; python_version < '3.9'",
