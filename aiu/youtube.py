@@ -1,6 +1,7 @@
 """
 Operations involving YouTube Music and YouTube Video links resolution to extract music, artist and album metadata.
 """
+
 import json
 import os
 import re

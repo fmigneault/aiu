@@ -346,9 +346,11 @@ def write_config(audio_config, file_path, fmt_mode):
             max_title_len = len(max(audio_config, key=lambda _: _.title).title)
             max_track_len = 0 if not all_have_track else int(math.log10(max(_.track for _ in audio_config))) + 1
             max_track_dot = max_track_len + 1   # extra space for '.' after track number
-            line_fmt = "{track:track_tab}{title:title_tab}{duration}" \
-                .replace("title_tab", str(max_title_len)) \
+            line_fmt = (
+                "{track:track_tab}{title:title_tab}{duration}"
+                .replace("title_tab", str(max_title_len))
                 .replace("track_tab", str(max_track_dot))
+            )
             for ac in audio_config:
                 track = f"{ac.track}." if all_have_track else ""
                 f.write(line_fmt.format(

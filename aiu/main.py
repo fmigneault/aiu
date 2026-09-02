@@ -6,6 +6,7 @@ All options defining specific metadata fields (``--artist``, ``--year``, etc.) o
 corresponding information fields found in configurations files from options ``--info`` or ``--all``.
 Applied changes listed in ``--output`` file.
 """
+
 import argparse
 import json
 import logging
